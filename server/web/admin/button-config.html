@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>按钮配置管理</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vant@4/lib/vant.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@4/lib/index.css">
+  <link rel="stylesheet" href="../css/app.css">
+  <style>
+    .config-container {
+      padding: 16px;
+      background: #f6f7f9;
+      min-height: 100vh;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin: 20px 0 10px;
+      color: #323233;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .button-item {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      border: 1px solid #ebedf0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .button-item:hover {
+      border-color: #0d5e56;
+      box-shadow: 0 2px 8px rgba(13,94,86,0.1);
+    }
+
+    .button-item.selected {
+      border-color: #0d5e56;
+      background: #f0f9ff;
+      box-shadow: 0 2px 8px rgba(13,94,86,0.15);
+    }
+
+    .button-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .button-title {
+      font-size: 14px;
+      color: #323233;
+    }
+
+    .sort-section {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 20px;
+      box-shadow: 0 2px 10px rgba(20,40,60,.04);
+    }
+
+    .sort-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      min-height: 60px;
+      padding: 10px;
+      border: 2px dashed #ebedf0;
+      border-radius: 8px;
+    }
+
+    .sorted-item {
+      position: relative;
+      background: white;
+      border: 1px solid #ebedf0;
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 120px;
+      text-align: center;
+      cursor: move;
+      user-select: none;
+    }
+
+    .remove-btn {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ee0a24;
+      color: white;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 1;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      padding: 16px 0;
+    }
+
+    .btn-save {
+      flex: 1;
+      background: var(--brand-grad);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .btn-cancel {
+      flex: 1;
+      background: #f5f5f5;
+      color: #666;
+      border: 1px solid #ddd;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .role-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .role-btn {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ebedf0;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+    }
+
+    .role-btn.active {
+      border-color: var(--brand);
+      background: #eef6f5;
+      color: var(--brand);
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="config-container">
+      <h2>按钮配置管理</h2>
+
+      <!-- 角色选择 -->
+      <div class="role-selector">
+        <div
+          class="role-btn"
+          :class="{ active: selectedRole === role.value }"
+          v-for="role in roles"
+          :key="role.value"
+          @click="selectRole(role.value)"
+        >
+          {{ role.label }}
+        </div>
+      </div>
+
+      <!-- 页面类型选择 -->
+      <div class="section-title">选择页面</div>
+      <div class="button-grid">
+        <div
+          class="button-item"
+          :class="{ selected: selectedPageType === page.value }"
+          v-for="page in getPageTypes()"
+          :key="page.value"
+          @click="selectPageType(page.value)"
+        >
+          <div class="button-title">{{ page.label }}</div>
+        </div>
+      </div>
+
+      <!-- 可用按钮选择区 -->
+      <div class="section-title" v-if="selectedPageType">可添加的按钮</div>
+      <div class="button-grid" v-if="selectedPageType">
+        <div
+          class="button-item"
+          v-for="btn in availableButtons"
+          :key="btn.id"
+          @click="addButton(btn)"
+        >
+          <div class="button-icon">
+            <van-icon :name="btn.icon || 'setting'"/>
+          </div>
+          <div class="button-title">{{ btn.title }}</div>
+        </div>
+      </div>
+
+      <!-- 已选按钮排序区 -->
+      <div class="sort-section" v-if="selectedPageType">
+        <div class="section-title">已选按钮（可拖拽排序）</div>
+        <div class="sort-grid" id="sort-area" ref="sortArea">
+          <div
+            class="sorted-item"
+            v-for="(btn, index) in currentConfig"
+            :key="btn.id"
+            draggable="true"
+            @dragstart="dragStart($event, index)"
+            @dragover.prevent="dragOver($event)"
+            @drop="drop($event, index)"
+          >
+            <div class="remove-btn" @click="removeButton(index)">×</div>
+            <div class="button-icon">
+              <van-icon :name="btn.icon || 'setting'"/>
+            </div>
+            <div class="button-title">{{ btn.title }}</div>
+          </div>
+
+          <!-- 拖拽占位符 -->
+          <div
+            v-if="dragPlaceholderIndex >= 0"
+            class="sorted-item"
+            style="border: 2px dashed var(--brand); background: rgba(13,94,86,0.05);"
+          >
+            释放到此处
+          </div>
+        </div>
+      </div>
+
+      <!-- 操作按钮 -->
+      <div class="actions" v-if="selectedPageType">
+        <button class="btn-cancel" @click="loadConfig">取消</button>
+        <button class="btn-save" @click="saveConfig">保存配置</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, reactive, onMounted, computed } = Vue;
+
+    createApp({
+      setup() {
+        const selectedRole = ref('admin');
+        const selectedPageType = ref('');
+        const currentConfig = ref([]);
+        const availableButtons = ref([]);
+        const draggedItem = ref(null);
+        const dragPlaceholderIndex = ref(-1);
+
+        const roles = [
+          { value: 'admin', label: '管理员' },
+          { value: 'coach', label: '教练' },
+          { value: 'member', label: '会员' }
+        ];
+
+        const pageTypes = {
+          admin: [
+            { value: 'admin-dashboard', label: '管理后台首页' },
+            { value: 'admin-members', label: '会员管理页' },
+            { value: 'admin-cards', label: '卡券管理页' }
+          ],
+          coach: [
+            { value: 'coach-dashboard', label: '教练工作台' },
+            { value: 'coach-students', label: '学员管理页' },
+            { value: 'coach-schedule', label: '课表管理页' }
+          ],
+          member: [
+            { value: 'member-home', label: '会员首页' },
+            { value: 'member-cards', label: '我的卡券页' },
+            { value: 'member-schedule', label: '我的预约页' }
+          ]
+        };
+
+        const selectRole = (role) => {
+          selectedRole.value = role;
+          selectedPageType.value = '';
+          currentConfig.value = [];
+          availableButtons.value = [];
+        };
+
+        const getPageTypes = () => {
+          return pageTypes[selectedRole.value] || [];
+        };
+
+        const selectPageType = async (pageType) => {
+          selectedPageType.value = pageType;
+          await loadConfig();
+        };
+
+        const loadConfig = async () => {
+          if (!selectedPageType.value) return;
+
+          try {
+            // 模拟加载配置，实际应用中这里应该是API调用
+            const response = await fetch(`/api/userButtonConfig/1/${selectedRole.value}/${selectedPageType.value}`);
+            const result = await response.json();
+
+            if (result.success) {
+              currentConfig.value = result.data;
+            } else {
+              // 加载失败时使用默认配置
+              currentConfig.value = getDefaultConfig(selectedRole.value, selectedPageType.value);
+            }
+
+            // 加载可用按钮
+            const availableResponse = await fetch(`/api/userButtonConfig/available-buttons/${selectedRole.value}/${selectedPageType.value}`);
+            const availableResult = await availableResponse.json();
+
+            if (availableResult.success) {
+              // 过滤掉已选中的按钮
+              const selectedIds = new Set(currentConfig.value.map(btn => btn.id));
+              availableButtons.value = availableResult.data.filter(btn => !selectedIds.has(btn.id));
+            }
+          } catch (error) {
+            console.error('加载配置失败:', error);
+            vant.Toast.fail('加载配置失败');
+          }
+        };
+
+        const addButton = (button) => {
+          // 检查是否已存在
+          if (currentConfig.value.some(btn => btn.id === button.id)) {
+            return;
+          }
+
+          // 添加到配置中
+          currentConfig.value.push({ ...button });
+
+          // 从可用按钮中移除
+          availableButtons.value = availableButtons.value.filter(btn => btn.id !== button.id);
+        };
+
+        const removeButton = (index) => {
+          const removed = currentConfig.value.splice(index, 1)[0];
+          // 将移除的按钮加回可用按钮列表
+          availableButtons.value.push(removed);
+        };
+
+        const dragStart = (e, index) => {
+          draggedItem.value = index;
+          e.dataTransfer.effectAllowed = 'move';
+        };
+
+        const dragOver = (e) => {
+          e.preventDefault();
+        };
+
+        const drop = (e, targetIndex) => {
+          e.preventDefault();
+
+          if (draggedItem.value !== null && draggedItem.value !== targetIndex) {
+            // 拖拽排序
+            const draggedBtn = currentConfig.value[draggedItem.value];
+            currentConfig.value.splice(draggedItem.value, 1);
+            currentConfig.value.splice(targetIndex, 0, draggedBtn);
+
+            // 重置拖拽状态
+            draggedItem.value = null;
+            dragPlaceholderIndex.value = -1;
+          }
+        };
+
+        const saveConfig = async () => {
+          try {
+            const payload = {
+              userId: 1, // 实际应用中应该是当前登录用户ID
+              role: selectedRole.value,
+              pageType: selectedPageType.value,
+              buttonConfig: currentConfig.value.map((btn, index) => ({
+                ...btn,
+                sortOrder: index + 1
+              }))
+            };
+
+            const response = await fetch('/api/userButtonConfig/save', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+              vant.Toast.success('保存成功');
+            } else {
+              vant.Toast.fail(result.message || '保存失败');
+            }
+          } catch (error) {
+            console.error('保存配置失败:', error);
+            vant.Toast.fail('保存失败');
+          }
+        };
+
+        const getDefaultConfig = (role, pageType) => {
+          const defaults = {
+            admin: {
+              'admin-dashboard': [
+                { id: 'members', title: '会员管理', icon: 'user', url: '/admin/members', sortOrder: 1, enabled: true },
+                { id: 'cards', title: '卡券管理', icon: 'credit-card', url: '/admin/cards', sortOrder: 2, enabled: true },
+                { id: 'coaches', title: '教练管理', icon: 'users', url: '/admin/coaches', sortOrder: 3, enabled: true },
+                { id: 'reports', title: '数据报表', icon: 'bar-chart-2', url: '/admin/reports', sortOrder: 4, enabled: true }
+              ]
+            },
+            coach: {
+              'coach-dashboard': [
+                { id: 'my-students', title: '我的学员', icon: 'users', url: '/coach/students', sortOrder: 1, enabled: true },
+                { id: 'my-schedule', title: '我的课表', icon: 'calendar', url: '/coach/schedule', sortOrder: 2, enabled: true },
+                { id: 'performance', title: '业绩统计', icon: 'trending-up', url: '/coach/performance', sortOrder: 3, enabled: true }
+              ]
+            },
+            member: {
+              'member-home': [
+                { id: 'my-cards', title: '我的卡券', icon: 'credit-card', url: '/member/cards', sortOrder: 1, enabled: true },
+                { id: 'my-schedule', title: '我的预约', icon: 'calendar', url: '/member/schedule', sortOrder: 2, enabled: true },
+                { id: 'course-list', title: '课程列表', icon: 'list', url: '/member/courses', sortOrder: 3, enabled: true },
+                { id: 'sign-in', title: '签到打卡', icon: 'map-pin', url: '/member/checkin', sortOrder: 4, enabled: true }
+              ]
+            }
+          };
+
+          return defaults[role] && defaults[role][pageType] ? defaults[role][pageType] : [];
+        };
+
+        onMounted(async () => {
+          await loadConfig();
+        });
+
+        return {
+          selectedRole,
+          selectedPageType,
+          currentConfig,
+          availableButtons,
+          roles,
+          dragPlaceholderIndex,
+          getPageTypes,
+          selectRole,
+          selectPageType,
+          loadConfig,
+          addButton,
+          removeButton,
+          dragStart,
+          dragOver,
+          drop,
+          saveConfig
+        };
+      }
+    }).use(vant).mount('#app');
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+node_modules/
+backups/
+.DS_Store
+.workbuddy/
+server/node_modules/
+miniprogram/node_modules/
+.env

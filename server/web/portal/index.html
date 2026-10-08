@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3S运动中心 · 系统入口</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif; min-height:100vh;
+    background:linear-gradient(135deg,#07332e 0%,#0d5e56 55%,#12756b 100%); display:flex; align-items:center; justify-content:center; padding:32px; }
+  .wrap { max-width:1060px; width:100%; }
+  h1 { color:#fff; font-size:34px; letter-spacing:2px; text-align:center; }
+  .sub { color:rgba(255,255,255,.75); text-align:center; margin:10px 0 40px; font-size:15px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:24px; }
+  .card { background:#fff; border-radius:16px; padding:28px; text-decoration:none; color:#1a1a1a;
+    box-shadow:0 12px 40px rgba(0,0,0,.25); transition:transform .15s; display:block; }
+  .card:hover { transform:translateY(-4px); }
+  .icon { font-size:38px; }
+  .card h2 { font-size:20px; margin:14px 0 8px; }
+  .card p { color:#666; font-size:13px; line-height:1.7; min-height:44px; }
+  .acc { background:#f4f7f6; border-radius:8px; padding:10px 12px; font-size:12px; color:#555; margin-top:14px; line-height:1.9; }
+  .acc b { color:#0d5e56; }
+  .tag { display:inline-block; background:#0d5e56; color:#fff; font-size:12px; border-radius:20px; padding:3px 12px; margin-top:4px;}
+  .foot { color:rgba(255,255,255,.55); text-align:center; margin-top:36px; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>3S 运动中心管理系统</h1>
+  <div class="sub">多商户 SaaS · 会员端 + 员工端（移动） · 商户管理后台 · 平台总后台</div>
+  <div class="grid">
+    <a class="card" href="/m/">
+      <div class="icon">📱</div>
+      <h2>会员端 / 员工端 <span class="tag">移动 H5</span></h2>
+      <p>浏览场馆与教练、在线购卡签约、约团课/私教、扫码签到、消课确认；员工按角色开卡、核销、管理预约。</p>
+      <div class="acc"><b>会员</b> 13911110001~16 / 123456<br><b>员工</b> front01·sale01·coach01·manager01 / admin123</div>
+    </a>
+    <a class="card" href="/admin/">
+      <div class="icon">🖥️</div>
+      <h2>商户管理后台 <span class="tag">Web</span></h2>
+      <p>数据看板、会员与会员卡管理、卡类型配置、排课与核销、教练与消课、财务双口径报表、员工权限。</p>
+      <div class="acc"><b>店长</b> manager01 / admin123<br><b>商户管理员</b> admin / admin123</div>
+    </a>
+    <a class="card" href="/platform/">
+      <div class="icon">🏢</div>
+      <h2>平台总后台 <span class="tag">Web</span></h2>
+      <p>商户与门店开通、平台经营总览、通知发布、操作日志监控。</p>
+      <div class="acc"><b>平台管理员</b> platform / admin123</div>
+    </a>
+  </div>
+  <div class="foot">Powered by Node.js + Express + MySQL(腾讯云) · 端口 8090</div>
+</div>
+</body>
+</html>

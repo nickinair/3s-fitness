@@ -1,0 +1,95 @@
+[fitness-app] server listening on http://localhost:8090
+[ERROR] POST /api/auth/login Error: Connection lost: The server closed the connection.
+    at query (/Users/nickni/Desktop/fitness-app/server/src/db.js:7:29)
+    at Object.queryOne (/Users/nickni/Desktop/fitness-app/server/src/db.js:12:22)
+    at /Users/nickni/Desktop/fitness-app/server/src/routes/auth.js:14:24
+    at Layer.handleRequest (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/layer.js:152:17)
+    at next (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/route.js:117:3)
+    at handle (/Users/nickni/Desktop/fitness-app/server/node_modules/router/index.js:435:11)
+    at Layer.handleRequest (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/layer.js:152:17)
+    at /Users/nickni/Desktop/fitness-app/server/node_modules/router/index.js:295:15
+    at processParams (/Users/nickni/Desktop/fitness-app/server/node_modules/router/index.js:582:12) {
+  fatal: true,
+  code: 'PROTOCOL_CONNECTION_LOST'
+}
+[ERROR] GET /api/clubs Error: Connection lost: The server closed the connection.
+    at Object.query (/Users/nickni/Desktop/fitness-app/server/src/db.js:7:29)
+    at /Users/nickni/Desktop/fitness-app/server/src/routes/common.js:11:27
+    at Layer.handleRequest (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/layer.js:152:17)
+    at next (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/route.js:157:13)
+    at /Users/nickni/Desktop/fitness-app/server/src/middleware/auth.js:27:5
+    at Layer.handleRequest (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/layer.js:152:17)
+    at next (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/route.js:117:3)
+    at handle (/Users/nickni/Desktop/fitness-app/server/node_modules/router/index.js:435:11)
+    at Layer.handleRequest (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/layer.js:152:17) {
+  fatal: true,
+  code: 'PROTOCOL_CONNECTION_LOST'
+}
+[ERROR] GET /api/finance/dashboard?date=2026-09-06 Error: Connection lost: The server closed the connection.
+    at Object.exec (/Users/nickni/Desktop/fitness-app/server/src/db.js:22:26)
+    at lifecycleTick (/Users/nickni/Desktop/fitness-app/server/src/util.js:37:12)
+    at /Users/nickni/Desktop/fitness-app/server/src/routes/finance.js:12:11
+    at Layer.handleRequest (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/layer.js:152:17)
+    at next (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/route.js:157:13)
+    at /Users/nickni/Desktop/fitness-app/server/src/middleware/auth.js:27:5
+    at Layer.handleRequest (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/layer.js:152:17)
+    at next (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (/Users/nickni/Desktop/fitness-app/server/node_modules/router/lib/route.js:117:3)
+    at handle (/Users/nickni/Desktop/fitness-app/server/node_modules/router/index.js:435:11) {
+  fatal: true,
+  code: 'PROTOCOL_CONNECTION_LOST'
+}
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[ERROR] POST /api/auth/member/login Error: connect ETIMEDOUT
+    at run (/Users/nickni/Desktop/fitness-app/server/src/db.js:15:17)
+    at async query (/Users/nickni/Desktop/fitness-app/server/src/db.js:20:18)
+    at async Object.queryOne (/Users/nickni/Desktop/fitness-app/server/src/db.js:25:16)
+    at async /Users/nickni/Desktop/fitness-app/server/src/routes/auth.js:41:15 {
+  errorno: 'ETIMEDOUT',
+  code: 'ETIMEDOUT',
+  syscall: 'connect',
+  fatal: true
+}
+lifecycle tick failed: connect ETIMEDOUT
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[ai] 豆包解析失败, 回落规则引擎: items is not iterable
+[ai] 豆包解析失败, 回落规则引擎: items is not iterable
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090
+[fitness-app] server listening on http://localhost:8090

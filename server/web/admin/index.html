@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3S运动中心 · 管理后台</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💪</text></svg>">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus@2.8.0/dist/index.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus@2.8.0/theme-chalk/dark/css-vars.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script>/* 提前应用主题, 避免首屏闪烁 */
+    (function () {
+      try {
+        var m = localStorage.getItem('fit_admin_theme') || 'auto';
+        var dark = m === 'dark' || (m === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark');
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue-router@4.4.3/dist/vue-router.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/element-plus@2.8.0/dist/index.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/element-plus@2.8.0/dist/locale/zh-cn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@element-plus/icons-vue@2.3.1/dist/index.iife.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js"></script>
+
+  <script src="js/api.js"></script>
+  <script src="js/recorder.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/pages/login.js"></script>
+  <script src="js/pages/dashboard.js"></script>
+  <script src="js/pages/members.js"></script>
+  <script src="js/pages/member-detail.js"></script>
+  <script src="js/pages/potentials.js"></script>
+  <script src="js/pages/member-overview.js"></script>
+  <script src="js/pages/members-import.js"></script>
+  <script src="js/pages/card-categories.js"></script>
+  <script src="js/pages/card-open.js"></script>
+  <script src="js/pages/cards.js"></script>
+  <script src="js/pages/card-detail.js"></script>
+  <script src="js/pages/contracts.js"></script>
+  <script src="js/pages/coaches.js"></script>
+  <script src="js/pages/pt-bookings.js"></script>
+  <script src="js/pages/pt-records.js"></script>
+  <script src="js/pages/coach-students.js"></script>
+  <script src="js/pages/coach-performance.js"></script>
+  <script src="js/pages/group-courses.js"></script>
+  <script src="js/pages/schedule.js"></script>
+  <script src="js/pages/checkin.js"></script>
+  <script src="js/pages/checkin-records.js"></script>
+  <script src="js/pages/checkin-report.js"></script>
+  <script src="js/pages/finance-monthly.js"></script>
+  <script src="js/pages/finance-recharges.js"></script>
+  <script src="js/pages/finance-spends.js"></script>
+  <script src="js/pages/finance-sales.js"></script>
+  <script src="js/pages/report.js"></script>
+  <script src="js/pages/settings.js"></script>
+  <script src="js/pages/training-plans.js"></script>
+  <script src="js/pages/milestones.js"></script>
+  <script src="js/pages/training-actions.js"></script>
+  <script src="js/pages/card-intents.js"></script>
+  <script src="js/pages/sms-logs.js"></script>
+  <script src="js/pages/coach-consume.js"></script>
+  <script src="js/pages/member-segments.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
