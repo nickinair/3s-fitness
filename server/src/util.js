@@ -35,6 +35,8 @@ async function lifecycleTick(force = false) {
   const n = now();
   // 使用中 -> 已过期
   await db.exec('UPDATE biz_member_card SET status=2 WHERE status=1 AND expire_time IS NOT NULL AND expire_time < ?', [n]);
+  // 已过期但到期时间被改到未来(改卡延期) -> 恢复使用中
+  await db.exec('UPDATE biz_member_card SET status=1 WHERE status=2 AND expire_time IS NOT NULL AND expire_time >= ?', [n]);
   // 暂停到期 -> 恢复使用
   await db.exec('UPDATE biz_member_card SET status=1, suspend_start_time=NULL, suspend_end_time=NULL WHERE status=3 AND suspend_end_time IS NOT NULL AND suspend_end_time < ?', [n]);
   // 待开卡超过最晚开卡日期 -> 自动激活

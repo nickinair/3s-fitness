@@ -27,7 +27,7 @@ window.AppPages.PtBookings = {
         <el-select v-model="query.status" placeholder="状态" clearable style="width:110px">
           <el-option v-for="(v,k) in DICT.ptStatus" :key="k" :value="k" :label="v" />
         </el-select>
-        <el-select v-if="role !== 'coach'" v-model="query.coach_id" placeholder="教练" clearable style="width:120px">
+        <el-select v-if="role !== 'coach' && !myCoachId" v-model="query.coach_id" placeholder="教练" clearable style="width:120px">
           <el-option v-for="c in coaches" :key="c.id" :value="c.id" :label="c.realname" />
         </el-select>
         <el-input v-model="query.keyword" placeholder="会员/手机号" clearable style="width:160px" @keyup.enter="search" />

@@ -386,8 +386,8 @@ r.get('/ptrain-bookings', staffAuth(), async (req, res, next) => {
     const { p, size, offset } = page(req);
     const { coach_id, vip_id, date, date_from, date_to, status, keyword, order } = req.query;
     const cond = ['merchant_id=?']; const params = [req.user.mid];
-    // 教练只看自己的
-    if (req.user.role === 'coach') { cond.push('coach_id=?'); params.push(req.user.coachId); }
+    // 教练只看自己的; 绑定了教练档案的管理员/店长同样只看自己名下, 避免互相看到别人约的课
+    if (req.user.role === 'coach' || req.user.coachId) { cond.push('coach_id=?'); params.push(req.user.coachId); }
     else if (coach_id) { cond.push('coach_id=?'); params.push(coach_id); }
     if (vip_id) { cond.push('vip_id=?'); params.push(vip_id); }
     if (date) { cond.push('`date`=?'); params.push(date); }
