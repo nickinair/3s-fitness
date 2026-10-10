@@ -144,6 +144,7 @@
       '      </div>',
       '      <div class="bk-time mt8"><van-icon name="clock-o" size="13"/> <b>{{ b.from_time }}-{{ b.to_time }}</b>',
       '        <span class="bk-day">{{ H.day(b.date) }}（{{ H.week(b.date) }}）</span></div>',
+      '      <div class="mt4"><van-icon name="manager-o" size="13"/> 上课教练：<b>{{ b.coach_name || \'未指定\' }}</b></div>',
       '      <div class="muted mt4">{{ b.card_type_name }} · 扣{{ b.card_deduct_num }}课时</div>',
       '      <div class="muted mt4" v-if="b.remark">备注：{{ b.remark }}</div>',
       '      <div class="foot" v-if="b.status===0 || b.status===1">',

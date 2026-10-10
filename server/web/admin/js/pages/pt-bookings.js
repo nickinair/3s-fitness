@@ -45,9 +45,10 @@ window.AppPages.PtBookings = {
             <div class="text-muted">{{ row.phone }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="coach_name" label="教练" width="90" />
+        <el-table-column prop="coach_name" label="上课教练" width="90" />
         <el-table-column prop="course_title" label="课程" min-width="110" show-overflow-tooltip />
         <el-table-column prop="card_type_name" label="扣课卡" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="remark" label="备注(代约人)" min-width="120" show-overflow-tooltip />
         <el-table-column label="状态" width="140">
           <template #default="{ row }">
             <dict-tag dict="ptStatus" :value="row.status" />
