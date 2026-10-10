@@ -29,6 +29,7 @@ class UserButtonConfigController {
           data: this.getDefaultButtonConfig(role, pageType)
         });
       }
+    } catch (error) {
       console.error('[ERROR] 获取按钮配置错误:', error);
       res.status(500).json({
         code: 500,
