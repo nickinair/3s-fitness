@@ -13,25 +13,27 @@ class UserButtonConfigController {
         WHERE user_id = ? AND role = ? AND page_type = ?
       `;
 
-      const [rows] = await db.execute(sql, [userId, role, pageType]);
+      const rows = await db.query(sql, [userId, role, pageType]);
 
       if (rows.length > 0) {
         res.json({
+          code: 0,
           success: true,
           data: rows[0].button_config
         });
       } else {
         // 返回默认配置
         res.json({
+          code: 0,
           success: true,
           data: this.getDefaultButtonConfig(role, pageType)
         });
       }
-    } catch (error) {
-      console.error('获取按钮配置错误:', error);
+      console.error('[ERROR] 获取按钮配置错误:', error);
       res.status(500).json({
+        code: 500,
         success: false,
-        message: error.message
+        msg: '服务器内部错误: ' + error.message
       });
     }
   }
@@ -74,17 +76,19 @@ class UserButtonConfigController {
         button_config = ?, updated_at = CURRENT_TIMESTAMP
       `;
 
-      await db.execute(sql, [userId, role, pageType, JSON.stringify(buttonConfig), JSON.stringify(buttonConfig)]);
+      await db.query(sql, [userId, role, pageType, JSON.stringify(buttonConfig), JSON.stringify(buttonConfig)]);
 
       res.json({
+        code: 0,
         success: true,
         message: '保存成功'
       });
     } catch (error) {
-      console.error('保存按钮配置错误:', error);
+      console.error('[ERROR] 保存按钮配置错误:', error);
       res.status(500).json({
+        code: 500,
         success: false,
-        message: error.message
+        msg: '服务器内部错误: ' + error.message
       });
     }
   }
@@ -97,14 +101,16 @@ class UserButtonConfigController {
       const availableButtons = this.getAvailableButtonsConfig(role, pageType);
 
       res.json({
+        code: 0,
         success: true,
         data: availableButtons
       });
     } catch (error) {
-      console.error('获取可用按钮错误:', error);
+      console.error('[ERROR] 获取可用按钮错误:', error);
       res.status(500).json({
+        code: 500,
         success: false,
-        message: error.message
+        msg: '服务器内部错误: ' + error.message
       });
     }
   }
