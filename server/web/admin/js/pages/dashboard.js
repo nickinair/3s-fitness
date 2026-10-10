@@ -47,6 +47,10 @@ window.AppPages.Dashboard = {
       
       // 报表相关
       rmonth: dayjs().format('YYYY-MM'),
+      // 报表门店口径: 与移动端一致默认「全部门店」, 不跟随顶部门店切换; 仅管理员可切换
+      rclub: 'all',
+      rclubs: [],
+      isAdmin: (Auth.getUser() || {}).role === 'admin',
       membersData: null,
       financeData: null,
       loadingMembers: false,
@@ -261,8 +265,12 @@ window.AppPages.Dashboard = {
 
     <!-- 用户数据 Tab -->
     <div v-show="activeTab === 'members'" v-loading="loadingMembers">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:15px">
-        <el-date-picker v-model="rmonth" type="month" value-format="YYYY-MM" :clearable="false" @change="loadMembers" style="width:160px" />
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:15px">
+        <el-select v-if="isAdmin && rclubs.length" v-model="rclub" style="width:170px" @change="onReportClub">
+          <el-option value="all" label="全部门店" />
+          <el-option v-for="c in rclubs" :key="c.id" :value="c.id" :label="c.name" />
+        </el-select>
+        <el-date-picker v-model="rmonth" type="month" value-format="YYYY-MM" :clearable="false" @change="onReportMonth" style="width:160px" />
       </div>
       <template v-if="membersData">
         <div class="metric-grid">
@@ -279,29 +287,29 @@ window.AppPages.Dashboard = {
         <div class="three-col" style="grid-template-columns: 1fr 1fr; gap:20px">
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
-                <span>新开会员卡 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共{{membersData.newCards.sum}}人</span></span>
-                <el-button link type="primary" @click="previewDetail('members', 'new_cards')">导出预览</el-button>
+                <span>新开会员卡 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共计{{membersData.newCards.sum}}人</span></span>
+                <el-button link type="primary" @click="previewDetail('members', 'new_cards')">导出明细</el-button>
               </div>
               <ratio-list :list="membersData.newCards.list" unit="人" />
            </div>
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
-                <span>教练有效课时 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共{{membersData.coachHours.sum}}节</span></span>
-                <el-button link type="primary" @click="previewDetail('members', 'coach_hours')">导出预览</el-button>
+                <span>教练有效课时 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共计{{membersData.coachHours.sum}}节</span></span>
+                <el-button link type="primary" @click="previewDetail('members', 'coach_hours')">导出明细</el-button>
               </div>
               <ratio-list :list="membersData.coachHours.list" unit="节" />
            </div>
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
-                <span>销售成单 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共{{membersData.salesOrders.sum}}单</span></span>
-                <el-button link type="primary" @click="previewDetail('members', 'sales_orders')">导出预览</el-button>
+                <span>销售成单 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共计{{membersData.salesOrders.sum}}单</span></span>
+                <el-button link type="primary" @click="previewDetail('members', 'sales_orders')">导出明细</el-button>
               </div>
               <ratio-list :list="membersData.salesOrders.list" unit="单" />
            </div>
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
-                <span>预约排行Top20 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共{{membersData.bookingTop.sum}}次</span></span>
-                <el-button link type="primary" @click="previewDetail('members', 'booking_top')">导出预览</el-button>
+                <span>预约排行Top20 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共计{{membersData.bookingTop.sum}}次</span></span>
+                <el-button link type="primary" @click="previewDetail('members', 'booking_top')">导出明细</el-button>
               </div>
               <ratio-list :list="membersData.bookingTop.list" unit="次" />
            </div>
@@ -311,8 +319,12 @@ window.AppPages.Dashboard = {
 
     <!-- 财务数据 Tab -->
     <div v-show="activeTab === 'finance'" v-loading="loadingFinance">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:15px">
-        <el-date-picker v-model="rmonth" type="month" value-format="YYYY-MM" :clearable="false" @change="loadFinance" style="width:160px" />
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:15px">
+        <el-select v-if="isAdmin && rclubs.length" v-model="rclub" style="width:170px" @change="onReportClub">
+          <el-option value="all" label="全部门店" />
+          <el-option v-for="c in rclubs" :key="c.id" :value="c.id" :label="c.name" />
+        </el-select>
+        <el-date-picker v-model="rmonth" type="month" value-format="YYYY-MM" :clearable="false" @change="onReportMonth" style="width:160px" />
       </div>
       <template v-if="financeData">
         <div class="metric-grid">
@@ -330,22 +342,23 @@ window.AppPages.Dashboard = {
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
                 <span>会员卡营收</span>
-                <el-button link type="primary" @click="previewDetail('finance', 'by_card')">导出预览</el-button>
+                <el-button link type="primary" @click="previewDetail('finance', 'by_card')">导出明细</el-button>
               </div>
               <ratio-list :list="financeData.byCard.list" money />
            </div>
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
                 <span>销售业绩</span>
-                <el-button link type="primary" @click="previewDetail('finance', 'sales')">导出预览</el-button>
+                <el-button link type="primary" @click="previewDetail('finance', 'sales')">导出明细</el-button>
               </div>
               <ratio-list :list="financeData.sales.list" money />
            </div>
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
-                <span>人效 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">权责发生制营收: ¥{{Fmt.num(financeData.accrual)}}</span></span>
-                <el-button link type="primary" @click="previewDetail('finance', 'staff_value')">导出预览</el-button>
+                <span>人效 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">营收(权责发生制): ¥{{Fmt.num(financeData.accrual)}}</span></span>
+                <el-button link type="primary" @click="previewDetail('finance', 'staff_value')">导出明细</el-button>
               </div>
+              <div class="text-muted" style="font-size:12px">(教练所有课程价值总和，团课价值取决于约课人数)</div>
               <ratio-list :list="financeData.staffValue.list" money />
            </div>
         </div>
@@ -404,14 +417,23 @@ window.AppPages.Dashboard = {
     },
     pctCls(v) { v = Number(v) || 0; return v > 0 ? 'up' : (v < 0 ? 'down' : ''); },
     pctText(v) { v = Number(v) || 0; let a = v > 0 ? '▲ ' : (v < 0 ? '▼ ' : ''); return a + Fmt.num(Math.abs(v)) + '%'; },
+    // 显式传 club_id, 覆盖顶部门店切换带的 X-Club-Id 请求头(非管理员后端固定本店, 忽略该参数)
+    reportParams(extra) { return Object.assign({ month: this.rmonth, club_id: this.rclub }, extra); },
+    async loadReportClubs() {
+      if (!this.isAdmin) return;
+      try { this.rclubs = await api.get('/clubs'); } catch (e) { /* ignore */ }
+    },
+    // 切换月份/门店后两个标签页的数据都失效, 只重载当前页
+    onReportMonth() { this.membersData = null; this.financeData = null; this.onTabChange(); },
+    onReportClub() { this.onReportMonth(); },
     async loadMembers() {
       this.loadingMembers = true;
-      try { this.membersData = await api.get('/report/members?month=' + this.rmonth); }
+      try { this.membersData = await api.get('/report/members', this.reportParams()); }
       finally { this.loadingMembers = false; }
     },
     async loadFinance() {
       this.loadingFinance = true;
-      try { this.financeData = await api.get('/report/finance?month=' + this.rmonth); }
+      try { this.financeData = await api.get('/report/finance', this.reportParams()); }
       finally { this.loadingFinance = false; }
     },
     async previewDetail(src, section) {
@@ -421,7 +443,7 @@ window.AppPages.Dashboard = {
       this.preview.visible = true;
       this.preview.loading = true;
       try {
-        const d = await api.get('/report/' + src + '?month=' + this.rmonth + '&detail=' + section);
+        const d = await api.get('/report/' + src, this.reportParams({ detail: section }));
         this.preview.data = d;
         this.preview.title = d.title;
         const items = [];
@@ -436,9 +458,9 @@ window.AppPages.Dashboard = {
       }
     },
     exportDetailCsv() {
-      const url = api.exportUrl('/report/' + this.preview.src, { month: this.rmonth, export: 'csv', section: this.preview.section });
+      const url = api.exportUrl('/report/' + this.preview.src, this.reportParams({ section: this.preview.section }));
       window.open(url);
     }
   },
-  mounted() { this.load(); this.loadMonthly(); this.loadSegs(); },
+  mounted() { this.load(); this.loadMonthly(); this.loadSegs(); this.loadReportClubs(); },
 };
