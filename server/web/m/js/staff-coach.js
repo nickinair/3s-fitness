@@ -2,12 +2,13 @@
 (function () {
   // 管理员没有教练档案, 选一位教练后即可使用教练的全部功能
   let picked = 0;
-  const coachId = () => (Store.user && Store.user.coach_id) || picked || 0;
+  let selfChecked = false;   // 本次打开是否已向服务端核实过本人教练身份
+  const selfId = () => (Store.user && Store.user.coach_id) || 0;
+  const coachId = () => selfId() || picked || 0;
 
   const CoachPick = {
-    data() { return { coachList: [], coachPick: false, myPick: 0 }; },
+    data() { return { coachList: [], coachPick: false, myPick: 0, needPick: !selfId() }; },
     computed: {
-      needPick() { return !(Store.user && Store.user.coach_id); },
       coachCols() { return this.coachList.map(c => ({ text: c.realname, value: c.id })); },
       curCoachName() {
         const id = this.myPick || coachId();
@@ -18,6 +19,15 @@
     methods: {
       // 页面 load 前调用: 管理员首次进入时拉教练列表并默认选中第一位
       async ensureCoach() {
+        // 登录后才绑定教练档案时本地缓存里 coach_id 还是 0, 先向服务端核实, 有档案就只看本人
+        if (!selfId() && !selfChecked) {
+          selfChecked = true;
+          try {
+            const me = await API.get('/coaches/me', { silent: true });
+            if (me && me.id) Store.user = Object.assign({}, Store.user, { coach_id: me.id });
+          } catch (e) { /* 纯管理岗无档案, 走教练选择 */ }
+        }
+        this.needPick = !selfId();
         if (!this.needPick) return true;
         if (!this.coachList.length) {
           const d = await API.get('/coaches');

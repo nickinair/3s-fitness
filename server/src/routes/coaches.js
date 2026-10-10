@@ -70,10 +70,17 @@ r.put('/coaches/:id', staffAuth('admin', 'manager', 'coach'), async (req, res, n
   } catch (e) { next(e); }
 });
 
-// 教练本人的档案(工作台「我的主页」用)
+// 当前登录账号绑定的教练档案ID: 以数据库为准, 登录后才建/绑档案时 token 里的 coachId 还是旧的 0
+async function myCoachId(req) {
+  if (req.user.coachId) return req.user.coachId;
+  const c = await db.queryOne('SELECT id FROM biz_club_coach WHERE user_id=? AND merchant_id=? AND status=1', [req.user.uid, req.user.mid]);
+  return c ? c.id : 0;
+}
+
+// 教练本人的档案(工作台「我的主页」「我的课表」用)
 r.get('/coaches/me', staffAuth(), async (req, res, next) => {
   try {
-    const id = req.user.coachId || 0;
+    const id = await myCoachId(req);
     if (!id) throw new BizError('当前账号不是教练');
     const row = await db.queryOne('SELECT * FROM biz_club_coach WHERE id=? AND merchant_id=?', [id, req.user.mid]);
     if (!row) throw new BizError('教练档案不存在');
@@ -386,8 +393,8 @@ r.get('/ptrain-bookings', staffAuth(), async (req, res, next) => {
     const { p, size, offset } = page(req);
     const { coach_id, vip_id, date, date_from, date_to, status, keyword, order } = req.query;
     const cond = ['merchant_id=?']; const params = [req.user.mid];
-    // 教练只看自己的; 绑定了教练档案的管理员/店长同样只看自己名下, 避免互相看到别人约的课
-    if (req.user.role === 'coach' || req.user.coachId) { cond.push('coach_id=?'); params.push(req.user.coachId); }
+    // 教练只看自己的; 管理员/店长等在预约管理里看全部
+    if (req.user.role === 'coach') { cond.push('coach_id=?'); params.push(req.user.coachId); }
     else if (coach_id) { cond.push('coach_id=?'); params.push(coach_id); }
     if (vip_id) { cond.push('vip_id=?'); params.push(vip_id); }
     if (date) { cond.push('`date`=?'); params.push(date); }
@@ -410,7 +417,8 @@ r.get('/ptrain-bookings', staffAuth(), async (req, res, next) => {
 r.get('/coaches/:id/schedule', staffAuth(), async (req, res, next) => {
   try {
     const { from, to } = req.query;
-    const coachId = req.params.id;
+    // 教练角色只能看自己的课表; 管理员/店长可切换查看任意教练
+    const coachId = req.user.role === 'coach' ? await myCoachId(req) : req.params.id;
     const bookings = await db.query(
       `SELECT * FROM biz_ptrain_bespeak_record WHERE coach_id=? AND \`date\` BETWEEN ? AND ? ORDER BY \`date\`, from_time`, [coachId, from, to]);
     const classes = await db.query(
