@@ -139,10 +139,12 @@ window.Pages.StaffTodayBookings = {
     const t = H.today();
     try {
       const [p, g] = await Promise.all([
-        API.get('/ptrain-bookings?date=' + t + '&size=100'),
+        API.get('/ptrain-bookings?date=' + t + '&size=100&order=asc'),   // 按上课时间从早到晚
         API.get('/syllabus-bookings?date=' + t + '&size=100'),
       ]);
-      this.pt = p.list || []; this.group = g.list || [];
+      this.pt = p.list || [];
+      // 团课接口按预约先后返回, 这里按上课时间从早到晚排
+      this.group = (g.list || []).slice().sort((a, b) => (a.class_start_time < b.class_start_time ? -1 : a.class_start_time > b.class_start_time ? 1 : a.id - b.id));
     } finally { this.loading = false; }
   },
 };
