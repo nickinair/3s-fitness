@@ -37,7 +37,9 @@
     let j = null;
     try { j = await res.json(); } catch (e) { /* ignore */ }
     if (!j || typeof j.code === 'undefined') {
-      vant.showToast('服务异常');
+      // 非 JSON 响应: 多为后端进程未启动/重启中, nginx 返回 502/504 页面; 带上状态码便于排查
+      const busy = [502, 503, 504].includes(res.status);
+      vant.showToast(busy ? '服务器正在重启或无响应，请稍后刷新(' + res.status + ')' : '服务异常(' + res.status + ')');
       const e = new Error('服务异常'); e.handled = true; throw e;
     }
     if (j.code !== 0) {
