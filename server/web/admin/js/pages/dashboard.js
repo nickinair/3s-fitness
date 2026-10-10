@@ -47,9 +47,6 @@ window.AppPages.Dashboard = {
       
       // 报表相关
       rmonth: dayjs().format('YYYY-MM'),
-      // 报表门店口径: 与移动端一致默认「全部门店」, 不跟随顶部门店切换; 仅管理员可切换
-      rclub: 'all',
-      rclubs: [],
       isAdmin: (Auth.getUser() || {}).role === 'admin',
       membersData: null,
       financeData: null,
@@ -266,10 +263,6 @@ window.AppPages.Dashboard = {
     <!-- 用户数据 Tab -->
     <div v-show="activeTab === 'members'" v-loading="loadingMembers">
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:15px">
-        <el-select v-if="isAdmin && rclubs.length" v-model="rclub" style="width:170px" @change="onReportClub">
-          <el-option value="all" label="全部门店" />
-          <el-option v-for="c in rclubs" :key="c.id" :value="c.id" :label="c.name" />
-        </el-select>
         <el-date-picker v-model="rmonth" type="month" value-format="YYYY-MM" :clearable="false" @change="onReportMonth" style="width:160px" />
       </div>
       <template v-if="membersData">
@@ -277,6 +270,10 @@ window.AppPages.Dashboard = {
           <div class="metric-card"><div class="m-label">累计会员</div><div class="m-value">{{ Fmt.num(membersData.summary.total_members) }}</div><div class="m-diff" :class="pctCls(membersData.summary.total_pct)">较上月 {{ pctText(membersData.summary.total_pct) }}</div></div>
           <div class="metric-card"><div class="m-label">在籍会员</div><div class="m-value">{{ Fmt.num(membersData.summary.active_members) }}</div><div class="m-diff" :class="pctCls(membersData.summary.active_pct)">较上月 {{ pctText(membersData.summary.active_pct) }}</div></div>
           <div class="metric-card"><div class="m-label">新会员</div><div class="m-value">{{ Fmt.num(membersData.summary.new_members) }}</div><div class="m-diff" :class="pctCls(membersData.summary.new_pct)">较上月 {{ pctText(membersData.summary.new_pct) }}</div></div>
+          <div class="metric-card"><div class="m-label">复购会员
+            <el-tooltip content="复购会员 = 当月老会员续卡/再次购卡/充值的去重人数" placement="top">
+              <el-icon style="cursor:help;vertical-align:-2px;margin-left:2px;color:var(--el-text-color-secondary)" size="13"><InfoFilled /></el-icon>
+            </el-tooltip></div><div class="m-value">{{ Fmt.num(membersData.summary.repeat_members) }}</div><div class="m-diff" :class="pctCls(membersData.summary.repeat_pct)">较上月 {{ pctText(membersData.summary.repeat_pct) }}</div></div>
         </div>
         
         <div class="card-box">
@@ -320,10 +317,6 @@ window.AppPages.Dashboard = {
     <!-- 财务数据 Tab -->
     <div v-show="activeTab === 'finance'" v-loading="loadingFinance">
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:15px">
-        <el-select v-if="isAdmin && rclubs.length" v-model="rclub" style="width:170px" @change="onReportClub">
-          <el-option value="all" label="全部门店" />
-          <el-option v-for="c in rclubs" :key="c.id" :value="c.id" :label="c.name" />
-        </el-select>
         <el-date-picker v-model="rmonth" type="month" value-format="YYYY-MM" :clearable="false" @change="onReportMonth" style="width:160px" />
       </div>
       <template v-if="financeData">
@@ -417,15 +410,14 @@ window.AppPages.Dashboard = {
     },
     pctCls(v) { v = Number(v) || 0; return v > 0 ? 'up' : (v < 0 ? 'down' : ''); },
     pctText(v) { v = Number(v) || 0; let a = v > 0 ? '▲ ' : (v < 0 ? '▼ ' : ''); return a + Fmt.num(Math.abs(v)) + '%'; },
-    // 显式传 club_id, 覆盖顶部门店切换带的 X-Club-Id 请求头(非管理员后端固定本店, 忽略该参数)
-    reportParams(extra) { return Object.assign({ month: this.rmonth, club_id: this.rclub }, extra); },
-    async loadReportClubs() {
-      if (!this.isAdmin) return;
-      try { this.rclubs = await api.get('/clubs'); } catch (e) { /* ignore */ }
+    // 门店口径跟随顶部门店切换; 显式传 club_id, 让 CSV 下载(无请求头)与页面数据一致. 非管理员后端固定本店, 忽略该参数
+    reportParams(extra) {
+      const p = { month: this.rmonth };
+      if (this.isAdmin) p.club_id = Auth.getClubId() || 'all';
+      return Object.assign(p, extra);
     },
-    // 切换月份/门店后两个标签页的数据都失效, 只重载当前页
+    // 切换月份后两个标签页的数据都失效, 只重载当前页
     onReportMonth() { this.membersData = null; this.financeData = null; this.onTabChange(); },
-    onReportClub() { this.onReportMonth(); },
     async loadMembers() {
       this.loadingMembers = true;
       try { this.membersData = await api.get('/report/members', this.reportParams()); }
@@ -462,5 +454,5 @@ window.AppPages.Dashboard = {
       window.open(url);
     }
   },
-  mounted() { this.load(); this.loadMonthly(); this.loadSegs(); this.loadReportClubs(); },
+  mounted() { this.load(); this.loadMonthly(); this.loadSegs(); },
 };

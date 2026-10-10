@@ -261,6 +261,7 @@
       '        <div class="rpt-kpi"><div class="l">累计会员</div><div class="v">{{ H.num(membersData.summary.total_members) }}</div><div :class="[\'rpt-kpi-pct\', pctCls(membersData.summary.total_pct)]">{{ pctText(membersData.summary.total_pct) }}</div></div>',
       '        <div class="rpt-kpi"><div class="l">在籍会员</div><div class="v">{{ H.num(membersData.summary.active_members) }}</div><div :class="[\'rpt-kpi-pct\', pctCls(membersData.summary.active_pct)]">{{ pctText(membersData.summary.active_pct) }}</div></div>',
       '        <div class="rpt-kpi"><div class="l">新会员</div><div class="v">{{ H.num(membersData.summary.new_members) }}</div><div :class="[\'rpt-kpi-pct\', pctCls(membersData.summary.new_pct)]">{{ pctText(membersData.summary.new_pct) }}</div></div>',
+      '        <div class="rpt-kpi"><div class="l">复购会员</div><div class="v">{{ H.num(membersData.summary.repeat_members) }}</div><div :class="[\'rpt-kpi-pct\', pctCls(membersData.summary.repeat_pct)]">{{ pctText(membersData.summary.repeat_pct) }}</div></div>',
       '      </div>',
       '      <div class="sec-title">新会员趋势</div>',
       '      <div class="card-box"><m-line-chart :data="membersTrend"></m-line-chart></div>',

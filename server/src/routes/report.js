@@ -149,14 +149,18 @@ r.get('/report/members', staffAuth(), async (req, res, next) => {
         `SELECT
           (SELECT COUNT(*) FROM biz_vip_user v WHERE merchant_id=? AND status=1 AND insert_time<=?${MC}) total_members,
           (SELECT COUNT(DISTINCT v.id) FROM biz_vip_user v JOIN biz_member_card c ON c.vip_id=v.id AND c.status IN (0,1,3) AND c.open_card_time<=? AND (c.expire_time IS NULL OR c.expire_time>=?)${cw(club, 'c.')} WHERE v.merchant_id=? AND v.status=1) active_members,
-          (SELECT COUNT(*) FROM biz_vip_user v WHERE merchant_id=? AND insert_time BETWEEN ? AND ?${MC}) new_members`,
-        [mid, b, ...P, b, a, ...P, mid, mid, a, b, ...P]);
+          (SELECT COUNT(*) FROM biz_vip_user v WHERE merchant_id=? AND insert_time BETWEEN ? AND ?${MC}) new_members,
+          (SELECT COUNT(DISTINCT vip_id) FROM biz_card_recharge WHERE merchant_id=? AND is_new_user=0 AND actual_money>0 AND insert_time BETWEEN ? AND ?${C}) repeat_members`,
+        [mid, b, ...P, b, a, ...P, mid, mid, a, b, ...P, mid, a, b, ...P]);
       return row;
     }
     const cur = await core(month); const prev = await core(lastMonth);
     const summary = {
       total_members: Number(cur.total_members), active_members: Number(cur.active_members), new_members: Number(cur.new_members),
+      // 复购会员 = 当月有老客付费(续卡/再次开卡/充值)的去重人数, 与财务数据「复购营收」同口径
+      repeat_members: Number(cur.repeat_members),
       total_pct: pct(cur.total_members, prev.total_members), active_pct: pct(cur.active_members, prev.active_members), new_pct: pct(cur.new_members, prev.new_members),
+      repeat_pct: pct(cur.repeat_members, prev.repeat_members),
     };
     const trendFrom = dayjs(month + '-01').subtract(11, 'month').format('YYYY-MM-01');
     const trendRaw = await safeDbQuery(
