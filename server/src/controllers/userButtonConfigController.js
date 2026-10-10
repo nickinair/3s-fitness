@@ -26,7 +26,7 @@ class UserButtonConfigController {
         res.json({
           code: 0,
           success: true,
-          data: this.getDefaultButtonConfig(role, pageType)
+          data: UserButtonConfigController.getDefaultButtonConfig(role, pageType)
         });
       }
     } catch (error) {
@@ -99,7 +99,7 @@ class UserButtonConfigController {
     try {
       const { role, pageType } = req.params;
 
-      const availableButtons = this.getAvailableButtonsConfig(role, pageType);
+      const availableButtons = UserButtonConfigController.getAvailableButtonsConfig(role, pageType);
 
       res.json({
         code: 0,
