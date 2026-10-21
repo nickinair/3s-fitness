@@ -94,7 +94,7 @@
         if (!this.d) return [];
         const arr = [];
         (this.d.bookings || []).forEach(b => arr.push({
-          id: b.id, rawBooking: b, key: 'pt' + b.id, time: b.from_time, timeEnd: b.to_time, kind: 'pt',
+          id: b.id, rawBooking: b, vipId: b.vip_id, key: 'pt' + b.id, time: b.from_time, timeEnd: b.to_time, kind: 'pt',
           title: b.course_title || '私教课', sub: '学员 ' + b.realname, studentName: b.realname, phone: b.phone,
           status: b.status, confirm: b.confirm_status, lesson_plan: b.lesson_plan,
         }));
@@ -168,6 +168,7 @@
             items.push({
               id: b.id,
               rawBooking: b,
+              vipId: b.vip_id,
               key: 'pt' + b.id,
               kind: 'pt',
               title: b.course_title || '私教课',
@@ -342,7 +343,10 @@
       '            <div class="title" style="flex:1;min-width:0">{{ it.title }} <van-tag :type="it.kind===\'pt\'?\'primary\':\'success\'" plain style="margin-left:4px">{{ it.kind===\'pt\'?\'私教\':\'团课\' }}</van-tag></div>',
       '            <d-tag v-if="it.kind===\'pt\'" dict="ptStatus" :v="it.status" style="flex-shrink:0"></d-tag>',
       '          </div>',
-      '          <div class="muted mt4">{{ it.sub }}</div>',
+      '          <div class="muted mt4" style="display:flex;justify-content:space-between;align-items:center">',
+      '            <span>{{ it.sub }}</span>',
+      '            <span v-if="it.vipId" @click="$router.push(\'/staff/member/\' + it.vipId)" style="color:#0d5e56;font-size:12px;cursor:pointer"><van-icon name="user-o"/> 学员风采</span>',
+      '          </div>',
       '          <lesson-plan-card v-if="it.kind===\'pt\'" :plan="it.lesson_plan" :booking="it" :can-edit="true" @edit="openPlanEditor(it)"/>',
       '        </div>',
       '      </div>',
@@ -464,7 +468,8 @@
       '        <lesson-plan-card :plan="curItem.lesson_plan" :booking="curItem" :can-edit="true" @edit="openPlanEditor(curItem)"/>',
       '      </div>',
       '      <div style="display:flex;gap:10px">',
-      '        <van-button block round plain type="primary" @click="jumpToDay(curItem.dateStr)">查看该日详情（{{ curItem.shortDate }}）</van-button>',
+      '        <van-button v-if="curItem.vipId" block round plain icon="user-o" type="primary" @click="$router.push(\'/staff/member/\' + curItem.vipId); detailShow=false" style="flex:1">学员详情/风采</van-button>',
+      '        <van-button block round plain icon="calendar-o" @click="jumpToDay(curItem.dateStr)" style="flex:1">查看该日详情（{{ curItem.shortDate }}）</van-button>',
       '      </div>',
       '    </div>',
       '  </van-popup>',
@@ -748,7 +753,7 @@
       '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
       '  <template v-else>',
       '    <van-empty v-if="!list.length" description="暂无学员"/>',
-      '    <div v-for="s in list" :key="s.card_id" class="rec-item flex">',
+      '    <div v-for="s in list" :key="s.card_id" class="rec-item flex" @click="$router.push(\'/staff/member/\' + s.id)" style="cursor:pointer">',
       '      <m-avatar :name="s.realname" :size="44"></m-avatar>',
       '      <div class="flex1" style="margin-left:12px">',
       '        <div class="name">{{ s.realname }}',
@@ -757,6 +762,7 @@
       '        <div class="muted mt4">{{ s.phone }} · {{ s.card_type_name }}</div>',
       '        <div class="muted mt4">剩余 <b class="brand-text">{{ s.left_counts }}</b>/{{ s.counts }} 课时 · 近30天 {{ s.lessons_30d }} 节 · 最近 {{ s.last_lesson_time ? H.day(s.last_lesson_time) : \'从未上课\' }}</div>',
       '      </div>',
+      '      <van-icon name="arrow" color="#c8c9cc" style="align-self:center;margin-left:6px"/>',
       '    </div>',
       '  </template>',
       '</div>',

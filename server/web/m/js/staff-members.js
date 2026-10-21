@@ -121,6 +121,8 @@ window.Pages.StaffMemberDetail = {
       eForm: { realname: '', gender: 0, birthday: '', initial_weight: '', target_weight: '', constellation_mbti: '', training_frequency: '', studio_feedback: '', target_compare_photos: [] },
       linkShow: false, linkData: { url: '', token: '', vipName: '' },
       trainingPhotos: [],
+      photoShow: false, photoSaving: false, photoUploading: false,
+      photoForm: { photo_url: '', photo_date: H.today(), remark: '' },
     };
   },
   computed: {
@@ -216,13 +218,23 @@ window.Pages.StaffMemberDetail = {
     '      <van-cell v-for="b in bodyRecords" :key="b.id" :title="H.dateOf(b.record_date)" :label="(b.remark||\'\')+(b.coach_name?(b.remark?\' · \':\'\')+b.coach_name+\' 录入\':\'\')">',
     '        <template #value><span style="font-size:13px">体重 <b>{{ b.weight!=null?H.num(b.weight):\'-\' }}</b>kg · 体脂 <b>{{ b.body_fat!=null?H.num(b.body_fat):\'-\' }}</b>%</span></template>',
     '      </van-cell>',
-    '    <div class="sec-title">训练风采（{{ trainingPhotos.length }}）</div>',
-    '    <van-empty v-if="!trainingPhotos.length" description="暂无训练风采照片" image-size="60"/>',
-    '    <div v-else class="card-box" style="padding:10px 12px">',
-    '      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">',
-    '        <div v-for="(p, idx) in trainingPhotos" :key="p.id" style="flex-shrink:0;width:80px;text-align:center" @click="previewTrainingPhoto(idx)">',
-    '          <van-image :src="p.photo_url" width="80" height="80" radius="6" fit="cover" />',
-    '          <div class="muted" style="font-size:11px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.remark || H.dateOf(p.photo_date) }}</div>',
+    '    </div>',
+    '    <div class="sec-title">训练风采（{{ trainingPhotos.length }}）<span class="more brand-text" @click="openAddPhoto"><van-icon name="photograph"/> 添加风采</span></div>',
+    '    <van-empty v-if="!trainingPhotos.length" description="暂无训练风采照片" image-size="60">',
+    '      <template #bottom>',
+    '        <van-button size="small" round type="primary" icon="photograph" @click="openAddPhoto" style="margin-top:8px">上传训练风采照片</van-button>',
+    '      </template>',
+    '    </van-empty>',
+    '    <div v-else class="card-box" style="padding:12px">',
+    '      <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch">',
+    '        <div @click="openAddPhoto" style="flex-shrink:0;width:84px;height:84px;border:1.5px dashed #0d5e56;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f0f9f8;color:#0d5e56;cursor:pointer">',
+    '          <van-icon name="plus" size="20"/>',
+    '          <span style="font-size:11px;font-weight:600;margin-top:3px">添加风采</span>',
+    '        </div>',
+    '        <div v-for="(p, idx) in trainingPhotos" :key="p.id" style="flex-shrink:0;width:84px;position:relative" @click="previewTrainingPhoto(idx)">',
+    '          <van-image :src="p.photo_url" width="84" height="84" radius="8" fit="cover" style="box-shadow:0 1px 4px rgba(0,0,0,0.08)"/>',
+    '          <div @click.stop="delTrainingPhoto(p)" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.55);color:#fff;border-radius:50%;width:18px;height:18px;line-height:17px;text-align:center;font-size:12px;cursor:pointer">×</div>',
+    '          <div class="muted" style="font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center">{{ p.remark || H.dateOf(p.photo_date) }}</div>',
     '        </div>',
     '      </div>',
     '    </div>',
@@ -306,6 +318,34 @@ window.Pages.StaffMemberDetail = {
     '      </div>',
     '      <div class="muted" style="font-size:11px;margin-top:12px;line-height:1.5">',
     '        可将链接复制后直接在微信中发送给学员，学员无需输入密码即可直接进入完善档案。',
+    '      </div>',
+    '    </div>',
+    '  </van-popup>',
+    '  <!-- 上传训练风采弹层 -->',
+    '  <van-popup v-model:show="photoShow" position="bottom" round safe-area-inset-bottom>',
+    '    <div style="padding:20px 16px 28px">',
+    '      <div style="font-size:16px;font-weight:700;margin-bottom:4px;color:#1f2937">添加训练风采照片</div>',
+    '      <div class="muted" style="font-size:12px;margin-bottom:14px">学员：{{ p ? (p.realname || p.nickname) : \'\' }} · 照片将同步展示于学员端「训练风采」相册</div>',
+    '      <van-field label="拍摄日期">',
+    '        <template #input><input type="date" v-model="photoForm.photo_date" style="border:none;outline:none;background:transparent;font-size:14px;color:#323233"/></template>',
+    '      </van-field>',
+    '      <div style="padding:12px 16px 4px">',
+    '        <div style="font-size:14px;color:#646566;margin-bottom:8px">照片 <span style="color:#ee0a24">*</span></div>',
+    '        <div v-if="photoForm.photo_url" style="position:relative;display:inline-block;width:100px;height:100px;border-radius:8px;overflow:hidden;border:1px solid #ebedf0">',
+    '          <van-image :src="photoForm.photo_url" width="100" height="100" fit="cover"/>',
+    '          <div @click="photoForm.photo_url=\'\'" style="position:absolute;top:0;right:0;background:rgba(0,0,0,0.6);color:#fff;width:22px;height:22px;line-height:20px;text-align:center;font-size:14px;cursor:pointer">×</div>',
+    '        </div>',
+    '        <van-uploader v-else :after-read="afterReadTrainingPhoto" accept="image/*" :max-size="5 * 1024 * 1024" @oversize="vant.showToast(\'图片不能超过5MB\')">',
+    '          <div style="width:100px;height:100px;border:1.5px dashed #0d5e56;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#0d5e56;background:#f0f9f8">',
+    '            <van-icon name="photograph" size="28"/>',
+    '            <span style="font-size:11px;font-weight:600;margin-top:4px">{{ photoUploading ? \'上传中...\' : \'选择照片\' }}</span>',
+    '          </div>',
+    '        </van-uploader>',
+    '      </div>',
+    '      <van-field v-model="photoForm.remark" label="心得/备注" placeholder="如：深蹲姿势进步显著 / 训练打卡记录" maxlength="50" show-word-limit/>',
+    '      <div class="mt16" style="display:flex;gap:10px">',
+    '        <van-button plain round block @click="photoShow=false" style="flex:1">取消</van-button>',
+    '        <van-button type="primary" round block :loading="photoSaving" @click="saveTrainingPhoto" style="flex:2">保存风采</van-button>',
     '      </div>',
     '    </div>',
     '  </van-popup>',
@@ -466,6 +506,55 @@ window.Pages.StaffMemberDetail = {
     },
     previewTrainingPhoto(idx) {
       vant.showImagePreview({ images: this.trainingPhotos.map(p => p.photo_url), startPosition: idx });
+    },
+    openAddPhoto() {
+      this.photoForm = { photo_url: '', photo_date: H.today(), remark: '' };
+      this.photoUploading = false;
+      this.photoShow = true;
+    },
+    async afterReadTrainingPhoto(file) {
+      this.photoUploading = true;
+      try {
+        const url = await API.upload(file.file);
+        this.photoForm.photo_url = url;
+        vant.showToast({ message: '照片已上传', icon: 'success' });
+      } catch (e) {
+        vant.showToast(e.message || '照片上传失败');
+      } finally {
+        this.photoUploading = false;
+      }
+    },
+    async saveTrainingPhoto() {
+      if (!this.photoForm.photo_url) return vant.showToast('请先选择照片上传');
+      this.photoSaving = true;
+      try {
+        await API.post('/members/' + this.$route.params.id + '/training-photos', {
+          photo_url: this.photoForm.photo_url,
+          photo_date: this.photoForm.photo_date || H.today(),
+          remark: this.photoForm.remark ? this.photoForm.remark.trim() : null,
+        });
+        vant.showToast({ message: '训练风采已添加', icon: 'success' });
+        this.photoShow = false;
+        this.loadTrainingPhotos();
+      } catch (e) {
+        vant.showToast(e.message || '保存失败');
+      } finally {
+        this.photoSaving = false;
+      }
+    },
+    delTrainingPhoto(p) {
+      vant.showConfirmDialog({
+        title: '删除训练风采',
+        message: '确定要删除这张训练风采照片吗？',
+      }).then(async () => {
+        try {
+          await API.delete('/members/' + this.$route.params.id + '/training-photos/' + p.id);
+          vant.showToast({ message: '已删除', icon: 'success' });
+          this.loadTrainingPhotos();
+        } catch (e) {
+          vant.showToast(e.message || '删除失败');
+        }
+      }).catch(() => {});
     },
   },
   mounted() { this.load(); },

@@ -20,6 +20,8 @@ window.AppPages.MemberDetail = {
       profileLinkDlg: false, profileLinkData: { url: '', token: '', vipName: '' },
       // 训练风采相册
       trainingPhotos: [], loadingPhotos: false,
+      photoDlg: false, photoSaving: false, photoUploading: false,
+      photoForm: { photo_url: '', photo_date: dayjs().format('YYYY-MM-DD'), remark: '' },
     };
   },
   computed: {
@@ -250,12 +252,19 @@ window.AppPages.MemberDetail = {
         </el-tab-pane>
         <el-tab-pane label="训练风采" name="trainingPhotos">
           <div v-loading="loadingPhotos" style="padding:10px 0">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+              <span class="text-muted" style="font-size:13px">共 {{ trainingPhotos.length }} 张训练风采照片（与学员端及教练手机端实时同步）</span>
+              <el-button type="primary" size="small" icon="Plus" @click="openUploadPhoto">上传训练风采</el-button>
+            </div>
             <div v-if="!trainingPhotos.length">
-              <el-empty description="该会员暂未上传训练风采照片" :image-size="70" />
+              <el-empty description="该会员暂未上传训练风采照片" :image-size="70">
+                <el-button type="primary" size="small" icon="Plus" @click="openUploadPhoto">上传第一张训练风采</el-button>
+              </el-empty>
             </div>
             <div v-else style="display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:16px">
-              <div v-for="p in trainingPhotos" :key="p.id" style="background:var(--el-fill-color-light);border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.06);display:flex;flex-direction:column">
+              <div v-for="p in trainingPhotos" :key="p.id" style="background:var(--el-fill-color-light);border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.06);display:flex;flex-direction:column;position:relative">
                 <el-image :src="p.photo_url" :preview-src-list="trainingPhotos.map(x => x.photo_url)" fit="cover" style="width:100%;height:180px" />
+                <el-button link type="danger" size="small" icon="Delete" style="position:absolute;top:6px;right:6px;background:rgba(255,255,255,0.85);padding:4px 6px;border-radius:4px" @click="deletePhoto(p)">删除</el-button>
                 <div style="padding:10px;font-size:13px">
                   <div style="font-weight:600;color:var(--text-main);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.remark || '训练打卡记录' }}</div>
                   <div style="display:flex;justify-content:space-between;color:var(--text-secondary);font-size:11px">
@@ -385,6 +394,32 @@ window.AppPages.MemberDetail = {
           3. 学员补充初始体重、目标对比照等档案后，系统将自动下发积分并在会员详情实时同步。
         </div>
       </div>
+    </el-dialog>
+
+    <!-- 训练风采上传弹窗 -->
+    <el-dialog v-model="photoDlg" title="上传会员训练风采照片" width="500px" destroy-on-close>
+      <el-form label-width="80px">
+        <el-form-item label="拍摄日期">
+          <el-date-picker v-model="photoForm.photo_date" type="date" value-format="YYYY-MM-DD" placeholder="选择拍摄日期" style="width:100%"/>
+        </el-form-item>
+        <el-form-item label="照片文件" required>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <el-upload :show-file-list="false" accept="image/*" :before-upload="uploadTrainingPhotoFile">
+              <el-button size="small" type="primary" plain :loading="photoUploading">+ 选择并上传照片</el-button>
+            </el-upload>
+            <div v-if="photoForm.photo_url" style="margin-top:6px">
+              <img :src="photoForm.photo_url" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #dcdfe6"/>
+            </div>
+          </div>
+        </el-form-item>
+        <el-form-item label="心得/备注">
+          <el-input v-model="photoForm.remark" type="textarea" :rows="2" placeholder="如：深蹲姿势进步显著 / 训练打卡记录" maxlength="50" show-word-limit/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="photoDlg=false">取消</el-button>
+        <el-button type="primary" :loading="photoSaving" @click="submitPhoto">确认保存</el-button>
+      </template>
     </el-dialog>
   </div>`,
   methods: {
@@ -552,6 +587,47 @@ window.AppPages.MemberDetail = {
       } finally {
         this.loadingPhotos = false;
       }
+    },
+    openUploadPhoto() {
+      this.photoForm = { photo_url: '', photo_date: dayjs().format('YYYY-MM-DD'), remark: '' };
+      this.photoDlg = true;
+    },
+    async uploadTrainingPhotoFile(file) {
+      if (file.size > 5 * 1024 * 1024) { ElementPlus.ElMessage.warning('图片不能超过 5MB'); return false; }
+      this.photoUploading = true;
+      try {
+        const url = await api.upload(file);
+        this.photoForm.photo_url = url;
+        ElementPlus.ElMessage.success('照片已上传');
+      } catch (e) { ElementPlus.ElMessage.error(e.message || '上传失败'); }
+      finally { this.photoUploading = false; }
+      return false;
+    },
+    async submitPhoto() {
+      if (!this.photoForm.photo_url) return ElementPlus.ElMessage.warning('请先选择并上传照片');
+      this.photoSaving = true;
+      try {
+        await api.post('/members/' + this.id + '/training-photos', {
+          photo_url: this.photoForm.photo_url,
+          photo_date: this.photoForm.photo_date || dayjs().format('YYYY-MM-DD'),
+          remark: this.photoForm.remark ? this.photoForm.remark.trim() : null,
+        });
+        ElementPlus.ElMessage.success('训练风采照片已添加');
+        this.photoDlg = false;
+        this.loadTrainingPhotos();
+      } catch (e) {
+        ElementPlus.ElMessage.error(e.message || '保存失败');
+      } finally {
+        this.photoSaving = false;
+      }
+    },
+    async deletePhoto(p) {
+      try {
+        await ElementPlus.ElMessageBox.confirm('确定要删除这张训练风采照片吗？', '提示', { type: 'warning' });
+        await api.del('/members/' + this.id + '/training-photos/' + p.id);
+        ElementPlus.ElMessage.success('已删除');
+        this.loadTrainingPhotos();
+      } catch (e) { /* ignore cancel */ }
     },
   },
   watch: {

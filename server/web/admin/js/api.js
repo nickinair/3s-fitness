@@ -74,6 +74,17 @@
     post: (url, data) => request('POST', url, data),
     put: (url, data) => request('PUT', url, data),
     del: (url, params) => request('DELETE', url, params),
+    async upload(file) {
+      const fd = new FormData();
+      fd.append('file', file);
+      const headers = {};
+      const token = getToken();
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      const res = await fetch('/api/upload', { method: 'POST', headers, body: fd });
+      const json = await res.json();
+      if (json.code !== 0) throw new Error(json.msg || '上传失败');
+      return json.data.url;
+    },
     exportUrl(url, params) {
       const p = Object.assign({}, params, { export: 'csv', token: getToken() });
       return '/api' + url + buildQuery(p);

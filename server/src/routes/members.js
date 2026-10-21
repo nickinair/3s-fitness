@@ -692,4 +692,45 @@ r.get('/members/:id/training-photos', staffAuth(), async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// 添加会员训练风采 (员工/教练端)
+r.post('/members/:id/training-photos', staffAuth(), async (req, res, next) => {
+  try {
+    const vipId = Number(req.params.id);
+    const b = req.body;
+    if (!b.photo_url || typeof b.photo_url !== 'string') {
+      throw new BizError('请上传照片');
+    }
+    const photoDate = b.photo_date ? dayjs(b.photo_date).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+    const monthKey = dayjs(photoDate).format('YYYY-MM');
+    const remark = (b.remark || '').trim().slice(0, 255) || null;
+
+    const v = await db.queryOne('SELECT merchant_id, realname FROM biz_vip_user WHERE id=?', [vipId]);
+    if (!v) throw new BizError('会员不存在');
+    const mid = v.merchant_id || req.user.mid || 1;
+
+    const result = await db.exec(
+      `INSERT INTO biz_member_training_photo (merchant_id, vip_id, photo_url, photo_date, month_key, remark, status)
+       VALUES (?, ?, ?, ?, ?, ?, 1)`,
+      [mid, vipId, b.photo_url, photoDate, monthKey, remark]);
+
+    await logAction(req, '上传会员训练风采', `会员: ${v.realname || ''}(#${vipId}), 日期: ${photoDate}`);
+
+    const newPhoto = await db.queryOne('SELECT * FROM biz_member_training_photo WHERE id=?', [result.insertId]);
+    res.json(ok(newPhoto));
+  } catch (e) { next(e); }
+});
+
+// 删除会员训练风采 (员工/教练端)
+r.delete('/members/:id/training-photos/:photoId', staffAuth(), async (req, res, next) => {
+  try {
+    const vipId = Number(req.params.id);
+    const photoId = Number(req.params.photoId);
+    await db.exec(
+      'UPDATE biz_member_training_photo SET status=0 WHERE id=? AND vip_id=?',
+      [photoId, vipId]);
+    await logAction(req, '删除会员训练风采', `会员: #${vipId}, 照片: #${photoId}`);
+    res.json(ok());
+  } catch (e) { next(e); }
+});
+
 module.exports = r;
