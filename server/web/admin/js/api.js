@@ -74,6 +74,7 @@
     post: (url, data) => request('POST', url, data),
     put: (url, data) => request('PUT', url, data),
     del: (url, params) => request('DELETE', url, params),
+    delete: (url, params) => request('DELETE', url, params),
     async upload(file) {
       const fd = new FormData();
       fd.append('file', file);

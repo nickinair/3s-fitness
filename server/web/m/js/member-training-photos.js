@@ -133,7 +133,7 @@
 
         this.deleting = true;
         try {
-          await API.delete('/member/training-photos/' + photo.id);
+          await API.del('/member/training-photos/' + photo.id);
           vant.showToast({ message: '照片已删除', icon: 'success' });
           this.showDetail = false;
           await this.loadData();

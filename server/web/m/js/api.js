@@ -54,6 +54,7 @@
     post: (u, d, o) => request('POST', u, d == null ? {} : d, o),
     put: (u, d, o) => request('PUT', u, d == null ? {} : d, o),
     del: (u, o) => request('DELETE', u, null, o),
+    delete: (u, o) => request('DELETE', u, null, o),
     upload: async (file) => {
       const fd = new FormData();
       fd.append('file', file);

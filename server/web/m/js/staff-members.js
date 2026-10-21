@@ -506,7 +506,7 @@ window.Pages.StaffMemberDetail = {
       }
     },
     previewTrainingPhoto(idx) {
-      vant.showImagePreview({ images: this.trainingPhotos.map(p => p.photo_url), startPosition: idx });
+      vant.showImagePreview({ images: this.trainingPhotos.map(p => p.photo_url), startPosition: idx, closeable: true });
     },
     openAddPhoto() {
       this.photoForm = { photo_url: '', photo_date: H.today(), remark: '' };
@@ -549,7 +549,7 @@ window.Pages.StaffMemberDetail = {
         message: '确定要删除这张训练风采照片吗？',
       }).then(async () => {
         try {
-          await API.delete('/members/' + this.$route.params.id + '/training-photos/' + p.id);
+          await API.del('/members/' + this.$route.params.id + '/training-photos/' + p.id);
           vant.showToast({ message: '已删除', icon: 'success' });
           this.loadTrainingPhotos();
         } catch (e) {
