@@ -74,6 +74,7 @@
         hours: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
         detailShow: false,
         curItem: null,
+        planEditor: { show: false, booking: null },
         editingPlan: false,
         planText: '',
         planSaving: false,
@@ -320,9 +321,7 @@
       '        <div class="flex1">',
       '          <div class="title">{{ it.title }} <van-tag :type="it.kind===\'pt\'?\'primary\':\'success\'" plain>{{ it.kind===\'pt\'?\'私教\':\'团课\' }}</van-tag></div>',
       '          <div class="muted mt4">{{ it.sub }}</div>',
-      '          <div v-if="it.lesson_plan" style="margin-top:6px;padding:6px 10px;background:#f0f9f8;border-left:2px solid #0d5e56;border-radius:4px;font-size:12px;color:#333;line-height:1.4">',
-      '            <span style="font-weight:600;color:#0d5e56"><van-icon name="notes-o"/> 训练计划：</span>{{ it.lesson_plan }}',
-      '          </div>',
+      '          <lesson-plan-card v-if="it.kind===\'pt\'" :plan="it.lesson_plan" :booking="it" :can-edit="true" @edit="openPlanEditor(it)"/>',
       '        </div>',
       '        <div style="display:flex;align-items:center" v-if="it.kind===\'pt\'">',
       '          <d-tag dict="ptStatus" :v="it.status"></d-tag>',
@@ -421,33 +420,16 @@
       '          <span>{{ curItem.remark }}</span>',
       '        </div>',
       '      </div>',
-      '      <!-- SYS-03 本节课训练计划 -->',
+      '      <!-- SYS-03 本节课训练计划 (图片缩略图+点击放大+图二编辑器) -->',
       '      <div v-if="curItem.kind===\'pt\'" style="margin-bottom:16px">',
-      '        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">',
-      '          <span style="font-size:14px;font-weight:700;color:#0d5e56;display:flex;align-items:center;gap:4px">',
-      '            <van-icon name="notes-o"/> 本节课训练计划',
-      '          </span>',
-      '          <van-button v-if="!editingPlan" size="mini" round plain type="primary" @click="startEditPlan">',
-      '            {{ curItem.lesson_plan ? \'修改计划\' : \'+ 填写计划\' }}',
-      '          </van-button>',
-      '        </div>',
-      '        <div v-if="!editingPlan">',
-      '          <div v-if="curItem.lesson_plan" style="padding:10px 12px;background:#f0f9f8;border-left:3px solid #0d5e56;border-radius:6px;font-size:13px;line-height:1.6;color:#2c3e50;white-space:pre-wrap">{{ curItem.lesson_plan }}</div>',
-      '          <div v-else style="padding:12px;text-align:center;background:#f9f9f9;border-radius:6px;color:#999;font-size:12px">暂未填写训练计划，点击右上角可填写</div>',
-      '        </div>',
-      '        <div v-else style="background:#f9fbfb;border:1px solid #cce3de;border-radius:8px;padding:10px">',
-      '          <van-field v-model="planText" type="textarea" rows="3" maxlength="500" show-word-limit placeholder="请输入本节课训练动作、组数、次数、拉伸项..." style="padding:0;background:transparent"/>',
-      '          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">',
-      '            <van-button size="small" round plain @click="editingPlan=false">取消</van-button>',
-      '            <van-button size="small" round type="primary" :loading="planSaving" @click="savePlan">保存计划</van-button>',
-      '          </div>',
-      '        </div>',
+      '        <lesson-plan-card :plan="curItem.lesson_plan" :booking="curItem" :can-edit="true" @edit="openPlanEditor(curItem)"/>',
       '      </div>',
       '      <div style="display:flex;gap:10px">',
       '        <van-button block round plain type="primary" @click="jumpToDay(curItem.dateStr)">查看该日详情（{{ curItem.shortDate }}）</van-button>',
       '      </div>',
       '    </div>',
       '  </van-popup>',
+      '  <plan-editor-popup v-model="planEditor.show" :booking="planEditor.booking" @saved="onPlanSaved"/>',
       '</div>',
     ].join('\n'),
     methods: {
@@ -544,27 +526,23 @@
         this.editingPlan = false;
         this.detailShow = true;
       },
-      startEditPlan() {
-        this.planText = (this.curItem && this.curItem.lesson_plan) || '';
-        this.editingPlan = true;
+      openPlanEditor(it) {
+        this.planEditor = { show: true, booking: it };
       },
-      async savePlan() {
-        if (!this.curItem || !this.curItem.id) return;
-        this.planSaving = true;
-        try {
-          await API.put('/ptrain-bookings/' + this.curItem.id + '/lesson-plan', {
-            lesson_plan: this.planText,
-          });
-          this.curItem.lesson_plan = this.planText;
+      onPlanSaved(e) {
+        if (this.curItem && this.curItem.id === e.booking.id) {
+          this.curItem.lesson_plan = e.raw;
           if (this.curItem.rawBooking) {
-            this.curItem.rawBooking.lesson_plan = this.planText;
+            this.curItem.rawBooking.lesson_plan = e.raw;
           }
-          vant.showToast({ message: '计划已保存', icon: 'success' });
-          this.editingPlan = false;
-        } catch (e) {
-          vant.showToast({ message: e.message || '保存失败', icon: 'fail' });
-        } finally {
-          this.planSaving = false;
+        }
+        if (this.items) {
+          const target = this.items.find(it => it.id === e.booking.id);
+          if (target) target.lesson_plan = e.raw;
+        }
+        if (this.weekData && this.weekData.bookings) {
+          const wb = this.weekData.bookings.find(b => b.id === e.booking.id);
+          if (wb) wb.lesson_plan = e.raw;
         }
       },
       async load() {
@@ -592,7 +570,7 @@
   };
 
   window.Pages.CoachBookings = {
-    data() { return { days: H.monthDays(), date: H.today(), list: [], loading: true, doing: 0, planDialog: { show: false, booking: null, text: '' } }; },
+    data() { return { days: H.monthDays(), date: H.today(), list: [], loading: true, doing: 0, planEditor: { show: false, booking: null } }; },
     template: [
       '<div class="page">',
       '  <m-nav title="预约管理"></m-nav>',
@@ -614,17 +592,7 @@
       '        <span class="bk-day">{{ H.day(b.date) }}（{{ H.week(b.date) }}）</span></div>',
       '      <div class="muted mt4">上课教练：{{ b.coach_name || \'未指定\' }}</div>',
       '      <div class="muted mt4">{{ b.card_type_name }} · 扣{{ b.card_deduct_num }}课时<template v-if="b.remark"> · 备注：{{ b.remark }}</template></div>',
-      '      <div v-if="b.lesson_plan" style="margin-top:8px;padding:8px 12px;background:#f5fbf9;border-left:3px solid #0d5e56;border-radius:4px;font-size:13px;line-height:1.5;">',
-      '        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">',
-      '          <span style="font-weight:600;color:#0d5e56"><van-icon name="notes-o" style="margin-right:4px"/>本节课训练计划</span>',
-      '          <van-button size="mini" plain round type="primary" @click="editPlan(b)">修改计划</van-button>',
-      '        </div>',
-      '        <div style="white-space:pre-wrap;color:#333">{{ b.lesson_plan }}</div>',
-      '      </div>',
-      '      <div v-else-if="b.status===0 || b.status===1" style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#f9f9f9;border-radius:4px;font-size:12px;color:#888;">',
-      '        <span>暂未填写训练计划</span>',
-      '        <van-button size="mini" plain round type="primary" @click="editPlan(b)">+ 填写计划</van-button>',
-      '      </div>',
+      '      <lesson-plan-card :plan="b.lesson_plan" :booking="b" :can-edit="b.status===0 || b.status===1" @edit="openPlanEditor(b)"/>',
       '      <div class="foot" v-if="b.status===0 || b.status===1">',
       '        <template v-if="b.status===0">',
       '          <van-button size="small" round plain @click="cancel(b)">拒绝</van-button>',
@@ -641,14 +609,7 @@
       '      </div>',
       '    </div>',
       '  </template>',
-      '  <van-dialog v-model:show="planDialog.show" title="本节课训练计划" show-cancel-button confirm-button-color="#0d5e56" :before-close="onPlanDialogBeforeClose">',
-      '    <div style="padding:12px 16px 4px">',
-      '      <div v-if="planDialog.booking" class="muted" style="margin-bottom:8px;font-size:12px">',
-      '        {{ planDialog.booking.realname }} · {{ H.day(planDialog.booking.date) }} {{ planDialog.booking.from_time }}-{{ planDialog.booking.to_time }}',
-      '      </div>',
-      '      <van-field v-model="planDialog.text" type="textarea" rows="4" maxlength="500" show-word-limit placeholder="请输入本节课训练计划（例如热身动作、训练动作/组数/次数、拉伸项）" style="border:1px solid #ebedf0;border-radius:6px;padding:8px"/>',
-      '    </div>',
-      '  </van-dialog>',
+      '  <plan-editor-popup v-model="planEditor.show" :booking="planEditor.booking" @saved="onPlanSaved"/>',
       '</div>',
     ].join('\n'),
     methods: {
@@ -724,22 +685,12 @@
           this.load(true);
         } finally { this.doing = 0; }
       },
-      editPlan(b) {
-        this.planDialog = { show: true, booking: b, text: b.lesson_plan || '' };
+      openPlanEditor(b) {
+        this.planEditor = { show: true, booking: b };
       },
-      async onPlanDialogBeforeClose(action) {
-        if (action !== 'confirm') return true;
-        const b = this.planDialog.booking;
-        if (!b) return true;
-        try {
-          await API.put('/ptrain-bookings/' + b.id + '/lesson-plan', { lesson_plan: this.planDialog.text });
-          b.lesson_plan = this.planDialog.text;
-          vant.showToast({ message: '训练计划已保存', icon: 'success' });
-          return true;
-        } catch (e) {
-          vant.showToast(e.message || '保存失败');
-          return false;
-        }
+      onPlanSaved(e) {
+        const b = this.list.find(x => x.id === e.booking.id);
+        if (b) b.lesson_plan = e.raw;
       },
     },
     mounted() { this.load(); this.scrollDay(); },

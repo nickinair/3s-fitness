@@ -790,35 +790,55 @@ html.dark .rf-diff { background: rgba(237, 106, 12, .14); }
 .timetable-day-col-head:last-child { border-right: none; }
 .timetable-day-col-head:active { background: #f3f4f6; }
 .timetable-date-num { font-size: 15px; font-weight: 600; color: #1f2937; width: 26px; height: 26px; line-height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
-.timetable-date-num.is-today { background: #801c1c; color: #fff !important; font-weight: 700; box-shadow: 0 2px 6px rgba(128, 28, 28, 0.35); }
+.timetable-date-num.is-today { background: #0d5e56; color: #fff !important; font-weight: 700; box-shadow: 0 2px 6px rgba(13, 94, 86, 0.35); }
 .timetable-week-name { font-size: 11px; color: #6b7280; line-height: 1; }
-.timetable-day-col-head.is-today .timetable-week-name { color: #801c1c; font-weight: 600; }
+.timetable-day-col-head.is-today .timetable-week-name { color: #0d5e56; font-weight: 600; }
 .timetable-body { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; display: flex; position: relative; background: #fff; height: calc(100vh - 195px); height: calc(100dvh - 195px); }
 .timetable-time-axis { width: 44px; flex-shrink: 0; position: relative; border-right: 1px solid #f0f0f0; background: #fafafa; }
 .timetable-time-label { position: absolute; left: 0; right: 4px; transform: translateY(-50%); text-align: right; font-size: 10.5px; color: #9ca3af; font-variant-numeric: tabular-nums; line-height: 1; }
 .timetable-grid-area { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(7, 1fr); position: relative; background-image: linear-gradient(to bottom, #f0f0f0 1px, transparent 1px); background-size: 100% 52px; }
 .timetable-col { position: relative; height: 100%; border-right: 1px solid #f0f0f0; }
 .timetable-col:last-child { border-right: none; }
-.timetable-col.is-today { background: rgba(128, 28, 28, 0.02); }
-/* 课程色块卡片 (参考图二: 暖浅杏色底+浅橙边框+橙色方块标点+学员名) */
+.timetable-col.is-today { background: rgba(13, 94, 86, 0.025); }
+/* 课程色块卡片 (统一主题绿，带轻透效果) */
 .timetable-card { position: absolute; border-radius: 4px; box-sizing: border-box; padding: 2px 2.5px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; transition: transform 0.1s, box-shadow 0.1s; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
 .timetable-card:active { transform: scale(0.97); opacity: 0.9; }
-.timetable-card.pt { background: #fff5ee; border: 1px solid #ffd8bf; color: #262626; }
+.timetable-card.pt { background: rgba(13, 94, 86, 0.08); border: 1px solid rgba(13, 94, 86, 0.22); color: #0d5e56; }
+.timetable-card.pt:active { background: rgba(13, 94, 86, 0.16); }
 .timetable-card.group { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
 .timetable-card.cancelled { background: #f5f5f5 !important; border-color: #e5e7eb !important; color: #9ca3af !important; opacity: 0.75; }
 .timetable-card-head { display: flex; align-items: center; gap: 1px; min-width: 0; line-height: 1.2; }
 .timetable-card-bullet { font-size: 8px; line-height: 1; flex-shrink: 0; margin-right: 1px; }
-.timetable-card.pt .timetable-card-bullet { color: #ea580c; }
+.timetable-card.pt .timetable-card-bullet { color: #0d5e56; }
 .timetable-card.group .timetable-card-bullet { color: #10b981; }
 .timetable-card.cancelled .timetable-card-bullet { color: #9ca3af; }
-.timetable-card-title { font-size: 11px; font-weight: 500; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
-.timetable-card.cancelled .timetable-card-title { text-decoration: line-through; }
-.timetable-card-time { font-size: 9px; color: #8c8c8c; margin-top: 1px; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; line-height: 1.1; }
+.timetable-card-title { font-size: 11px; font-weight: 600; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; color: #0d5e56; }
+.timetable-card.cancelled .timetable-card-title { text-decoration: line-through; color: #9ca3af; }
+.timetable-card-time { font-size: 9px; color: #2e6862; margin-top: 1px; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; line-height: 1.1; }
 /* 休息时段卡片 */
 .timetable-rest-block { position: absolute; left: 1px; right: 1px; border-radius: 4px; background: repeating-linear-gradient(45deg, #fffbeb, #fffbeb 6px, #fef3c7 6px, #fef3c7 12px); border: 1px dashed #f59e0b; color: #b45309; font-size: 9.5px; display: flex; align-items: center; justify-content: center; padding: 2px; z-index: 1; box-sizing: border-box; text-align: center; }
-/* 当前时间红线 */
-.timetable-now-line { position: absolute; left: 0; right: 0; height: 2px; background: #ef4444; z-index: 3; pointer-events: none; }
-.timetable-now-dot { position: absolute; left: -3px; top: -2px; width: 6px; height: 6px; border-radius: 50%; background: #ef4444; }
+/* 当前时间绿色指示线 */
+.timetable-now-line { position: absolute; left: 0; right: 0; height: 2px; background: #0d5e56; z-index: 3; pointer-events: none; }
+.timetable-now-dot { position: absolute; left: -3px; top: -2px; width: 6px; height: 6px; border-radius: 50%; background: #0d5e56; }
+
+/* ===== 训练计划图片缩略图卡片 (学员/教练端共用) ===== */
+.lesson-plan-box { margin-top: 8px; }
+.lesson-plan-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.lesson-plan-head-title { font-size: 13px; font-weight: 700; color: #0d5e56; display: flex; align-items: center; gap: 4px; }
+.plan-thumb-card { display: flex; align-items: center; gap: 12px; background: #f2f8f7; border: 1px solid #cce5e1; border-radius: 8px; padding: 8px 10px; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+.plan-thumb-card:active { background: #e5f2ef; transform: scale(0.99); }
+.plan-thumb-media { position: relative; width: 56px; height: 74px; flex-shrink: 0; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.08); border: 1px solid #b8ddd8; background: #fff; }
+.plan-thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.plan-thumb-zoom-tag { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(13,94,86,0.85); color: #fff; font-size: 9px; text-align: center; padding: 1px 0; line-height: 1.2; backdrop-filter: blur(2px); }
+.plan-thumb-desc { flex: 1; min-width: 0; }
+.plan-thumb-title { font-size: 13.5px; font-weight: 700; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plan-thumb-count { font-size: 11.5px; margin-top: 3px; color: #0d5e56; font-weight: 600; }
+.plan-thumb-note { font-size: 11px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #666; }
+.plan-thumb-tip { font-size: 10.5px; color: #888; margin-top: 4px; display: flex; align-items: center; gap: 2px; }
+.plan-empty-card { padding: 8px 12px; background: #f9fbfb; border: 1px dashed #d8ece8; border-radius: 6px; font-size: 12px; color: #888; }
+.plan-legacy-card { padding: 8px 10px; background: #f5fbf9; border-left: 3px solid #0d5e56; border-radius: 6px; }
+.plan-legacy-text { font-size: 13px; color: #333; line-height: 1.5; white-space: pre-wrap; }
+.plan-legacy-hint { margin-top: 4px; font-size: 11px; color: #0d5e56; cursor: pointer; }
 
 /* 暗黑模式适配 */
 html.dark .timetable-wrap,
@@ -830,6 +850,15 @@ html.dark .timetable-date-num { color: var(--text-main, #f3f4f6); }
 html.dark .timetable-time-axis { background: #18181a; border-color: #2c2c2e; }
 html.dark .timetable-col,
 html.dark .timetable-grid-area { border-color: #2c2c2e; background-image: linear-gradient(to bottom, #2a2a2d 1px, transparent 1px); }
-html.dark .timetable-card.pt { background: #2b1f1a; border-color: #5c321d; color: #fed7aa; }
+html.dark .timetable-card.pt { background: rgba(13, 94, 86, 0.22); border-color: rgba(31, 160, 143, 0.45); color: #86efac; }
+html.dark .timetable-card.pt .timetable-card-bullet,
+html.dark .timetable-card.pt .timetable-card-title { color: #86efac; }
+html.dark .timetable-card.pt .timetable-card-time { color: #a7f3d0; }
 html.dark .timetable-card.group { background: #142a1e; border-color: #166534; color: #86efac; }
 html.dark .timetable-card.cancelled { background: #232326 !important; border-color: #38383c !important; color: #6b7280 !important; }
+html.dark .plan-thumb-card { background: rgba(13, 94, 86, 0.16); border-color: rgba(31, 160, 143, 0.35); }
+html.dark .plan-thumb-title { color: #f3f4f6; }
+html.dark .plan-thumb-count { color: #86efac; }
+html.dark .plan-thumb-tip { color: #9ca3af; }
+html.dark .plan-empty-card { background: #222226; border-color: #333338; color: #888; }
+

@@ -44,7 +44,7 @@ window.Pages.MemberSchedule = {
     '        <div class="flex1">',
     '          <div class="title">{{ b.course_title || \'私教课\' }}</div>',
     '          <div class="muted mt4">教练 {{ b.coach_name }}<template v-if="b.club_name"> · {{ b.club_name }}</template></div>',
-    '          <div v-if="b.lesson_plan" class="mt4" style="font-size:12px;color:#0d5e56;background:#eef7f5;padding:2px 8px;border-radius:4px;display:inline-block"><van-icon name="notes-o" style="margin-right:2px"/>计划：{{ b.lesson_plan.length > 20 ? b.lesson_plan.slice(0, 20) + "..." : b.lesson_plan }}</div>',
+    '          <div v-if="b.lesson_plan" class="mt4" style="font-size:12px;color:#0d5e56;background:#eef7f5;padding:2px 8px;border-radius:4px;display:inline-block"><van-icon name="notes-o" style="margin-right:2px"/>计划：{{ planLabel(b.lesson_plan) }}</div>',
     '        </div>',
     '        <div style="display:flex;align-items:center"><van-tag round :type="ptTag(b).type">{{ ptTag(b).text }}</van-tag></div>',
     '      </div>',
@@ -214,7 +214,13 @@ window.Pages.MemberSchedule = {
         else this.list = await API.get('/member/schedule?date=' + this.date);
       } finally { this.loading = false; }
     },
-    /* ---- 私教课 ---- */
+    planLabel(raw) {
+      const p = window.parseLessonPlan ? window.parseLessonPlan(raw) : null;
+      if (!p) return '';
+      if (p.title) return p.title + (p.items && p.items.length ? ' · ' + p.items.length + '动作' : '');
+      if (p.legacy_text) return p.legacy_text.length > 20 ? p.legacy_text.slice(0, 20) + '...' : p.legacy_text;
+      return '查看计划';
+    },
     ptTag(b) {
       if (b.status === 3) return { text: '已完成', type: 'success' };
       if (b.status === 0) return { text: '待教练确认', type: 'warning' };
