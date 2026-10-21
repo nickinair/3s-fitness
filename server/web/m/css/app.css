@@ -801,19 +801,19 @@ html.dark .rf-diff { background: rgba(237, 106, 12, .14); }
 .timetable-col:last-child { border-right: none; }
 .timetable-col.is-today { background: rgba(128, 28, 28, 0.02); }
 /* 课程色块卡片 (参考图二: 暖浅杏色底+浅橙边框+橙色方块标点+学员名) */
-.timetable-card { position: absolute; border-radius: 4px; box-sizing: border-box; padding: 2px 3px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; transition: transform 0.1s, box-shadow 0.1s; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.timetable-card { position: absolute; border-radius: 4px; box-sizing: border-box; padding: 2px 2.5px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; transition: transform 0.1s, box-shadow 0.1s; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
 .timetable-card:active { transform: scale(0.97); opacity: 0.9; }
 .timetable-card.pt { background: #fff5ee; border: 1px solid #ffd8bf; color: #262626; }
 .timetable-card.group { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
 .timetable-card.cancelled { background: #f5f5f5 !important; border-color: #e5e7eb !important; color: #9ca3af !important; opacity: 0.75; }
-.timetable-card-head { display: flex; align-items: center; gap: 2px; min-width: 0; line-height: 1.2; }
-.timetable-card-bullet { font-size: 11px; line-height: 1; flex-shrink: 0; }
+.timetable-card-head { display: flex; align-items: center; gap: 1px; min-width: 0; line-height: 1.2; }
+.timetable-card-bullet { font-size: 8px; line-height: 1; flex-shrink: 0; margin-right: 1px; }
 .timetable-card.pt .timetable-card-bullet { color: #ea580c; }
 .timetable-card.group .timetable-card-bullet { color: #10b981; }
 .timetable-card.cancelled .timetable-card-bullet { color: #9ca3af; }
-.timetable-card-title { font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.timetable-card-title { font-size: 11px; font-weight: 500; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 .timetable-card.cancelled .timetable-card-title { text-decoration: line-through; }
-.timetable-card-time { font-size: 9px; color: #8c8c8c; margin-top: 1px; white-space: nowrap; overflow: hidden; line-height: 1.1; }
+.timetable-card-time { font-size: 9px; color: #8c8c8c; margin-top: 1px; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; line-height: 1.1; }
 /* 休息时段卡片 */
 .timetable-rest-block { position: absolute; left: 1px; right: 1px; border-radius: 4px; background: repeating-linear-gradient(45deg, #fffbeb, #fffbeb 6px, #fef3c7 6px, #fef3c7 12px); border: 1px dashed #f59e0b; color: #b45309; font-size: 9.5px; display: flex; align-items: center; justify-content: center; padding: 2px; z-index: 1; box-sizing: border-box; text-align: center; }
 /* 当前时间红线 */
