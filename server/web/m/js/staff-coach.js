@@ -40,7 +40,14 @@
       onPickCoach(v) {
         const val = v && v.selectedValues ? v.selectedValues[0] : v;
         picked = val; this.myPick = val; this.coachPick = false;
-        if (this.load) this.load();
+        if (this.load) {
+          const p = this.load();
+          if (p && p.then) {
+            p.then(() => {
+              if (this.viewMode === 'week' && this.autoScrollWeekGrid) this.autoScrollWeekGrid();
+            });
+          }
+        }
       },
     },
   };
@@ -63,8 +70,9 @@
       const day = d.day();
       const diff = day === 0 ? -6 : 1 - day;
       const initialMonday = d.add(diff, 'day').format('YYYY-MM-DD');
+      const qView = this.$route && this.$route.query && this.$route.query.view;
       return {
-        viewMode: 'day', // 'day' | 'week'
+        viewMode: qView === 'day' ? 'day' : 'week', // 默认展示周视图: 周视图在前, 日视图在右
         days: H.monthDays(),
         date: today,
         d: null,
@@ -299,8 +307,8 @@
       PICK_BAR,
       '  <div style="padding:10px 16px 6px;display:flex;justify-content:center;background:#fff;border-bottom:1px solid #f0f0f0">',
       '    <div style="display:inline-flex;background:#eef2f1;border-radius:20px;padding:3px">',
-      '      <div @click="switchView(\'day\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'day\'?\'background:#0d5e56;color:#fff;box-shadow:0 2px 6px rgba(13,94,86,0.25)\':\'color:#555\'">日视图</div>',
       '      <div @click="switchView(\'week\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'week\'?\'background:#0d5e56;color:#fff;box-shadow:0 2px 6px rgba(13,94,86,0.25)\':\'color:#555\'">周视图</div>',
+      '      <div @click="switchView(\'day\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'day\'?\'background:#0d5e56;color:#fff;box-shadow:0 2px 6px rgba(13,94,86,0.25)\':\'color:#555\'">日视图</div>',
       '    </div>',
       '  </div>',
       /* === 日视图 === */
@@ -479,19 +487,21 @@
       },
       autoScrollWeekGrid() {
         this.$nextTick(() => {
-          const body = this.$refs.timeBody;
-          if (!body) return;
-          let minStart = 1440;
-          (this.weekSchedule || []).forEach(day => {
-            (day.items || []).forEach(it => {
-              if (it.startMin && it.startMin < minStart) {
-                minStart = it.startMin;
-              }
+          setTimeout(() => {
+            const body = this.$refs.timeBody;
+            if (!body) return;
+            let minStart = 1440;
+            (this.weekSchedule || []).forEach(day => {
+              (day.items || []).forEach(it => {
+                if (it.startMin && it.startMin < minStart) {
+                  minStart = it.startMin;
+                }
+              });
             });
-          });
-          const targetMin = minStart < 1440 ? Math.max(420, minStart - 30) : 510;
-          const targetTop = Math.round(((targetMin - 420) / 60) * 52);
-          body.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+            const targetMin = minStart < 1440 ? Math.max(420, minStart - 30) : 510;
+            const targetTop = Math.round(((targetMin - 420) / 60) * 52);
+            body.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+          }, 50);
         });
       },
       calcCardStyle(it) {
