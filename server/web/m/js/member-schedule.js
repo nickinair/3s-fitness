@@ -44,6 +44,7 @@ window.Pages.MemberSchedule = {
     '        <div class="flex1">',
     '          <div class="title">{{ b.course_title || \'私教课\' }}</div>',
     '          <div class="muted mt4">教练 {{ b.coach_name }}<template v-if="b.club_name"> · {{ b.club_name }}</template></div>',
+    '          <div v-if="b.lesson_plan" class="mt4" style="font-size:12px;color:#0d5e56;background:#eef7f5;padding:2px 8px;border-radius:4px;display:inline-block"><van-icon name="notes-o" style="margin-right:2px"/>计划：{{ b.lesson_plan.length > 20 ? b.lesson_plan.slice(0, 20) + "..." : b.lesson_plan }}</div>',
     '        </div>',
     '        <div style="display:flex;align-items:center"><van-tag round :type="ptTag(b).type">{{ ptTag(b).text }}</van-tag></div>',
     '      </div>',

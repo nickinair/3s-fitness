@@ -348,6 +348,20 @@ r.put('/cards/:id', staffAuth('admin', 'manager'), async (req, res, next) => {
     if (!card) throw new BizError('会员卡不存在');
     const b = req.body;
     const sets = []; const params = []; const changes = [];
+
+    // 需求 SYS-01: 仅 300 元/节私教次卡支持修改制卡次数，由管理员操作
+    if (b.counts !== undefined && Number(b.counts) !== Number(card.counts)) {
+      const isAdmin = req.user.role === 'admin' || req.user.role === 'platform';
+      if (!isAdmin) throw new BizError('仅管理员可修改制卡次数');
+      const unit = Math.round(Number(card.unit_price || 0));
+      const is300Pt = card.card_kind === 4 && (unit === 300 || (card.card_type_name && card.card_type_name.includes('300')));
+      if (!is300Pt) throw new BizError('仅 300 元/节的私教次卡支持修改制卡总次数');
+      const newCounts = parseInt(b.counts, 10);
+      if (isNaN(newCounts) || newCounts <= 0) throw new BizError('制卡总次数必须为大于0的整数');
+      sets.push('counts=?'); params.push(newCounts);
+      changes.push(`制卡总次数 ${card.counts}→${newCounts}`);
+    }
+
     if (b.expire_time !== undefined) { sets.push('expire_time=?'); params.push(b.expire_time); changes.push(`有效期 ${card.expire_time}→${b.expire_time}`); }
     if (b.left_counts !== undefined) { sets.push('left_counts=?'); params.push(b.left_counts); changes.push(`剩余次数 ${card.left_counts}→${b.left_counts}`); }
     if (b.left_money !== undefined) { sets.push('left_money=?'); params.push(b.left_money); changes.push(`余额 ${card.left_money}→${b.left_money}`); }

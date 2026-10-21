@@ -245,7 +245,7 @@ r.get('/pt-schedule', async (req, res, next) => {
     }
     list.sort((a, b) => (b.is_main - a.is_main) || (b.is_sub - a.is_sub));
     const mine = await db.query(
-      `SELECT b.id, b.coach_id, b.coach_name, b.course_title, b.from_time, b.to_time, b.status, b.confirm_status, c.name club_name
+      `SELECT b.id, b.coach_id, b.coach_name, b.course_title, b.from_time, b.to_time, b.status, b.confirm_status, b.lesson_plan, c.name club_name
        FROM biz_ptrain_bespeak_record b LEFT JOIN biz_club c ON c.id=b.club_id
        WHERE b.vip_id=? AND b.\`date\`=? AND b.status IN (0,1,3) ORDER BY b.from_time`, [req.user.vip, date]);
     const opts = await clubOptions(req.user.mid, req.user.vip);
@@ -429,15 +429,31 @@ r.get('/badges', async (req, res, next) => {
 // ---- 个人资料 ----
 r.get('/profile', async (req, res, next) => {
   try {
-    const v = await db.queryOne('SELECT id,phone,realname,nickname,avatar,gender,birthday,points,expire_status,expire_time,membership_name,coach_id,coach_name,sub_coach_id,sub_coach_name FROM biz_vip_user WHERE id=?', [req.user.vip]);
+    const v = await db.queryOne(
+      `SELECT id,phone,realname,nickname,avatar,gender,birthday,points,expire_status,expire_time,membership_name,
+              coach_id,coach_name,sub_coach_id,sub_coach_name,
+              initial_weight,target_weight,target_compare_photos,constellation_mbti,training_frequency,studio_feedback
+       FROM biz_vip_user WHERE id=?`, [req.user.vip]);
     res.json(ok(v));
   } catch (e) { next(e); }
 });
 r.put('/profile', async (req, res, next) => {
   try {
     const b = req.body;
-    await db.exec('UPDATE biz_vip_user SET realname=?, nickname=?, gender=?, birthday=? WHERE id=?',
-      [b.realname, b.nickname || b.realname, b.gender || 0, b.birthday || null, req.user.vip]);
+    const initial_weight = (b.initial_weight === '' || b.initial_weight == null) ? null : Number(b.initial_weight);
+    const target_weight = (b.target_weight === '' || b.target_weight == null) ? null : Number(b.target_weight);
+    const target_compare_photos = Array.isArray(b.target_compare_photos) ? JSON.stringify(b.target_compare_photos) : (typeof b.target_compare_photos === 'string' ? b.target_compare_photos : null);
+    const constellation_mbti = b.constellation_mbti || null;
+    const training_frequency = b.training_frequency || null;
+    const studio_feedback = b.studio_feedback || null;
+
+    await db.exec(
+      `UPDATE biz_vip_user SET realname=?, nickname=?, gender=?, birthday=?,
+              initial_weight=?, target_weight=?, target_compare_photos=?, constellation_mbti=?, training_frequency=?, studio_feedback=?
+       WHERE id=?`,
+      [b.realname, b.nickname || b.realname, b.gender || 0, b.birthday || null,
+       initial_weight, target_weight, target_compare_photos, constellation_mbti, training_frequency, studio_feedback,
+       req.user.vip]);
     res.json(ok());
   } catch (e) { next(e); }
 });
@@ -557,6 +573,229 @@ r.put('/workbench', async (req, res, next) => {
   try {
     const items = await widget.saveWidget(req.user.vip, 'member_home', req.body.items);
     res.json(ok({ items }));
+  } catch (e) { next(e); }
+});
+
+// ---- 完善资料专属免登 H5 页面详情与积分奖励 ----
+r.get('/complete-profile-data', async (req, res, next) => {
+  try {
+    const v = await db.queryOne(
+      `SELECT id, realname, nickname, phone, gender, birthday, avatar, points,
+              initial_weight, target_weight, target_compare_photos, constellation_mbti, training_frequency, studio_feedback
+       FROM biz_vip_user WHERE id=?`, [req.user.vip]);
+    if (!v) throw new BizError('会员不存在');
+    
+    let photos = [];
+    if (Array.isArray(v.target_compare_photos)) photos = v.target_compare_photos;
+    else if (typeof v.target_compare_photos === 'string') {
+      try { photos = JSON.parse(v.target_compare_photos); } catch { photos = []; }
+    }
+    v.target_compare_photos = photos;
+
+    const rewardedRows = await db.query("SELECT item_key FROM biz_point_record WHERE vip_id=? AND type='profile_item'", [v.id]);
+    const rewardedKeys = new Set(rewardedRows.map(row => row.item_key));
+
+    const ITEMS = [
+      { key: 'initial_weight', title: '初始体重', points: 10, completed: v.initial_weight != null && v.initial_weight !== '', rewarded: rewardedKeys.has('profile_initial_weight') },
+      { key: 'target_weight', title: '目标体重', points: 10, completed: v.target_weight != null && v.target_weight !== '', rewarded: rewardedKeys.has('profile_target_weight') },
+      { key: 'target_compare_photos', title: '目标对比图', points: 10, completed: photos.length > 0, rewarded: rewardedKeys.has('profile_target_compare_photos') },
+      { key: 'birthday', title: '生日', points: 10, completed: !!v.birthday, rewarded: rewardedKeys.has('profile_birthday') },
+      { key: 'constellation_mbti', title: '星座/MBTI', points: 10, completed: !!(v.constellation_mbti && v.constellation_mbti.trim()), rewarded: rewardedKeys.has('profile_constellation_mbti') },
+      { key: 'training_frequency', title: '期望训练频次', points: 10, completed: !!(v.training_frequency && v.training_frequency.trim()), rewarded: rewardedKeys.has('profile_training_frequency') },
+      { key: 'studio_feedback', title: '会馆反馈与建议', points: 10, completed: !!(v.studio_feedback && v.studio_feedback.trim()), rewarded: rewardedKeys.has('profile_studio_feedback') },
+    ];
+
+    const completedCount = ITEMS.filter(it => it.completed).length;
+    const earnedPoints = ITEMS.filter(it => it.rewarded).length * 10;
+
+    res.json(ok({
+      vip: v,
+      items: ITEMS,
+      completed_count: completedCount,
+      total_count: ITEMS.length,
+      earned_points: earnedPoints,
+      max_points: 70,
+    }));
+  } catch (e) { next(e); }
+});
+
+r.post('/complete-profile-submit', async (req, res, next) => {
+  try {
+    const b = req.body;
+    const vipId = req.user.vip;
+    const v = await db.queryOne('SELECT id, points, merchant_id FROM biz_vip_user WHERE id=?', [vipId]);
+    if (!v) throw new BizError('会员不存在');
+
+    const initial_weight = (b.initial_weight === '' || b.initial_weight == null) ? null : Number(b.initial_weight);
+    const target_weight = (b.target_weight === '' || b.target_weight == null) ? null : Number(b.target_weight);
+    const target_compare_photos = Array.isArray(b.target_compare_photos) ? JSON.stringify(b.target_compare_photos) : (typeof b.target_compare_photos === 'string' ? b.target_compare_photos : null);
+    const constellation_mbti = (b.constellation_mbti || '').trim() || null;
+    const training_frequency = (b.training_frequency || '').trim() || null;
+    const studio_feedback = (b.studio_feedback || '').trim() || null;
+    const birthday = b.birthday || null;
+
+    // 检查哪些项达成了完成条件
+    const completedItems = [];
+    if (initial_weight != null) completedItems.push({ key: 'profile_initial_weight', title: '初始体重' });
+    if (target_weight != null) completedItems.push({ key: 'profile_target_weight', title: '目标体重' });
+    let parsedImgs = [];
+    try { parsedImgs = JSON.parse(target_compare_photos || '[]'); } catch {}
+    if (parsedImgs.length > 0) completedItems.push({ key: 'profile_target_compare_photos', title: '目标对比图' });
+    if (birthday) completedItems.push({ key: 'profile_birthday', title: '生日' });
+    if (constellation_mbti) completedItems.push({ key: 'profile_constellation_mbti', title: '星座/MBTI' });
+    if (training_frequency) completedItems.push({ key: 'profile_training_frequency', title: '期望训练频次' });
+    if (studio_feedback) completedItems.push({ key: 'profile_studio_feedback', title: '会馆反馈' });
+
+    // 查询已获得积分的项 (幂等保证)
+    const rewardedRows = await db.query("SELECT item_key FROM biz_point_record WHERE vip_id=? AND type='profile_item'", [vipId]);
+    const rewardedSet = new Set(rewardedRows.map(row => row.item_key));
+
+    const newlyRewarded = completedItems.filter(it => !rewardedSet.has(it.key));
+    const pointsGained = newlyRewarded.length * 10;
+    const currentPoints = Number(v.points || 0);
+    const newTotalPoints = currentPoints + pointsGained;
+
+    await db.tx(async (t) => {
+      // 1. 更新资料
+      await t.exec(
+        `UPDATE biz_vip_user SET
+          realname=COALESCE(?, realname), nickname=COALESCE(?, nickname), gender=COALESCE(?, gender), birthday=?,
+          initial_weight=?, target_weight=?, target_compare_photos=?, constellation_mbti=?, training_frequency=?, studio_feedback=?,
+          points=?
+         WHERE id=?`,
+        [b.realname || null, b.nickname || null, b.gender != null ? b.gender : null, birthday,
+         initial_weight, target_weight, target_compare_photos, constellation_mbti, training_frequency, studio_feedback,
+         newTotalPoints, vipId]);
+
+      // 2. 插入积分记录
+      let runningBalance = currentPoints;
+      for (const it of newlyRewarded) {
+        runningBalance += 10;
+        await t.exec(
+          `INSERT INTO biz_point_record (merchant_id, vip_id, points, balance, type, item_key, remark)
+           VALUES (?, ?, ?, ?, 'profile_item', ?, ?)`,
+          [v.merchant_id || 1, vipId, 10, runningBalance, it.key, `完善资料项【${it.title}】奖励`]);
+      }
+    });
+
+    res.json(ok({
+      points_gained: pointsGained,
+      total_points: newTotalPoints,
+      completed_count: completedItems.length,
+      newly_rewarded_count: newlyRewarded.length,
+      msg: pointsGained > 0 ? `恭喜获得 ${pointsGained} 积分奖励！` : '资料已成功保存',
+    }));
+  } catch (e) { next(e); }
+});
+
+// ---- 训练风采专属相册 (SYS-13) ----
+r.get('/training-photos', async (req, res, next) => {
+  try {
+    const vipId = req.user.vip;
+    const currentMonth = dayjs().format('YYYY-MM');
+
+    // 1. 查询全部有效照片，按照片拍摄日期及ID倒序
+    const list = await db.query(
+      `SELECT id, photo_url, photo_date, month_key, remark, insert_time
+       FROM biz_member_training_photo
+       WHERE vip_id=? AND status=1
+       ORDER BY photo_date DESC, id DESC`, [vipId]);
+
+    // 2. 统计当月已用额度
+    const curMonthRows = list.filter(p => p.month_key === currentMonth);
+    const currentMonthCount = curMonthRows.length;
+    const monthlyLimit = 5;
+    const remainingQuota = Math.max(0, monthlyLimit - currentMonthCount);
+
+    // 3. 按月份聚合分组
+    const groupMap = new Map();
+    for (const item of list) {
+      const mk = item.month_key || dayjs(item.photo_date).format('YYYY-MM');
+      if (!groupMap.has(mk)) {
+        const parts = mk.split('-');
+        const label = `${parts[0]}年${parseInt(parts[1], 10)}月`;
+        groupMap.set(mk, { month_key: mk, label, photos: [] });
+      }
+      groupMap.get(mk).photos.push(item);
+    }
+    const groups = Array.from(groupMap.values()).map(g => ({
+      ...g,
+      count: g.photos.length,
+    }));
+
+    res.json(ok({
+      list,
+      groups,
+      current_month: currentMonth,
+      current_month_count: currentMonthCount,
+      monthly_limit: monthlyLimit,
+      remaining_quota: remainingQuota,
+      total_count: list.length,
+    }));
+  } catch (e) { next(e); }
+});
+
+r.post('/training-photos', async (req, res, next) => {
+  try {
+    const vipId = req.user.vip;
+    const b = req.body;
+    if (!b.photo_url || typeof b.photo_url !== 'string') {
+      throw new BizError('请上传照片');
+    }
+
+    const currentMonth = dayjs().format('YYYY-MM');
+    const cntRow = await db.queryOne(
+      'SELECT COUNT(*) c FROM biz_member_training_photo WHERE vip_id=? AND month_key=? AND status=1',
+      [vipId, currentMonth]);
+    const currentCount = (cntRow && cntRow.c) || 0;
+    if (currentCount >= 5) {
+      throw new BizError('本月训练风采照片上传额度已达上限(5张)，下月1日重置');
+    }
+
+    const photoDate = b.photo_date ? dayjs(b.photo_date).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+    const remark = (b.remark || '').trim().slice(0, 255) || null;
+
+    const v = await db.queryOne('SELECT merchant_id FROM biz_vip_user WHERE id=?', [vipId]);
+    const mid = (v && v.merchant_id) || req.user.mid || 1;
+
+    const result = await db.exec(
+      `INSERT INTO biz_member_training_photo (merchant_id, vip_id, photo_url, photo_date, month_key, remark, status)
+       VALUES (?, ?, ?, ?, ?, ?, 1)`,
+      [mid, vipId, b.photo_url, photoDate, currentMonth, remark]);
+
+    const newPhoto = await db.queryOne('SELECT * FROM biz_member_training_photo WHERE id=?', [result.insertId]);
+
+    res.json(ok({
+      photo: newPhoto,
+      current_month_count: currentCount + 1,
+      remaining_quota: Math.max(0, 4 - currentCount),
+      msg: '上传成功',
+    }));
+  } catch (e) { next(e); }
+});
+
+r.delete('/training-photos/:id', async (req, res, next) => {
+  try {
+    const vipId = req.user.vip;
+    const photoId = Number(req.params.id);
+    const photo = await db.queryOne(
+      'SELECT id, month_key FROM biz_member_training_photo WHERE id=? AND vip_id=? AND status=1',
+      [photoId, vipId]);
+    if (!photo) throw new BizError('照片不存在或已删除');
+
+    await db.exec('UPDATE biz_member_training_photo SET status=0 WHERE id=?', [photoId]);
+
+    const currentMonth = dayjs().format('YYYY-MM');
+    const cntRow = await db.queryOne(
+      'SELECT COUNT(*) c FROM biz_member_training_photo WHERE vip_id=? AND month_key=? AND status=1',
+      [vipId, currentMonth]);
+    const currentCount = (cntRow && cntRow.c) || 0;
+
+    res.json(ok({
+      current_month_count: currentCount,
+      remaining_quota: Math.max(0, 5 - currentCount),
+      msg: '照片已删除',
+    }));
   } catch (e) { next(e); }
 });
 

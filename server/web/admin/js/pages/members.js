@@ -15,6 +15,8 @@ window.AppPages.Members = {
       mtDlg: false, mtMember: null, mtList: [], mtForm: { record_type: 1, content: '' }, mtSaving: false,
       // 分配教练
       assignDlg: false, assignForm: { coach_id: null },
+      // 专属完善链接
+      profileLinkDlg: false, profileLinkData: { url: '', token: '', vipName: '' },
       Fmt: window.Fmt, DICT: window.DICT,
     };
   },
@@ -135,7 +137,10 @@ window.AppPages.Members = {
                 <el-button link type="primary" size="small" style="margin-left:0">更多<el-icon style="margin-left:2px"><ArrowDown /></el-icon></el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item command="black">
+                    <el-dropdown-item command="profileLink">
+                      <span style="color:#0d5e56">专属完善链接 (送70分)</span>
+                    </el-dropdown-item>
+                    <el-dropdown-item command="black" divided>
                       <span :style="{color: row.is_black ? 'var(--el-color-success)' : 'var(--el-color-danger)'}">{{ row.is_black ? '移出黑名单' : '加入黑名单' }}</span>
                     </el-dropdown-item>
                     <el-dropdown-item v-if="['admin','manager'].includes((user||{}).role)" command="disable" divided>
@@ -236,6 +241,29 @@ window.AppPages.Members = {
         <el-button @click="assignDlg=false">取消</el-button>
         <el-button type="primary" @click="doAssign">确认分配</el-button>
       </template>
+    </el-dialog>
+
+    <!-- 专属完善链接弹窗 -->
+    <el-dialog v-model="profileLinkDlg" title="会员专属完善资料链接 (免登录)" width="520px" destroy-on-close>
+      <div style="text-align:center;padding:10px 0">
+        <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:6px">
+          会员：{{ profileLinkData.vipName }}
+        </div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+          专属免登录链接（有效时长30天），会员打开即可完善7项健康档案并最高获得 70 积分奖励
+        </div>
+        <div id="admin-members-profile-qr" style="display:inline-block;padding:12px;background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);margin-bottom:16px;min-width:170px;min-height:170px"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <el-input :model-value="profileLinkData.url" readonly select-all-on-focus />
+          <el-button type="primary" @click="copyProfileLink">复制链接</el-button>
+        </div>
+        <div style="margin-top:14px;padding:10px 14px;background:var(--el-fill-color-light);border-radius:6px;font-size:12px;color:var(--text-secondary);text-align:left;line-height:1.6">
+          💡 <b>使用提示：</b><br/>
+          1. 复制链接后，可通过微信直接发送给学员；<br/>
+          2. 也可让学员直接使用微信扫描上方二维码；<br/>
+          3. 学员补充初始体重、目标对比照等档案后，系统将自动下发积分。
+        </div>
+      </div>
     </el-dialog>
   </div>`,
   computed: {
@@ -349,6 +377,50 @@ window.AppPages.Members = {
     rowCmd(cmd, row) {
       if (cmd === 'black') this.toggleBlack(row);
       else if (cmd === 'disable') this.disableMember(row);
+      else if (cmd === 'profileLink') this.openProfileLinkDialog(row);
+    },
+    async openProfileLinkDialog(row) {
+      try {
+        const res = await api.get('/members/' + row.id + '/profile-link');
+        if (!res) return;
+        const fullUrl = window.location.origin + '/m/' + (res.link || res.path);
+        this.profileLinkData = {
+          url: fullUrl,
+          token: res.token,
+          vipName: res.vip_name || row.realname || '',
+        };
+        this.profileLinkDlg = true;
+        this.$nextTick(() => {
+          const el = document.getElementById('admin-members-profile-qr');
+          if (el) {
+            el.innerHTML = '';
+            if (window.QRCode) {
+              new QRCode(el, { text: fullUrl, width: 170, height: 170, colorDark: '#0d5e56', colorLight: '#ffffff' });
+            }
+          }
+        });
+      } catch (e) {
+        ElementPlus.ElMessage.error(e.message || '获取专属链接失败');
+      }
+    },
+    async copyProfileLink() {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(this.profileLinkData.url);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = this.profileLinkData.url;
+          ta.style.position = 'fixed';
+          ta.style.top = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        ElementPlus.ElMessage.success('专属完善资料链接已复制到剪贴板！');
+      } catch (e) {
+        ElementPlus.ElMessage.error('复制失败，请手动长按复制');
+      }
     },
     disableMember(row) {
       ElementPlus.ElMessageBox.confirm(

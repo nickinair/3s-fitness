@@ -11,6 +11,8 @@ window.AppPages.PtBookings = {
       dlg: false, saving: false,
       bkForm: { vip_id: null, coach_id: null, course_id: null, date: dayjs().format('YYYY-MM-DD'), from_time: '', card_id: null, remark: '' },
       memberCards: [], slots: [],
+      // 训练计划
+      planDlg: { show: false, row: null, text: '', saving: false },
       Fmt: window.Fmt, DICT: window.DICT,
       role: (Auth.getUser() || {}).role,
       myCoachId: (Auth.getUser() || {}).coach_id || null,
@@ -49,6 +51,19 @@ window.AppPages.PtBookings = {
         <el-table-column prop="course_title" label="课程" min-width="110" show-overflow-tooltip />
         <el-table-column prop="card_type_name" label="扣课卡" min-width="120" show-overflow-tooltip />
         <el-table-column prop="remark" label="备注(代约人)" min-width="120" show-overflow-tooltip />
+        <el-table-column label="训练计划" min-width="150">
+          <template #default="{ row }">
+            <div v-if="row.lesson_plan" style="display:flex;align-items:center;justify-content:space-between">
+              <el-tooltip :content="row.lesson_plan" placement="top" :max-width="300">
+                <span style="display:inline-block;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;color:#0d5e56;font-size:13px" @click="openPlan(row)">{{ row.lesson_plan }}</span>
+              </el-tooltip>
+              <el-button link type="primary" size="small" @click="openPlan(row)">修改</el-button>
+            </div>
+            <div v-else>
+              <el-button link type="primary" size="small" @click="openPlan(row)">+ 填写计划</el-button>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="140">
           <template #default="{ row }">
             <dict-tag dict="ptStatus" :value="row.status" />
@@ -120,15 +135,36 @@ window.AppPages.PtBookings = {
         <el-button type="primary" :loading="saving" @click="doBook">提交预约</el-button>
       </template>
     </el-dialog>
+
+    <!-- 本节课训练计划 -->
+    <el-dialog v-model="planDlg.show" title="本节课训练计划" width="480px" destroy-on-close>
+      <div v-if="planDlg.row" style="margin-bottom:12px;color:#666;font-size:13px;line-height:1.6">
+        会员：<b>{{ planDlg.row.realname }}</b> · 日期：<b>{{ Fmt.date(planDlg.row.date) }} {{ planDlg.row.from_time }}-{{ planDlg.row.to_time }}</b><br>
+        课程：{{ planDlg.row.course_title }} · 教练：{{ planDlg.row.coach_name || '未指定' }}
+      </div>
+      <el-input v-model="planDlg.text" type="textarea" :rows="5" maxlength="500" show-word-limit placeholder="请输入本节课训练计划（例如热身动作、训练动作/组数/重量/次数、拉伸放松等，会员端可见）" />
+      <template #footer>
+        <el-button @click="planDlg.show=false">取消</el-button>
+        <el-button type="primary" :loading="planDlg.saving" @click="savePlan">保存计划</el-button>
+      </template>
+    </el-dialog>
   </div>`,
   methods: {
     isPast(row) { return dayjs(Fmt.date(row.date) + ' ' + row.from_time).isBefore(dayjs()); },
-    async load() {
-      this.loading = true;
+    async load(silent = false) {
+      if (!silent) this.loading = true;
+      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
       try {
         const d = await api.get('/ptrain-bookings', this.query);
         this.list = d.list; this.total = d.total;
-      } finally { this.loading = false; }
+      } finally {
+        if (!silent) this.loading = false;
+        if (silent) {
+          this.$nextTick(() => {
+            window.scrollTo({ top: scrollY, behavior: 'instant' });
+          });
+        }
+      }
     },
     search() { this.query.page = 1; this.load(); },
     reset() { this.query = { date: '', status: '', coach_id: '', keyword: '', page: 1, size: 20 }; this.load(); },
@@ -141,7 +177,7 @@ window.AppPages.PtBookings = {
         .then(async () => {
           await api.post('/ptrain-bookings/' + row.id + '/confirm');
           ElementPlus.ElMessage.success('已确认');
-          this.load();
+          this.load(true);
         }).catch(() => {});
     },
     cancel(row) {
@@ -150,7 +186,7 @@ window.AppPages.PtBookings = {
       }).then(async ({ value }) => {
         await api.post('/ptrain-bookings/' + row.id + '/cancel', { reason: value || '' });
         ElementPlus.ElMessage.success('已取消');
-        this.load();
+        this.load(true);
       }).catch(() => {});
     },
     noshow(row) {
@@ -158,7 +194,7 @@ window.AppPages.PtBookings = {
         .then(async () => {
           await api.post('/ptrain-bookings/' + row.id + '/noshow');
           ElementPlus.ElMessage.success('已标记爽约');
-          this.load();
+          this.load(true);
         }).catch(() => {});
     },
     startFinish(row) {
@@ -166,7 +202,7 @@ window.AppPages.PtBookings = {
         .then(async () => {
           await api.post('/ptrain-bookings/' + row.id + '/start-finish');
           ElementPlus.ElMessage.success('已发起消课，等待学员确认');
-          this.load();
+          this.load(true);
         }).catch(() => {});
     },
     finish(row) {
@@ -174,7 +210,7 @@ window.AppPages.PtBookings = {
         .then(async () => {
           await api.post('/ptrain-bookings/' + row.id + '/finish', {});
           ElementPlus.ElMessage.success('消课完成');
-          this.load();
+          this.load(true);
         }).catch(() => {});
     },
     openBook() {
@@ -212,6 +248,21 @@ window.AppPages.PtBookings = {
         this.dlg = false;
         this.load();
       } finally { this.saving = false; }
+    },
+    openPlan(row) {
+      this.planDlg = { show: true, row, text: row.lesson_plan || '', saving: false };
+    },
+    async savePlan() {
+      if (!this.planDlg.row) return;
+      this.planDlg.saving = true;
+      try {
+        await api.put('/ptrain-bookings/' + this.planDlg.row.id + '/lesson-plan', { lesson_plan: this.planDlg.text });
+        ElementPlus.ElMessage.success('训练计划保存成功');
+        this.planDlg.row.lesson_plan = this.planDlg.text;
+        this.planDlg.show = false;
+      } finally {
+        this.planDlg.saving = false;
+      }
     },
   },
   mounted() { this.load(); this.loadDicts(); },

@@ -11,6 +11,8 @@
     { path: '/coach/:id', component: P.MemberCoachDetail },
     { path: '/buy', component: P.MemberBuy },
     { path: '/mine', component: P.MemberMine },
+    { path: '/complete-profile', component: P.CompleteProfile },
+    { path: '/training-photos', component: P.MemberTrainingPhotos },
     { path: '/profile', component: P.MemberProfile },
     { path: '/my-cards', component: P.MemberCards },
     { path: '/card/:id', component: P.MemberCardDetail },
@@ -90,6 +92,17 @@
   });
 
   router.beforeEach((to) => {
+    if (to.path === '/complete-profile') {
+      const urlToken = (to.query && to.query.token) || (new URLSearchParams(window.location.search).get('token'));
+      if (urlToken) {
+        localStorage.setItem('m_token', urlToken);
+        localStorage.setItem('m_type', 'member');
+        Store.token = urlToken;
+        Store.type = 'member';
+      }
+      if (Store.token) return true;
+      return '/login';
+    }
     if (to.path === '/login') {
       if (Store.token) return Store.type === 'staff' ? '/staff' : '/';
       return true;

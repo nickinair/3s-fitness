@@ -137,6 +137,33 @@ r.get('/members/:id', staffAuth(), async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ---- 获取会员专属资料完善免登链接 ----
+r.get('/members/:id/profile-link', staffAuth(), async (req, res, next) => {
+  try {
+    const v = await db.queryOne('SELECT id, realname, phone, merchant_id FROM biz_vip_user WHERE id=? AND merchant_id=?', [req.params.id, req.user.mid]);
+    if (!v) throw new BizError('会员不存在');
+    const { sign } = require('../middleware/auth');
+    // 签发专属免登 token, 30天有效
+    const token = sign({ type: 'profile_token', vip: v.id, mid: v.merchant_id, name: v.realname, phone: v.phone });
+    
+    // 查询当前已奖励项 (满分70)
+    const rewardedRows = await db.query("SELECT item_key FROM biz_point_record WHERE vip_id=? AND type='profile_item'", [v.id]);
+    const rewardedKeys = rewardedRows.map(r => r.item_key);
+    
+    res.json(ok({
+      token,
+      vip_id: v.id,
+      vip_name: v.realname,
+      realname: v.realname,
+      phone: v.phone,
+      rewarded_keys: rewardedKeys,
+      rewarded_points: rewardedKeys.length * 10,
+      path: `#/complete-profile?token=${token}`,
+      link: `#/complete-profile?token=${token}`,
+    }));
+  } catch (e) { next(e); }
+});
+
 // ---- 新增会员（手机号唯一, 重复提示合并）----
 r.post('/members', staffAuth(), async (req, res, next) => {
   try {
@@ -147,12 +174,17 @@ r.post('/members', staffAuth(), async (req, res, next) => {
     const bcrypt = require('bcryptjs');
     const id = await db.insert(
       `INSERT INTO biz_vip_user (merchant_id,phone,password,realname,nickname,gender,birthday,id_card_number,address,source_id,source_name,
-        membership_id,membership_name,coach_id,coach_name,sub_coach_id,sub_coach_name,label_levels,remark)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        membership_id,membership_name,coach_id,coach_name,sub_coach_id,sub_coach_name,label_levels,remark,
+        initial_weight,target_weight,target_compare_photos,constellation_mbti,training_frequency,studio_feedback)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [req.user.mid, b.phone, await bcrypt.hash('123456', 10), b.realname || '', b.nickname || b.realname || '', b.gender || 0,
         b.birthday || null, b.id_card_number || '', b.address || '', b.source_id || 0, b.source_name || '',
         b.membership_id || 0, b.membership_name || '', b.coach_id || 0, b.coach_name || '',
-        b.sub_coach_id || 0, b.sub_coach_name || '', b.label_levels || 0, b.remark || '']);
+        b.sub_coach_id || 0, b.sub_coach_name || '', b.label_levels || 0, b.remark || '',
+        (b.initial_weight === '' || b.initial_weight == null) ? null : Number(b.initial_weight),
+        (b.target_weight === '' || b.target_weight == null) ? null : Number(b.target_weight),
+        Array.isArray(b.target_compare_photos) ? JSON.stringify(b.target_compare_photos) : (typeof b.target_compare_photos === 'string' ? b.target_compare_photos : null),
+        b.constellation_mbti || null, b.training_frequency || null, b.studio_feedback || null]);
     await db.exec('INSERT IGNORE INTO biz_user_club (vip_user_id, club_id) VALUES (?,?)', [id, req.clubId]);
     await logAction(req, '新增会员', `${b.realname} ${b.phone}`);
     res.json(ok({ id }));
@@ -163,12 +195,23 @@ r.post('/members', staffAuth(), async (req, res, next) => {
 r.put('/members/:id', staffAuth(), async (req, res, next) => {
   try {
     const b = req.body;
+    const initial_weight = (b.initial_weight === '' || b.initial_weight == null) ? null : Number(b.initial_weight);
+    const target_weight = (b.target_weight === '' || b.target_weight == null) ? null : Number(b.target_weight);
+    const target_compare_photos = Array.isArray(b.target_compare_photos) ? JSON.stringify(b.target_compare_photos) : (typeof b.target_compare_photos === 'string' ? b.target_compare_photos : null);
+    const constellation_mbti = b.constellation_mbti || null;
+    const training_frequency = b.training_frequency || null;
+    const studio_feedback = b.studio_feedback || null;
+
     await db.exec(
       `UPDATE biz_vip_user SET realname=?,nickname=?,gender=?,birthday=?,id_card_number=?,address=?,source_id=?,source_name=?,
-        coach_id=?,coach_name=?,sub_coach_id=?,sub_coach_name=?,label_levels=?,remark=? WHERE id=? AND merchant_id=?`,
+        coach_id=?,coach_name=?,sub_coach_id=?,sub_coach_name=?,label_levels=?,remark=?,
+        initial_weight=?,target_weight=?,target_compare_photos=?,constellation_mbti=?,training_frequency=?,studio_feedback=?
+       WHERE id=? AND merchant_id=?`,
       [b.realname, b.nickname, b.gender || 0, b.birthday || null, b.id_card_number || '', b.address || '',
         b.source_id || 0, b.source_name || '', b.coach_id || 0, b.coach_name || '',
-        b.sub_coach_id || 0, b.sub_coach_name || '', b.label_levels || 0, b.remark || '', req.params.id, req.user.mid]);
+        b.sub_coach_id || 0, b.sub_coach_name || '', b.label_levels || 0, b.remark || '',
+        initial_weight, target_weight, target_compare_photos, constellation_mbti, training_frequency, studio_feedback,
+        req.params.id, req.user.mid]);
     // 主教练变更: 未总结的里程碑转给新主教练
     if (b.coach_id) await db.exec('UPDATE biz_milestone SET coach_id=?, coach_name=? WHERE vip_id=? AND merchant_id=? AND status=0', [b.coach_id, b.coach_name || '', req.params.id, req.user.mid]);
     await logAction(req, '编辑会员', `#${req.params.id} ${b.realname}`);
@@ -633,6 +676,19 @@ r.post('/members/import', staffAuth('admin', 'manager', 'membership'), async (re
     await lifecycleTick(true);
     await logAction(req, '会员导入', `共${stat.total}条: 新建会员${createdMember}人, 导入卡${createdCard}张, 新建卡类型${newCats.size}个`);
     res.json(ok({ created_member: createdMember, created_card: createdCard, created_body: createdBody, created_categories: [...newCats.keys()], skipped: stat.skip, total: stat.total, password_rule: '手机号后6位' }));
+  } catch (e) { next(e); }
+});
+
+// 会员训练风采相册查看 (员工端/PC端)
+r.get('/members/:id/training-photos', staffAuth(), async (req, res, next) => {
+  try {
+    const vipId = Number(req.params.id);
+    const list = await db.query(
+      `SELECT id, photo_url, photo_date, month_key, remark, insert_time
+       FROM biz_member_training_photo
+       WHERE vip_id=? AND status=1
+       ORDER BY photo_date DESC, id DESC`, [vipId]);
+    res.json(ok(list));
   } catch (e) { next(e); }
 });
 

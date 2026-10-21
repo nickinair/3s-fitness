@@ -57,7 +57,22 @@
   ].join('\n');
 
   window.Pages.CoachSchedule = {
-    data() { return { days: H.monthDays(), date: H.today(), d: null, loading: true }; },
+    data() {
+      const today = H.today();
+      const d = dayjs(today);
+      const day = d.day();
+      const diff = day === 0 ? -6 : 1 - day;
+      const initialMonday = d.add(diff, 'day').format('YYYY-MM-DD');
+      return {
+        viewMode: 'day', // 'day' | 'week'
+        days: H.monthDays(),
+        date: today,
+        d: null,
+        weekMonday: initialMonday,
+        weekData: null,
+        loading: true,
+      };
+    },
     computed: {
       items() {
         if (!this.d) return [];
@@ -65,6 +80,7 @@
         (this.d.bookings || []).forEach(b => arr.push({
           key: 'pt' + b.id, time: b.from_time, timeEnd: b.to_time, kind: 'pt',
           title: b.course_title || '私教课', sub: '学员 ' + b.realname, status: b.status, confirm: b.confirm_status,
+          lesson_plan: b.lesson_plan,
         }));
         (this.d.classes || []).forEach(c => arr.push({
           key: 'g' + c.id, time: H.time(c.start_time), timeEnd: H.time(c.end_time), kind: 'group',
@@ -73,36 +89,225 @@
         return arr.sort((a, b) => a.time < b.time ? -1 : 1);
       },
       rests() { return (this.d && this.d.rests) || []; },
+      weekSunday() {
+        return dayjs(this.weekMonday).add(6, 'day').format('YYYY-MM-DD');
+      },
+      isCurrentWeek() {
+        return this.weekMonday === this.calcMonday(H.today());
+      },
+      weekLabel() {
+        const m = dayjs(this.weekMonday);
+        const s = dayjs(this.weekSunday);
+        return m.format('YYYY年M月D日') + ' ~ ' + s.format('M月D日');
+      },
+      weekSchedule() {
+        if (!this.weekData) return [];
+        const W_NAMES = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        const res = [];
+        const mon = dayjs(this.weekMonday);
+        const today = H.today();
+        const bookings = this.weekData.bookings || [];
+        const classes = this.weekData.classes || [];
+        const rests = this.weekData.rests || [];
+
+        for (let i = 0; i < 7; i++) {
+          const cur = mon.add(i, 'day');
+          const dStr = cur.format('YYYY-MM-DD');
+          const dayBookings = bookings.filter(b => H.dateOf(b.date) === dStr);
+          const dayClasses = classes.filter(c => H.dateOf(c.start_time) === dStr);
+          const dayRests = rests.filter(r => H.dateOf(r.rest_date) === dStr);
+
+          const items = [];
+          dayBookings.forEach(b => items.push({
+            key: 'pt' + b.id, time: b.from_time, timeEnd: b.to_time, kind: 'pt',
+            title: b.course_title || '私教课', sub: '学员 ' + b.realname + (b.phone ? ' (' + b.phone.slice(-4) + ')' : ''),
+            status: b.status, confirm: b.confirm_status, lesson_plan: b.lesson_plan,
+          }));
+          dayClasses.forEach(c => items.push({
+            key: 'g' + c.id, time: H.time(c.start_time), timeEnd: H.time(c.end_time), kind: 'group',
+            title: c.title, sub: (c.classroom_name || '') + ' · ' + c.booked_count + '/' + c.people_count + '人',
+          }));
+          items.sort((a, b) => a.time < b.time ? -1 : 1);
+
+          res.push({
+            date: dStr,
+            d: cur.format('MM-DD'),
+            w: W_NAMES[i],
+            isToday: dStr === today,
+            isPast: cur.isBefore(dayjs().startOf('day')),
+            items,
+            rests: dayRests,
+          });
+        }
+        return res;
+      },
+      weekStats() {
+        const ws = this.weekSchedule;
+        let pt = 0, group = 0, rest = 0;
+        ws.forEach(d => {
+          d.items.forEach(it => {
+            if (it.kind === 'pt') pt++;
+            else if (it.kind === 'group') group++;
+          });
+          if (d.rests.length) rest++;
+        });
+        return { pt, group, rest };
+      },
     },
     template: [
       '<div class="page">',
       '  <m-nav :title="needPick ? \'教练课表\' : \'我的课表\'"></m-nav>',
       PICK_BAR,
-      '  <div class="day-strip" ref="strip">',
-      '    <div v-for="dd in days" :key="dd.date" class="day-item" :class="{on:dd.date===date, past:dd.past}" @click="pick(dd.date)">',
-      '      <div class="w">{{ dd.w }}</div><div class="d">{{ dd.d }}</div>',
+      '  <div style="padding:10px 16px 6px;display:flex;justify-content:center;background:#fff;border-bottom:1px solid #f0f0f0">',
+      '    <div style="display:inline-flex;background:#eef2f1;border-radius:20px;padding:3px">',
+      '      <div @click="switchView(\'day\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'day\'?\'background:#0d5e56;color:#fff;box-shadow:0 2px 6px rgba(13,94,86,0.25)\':\'color:#555\'">日视图</div>',
+      '      <div @click="switchView(\'week\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'week\'?\'background:#0d5e56;color:#fff;box-shadow:0 2px 6px rgba(13,94,86,0.25)\':\'color:#555\'">周计划</div>',
       '    </div>',
       '  </div>',
-      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      /* === 日视图 === */
+      '  <template v-if="viewMode===\'day\'">',
+      '    <div class="day-strip" ref="strip">',
+      '      <div v-for="dd in days" :key="dd.date" class="day-item" :class="{on:dd.date===date, past:dd.past}" @click="pick(dd.date)">',
+      '        <div class="w">{{ dd.w }}</div><div class="d">{{ dd.d }}</div>',
+      '      </div>',
+      '    </div>',
+      '    <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '    <template v-else>',
+      '      <div class="pending-bar" v-for="r in rests" :key="r.id" style="background:#f0f9f8;border-color:#9fc6c1;color:#0d5e56">',
+      '        <van-icon name="underway-o"/><span style="margin-left:8px">休息：{{ r.from_time ? (r.from_time+\' - \'+r.to_time) : \'全天\' }}{{ r.remark? \' · \'+r.remark : \'\' }}</span>',
+      '      </div>',
+      '      <van-empty v-if="!items.length" description="当日暂无课程安排"/>',
+      '      <div v-for="it in items" :key="it.key" class="course-item">',
+      '        <div class="course-time"><div class="b">{{ it.time }}</div><div class="e">{{ it.timeEnd }}</div></div>',
+      '        <div class="flex1">',
+      '          <div class="title">{{ it.title }} <van-tag :type="it.kind===\'pt\'?\'primary\':\'success\'" plain>{{ it.kind===\'pt\'?\'私教\':\'团课\' }}</van-tag></div>',
+      '          <div class="muted mt4">{{ it.sub }}</div>',
+      '          <div v-if="it.lesson_plan" style="margin-top:6px;padding:6px 10px;background:#f0f9f8;border-left:2px solid #0d5e56;border-radius:4px;font-size:12px;color:#333;line-height:1.4">',
+      '            <span style="font-weight:600;color:#0d5e56"><van-icon name="notes-o"/> 训练计划：</span>{{ it.lesson_plan }}',
+      '          </div>',
+      '        </div>',
+      '        <div style="display:flex;align-items:center" v-if="it.kind===\'pt\'">',
+      '          <d-tag dict="ptStatus" :v="it.status"></d-tag>',
+      '        </div>',
+      '      </div>',
+      '    </template>',
+      '  </template>',
+      /* === 周视图 === */
       '  <template v-else>',
-      '    <div class="pending-bar" v-for="r in rests" :key="r.id" style="background:#f0f9f8;border-color:#9fc6c1;color:#0d5e56">',
-      '      <van-icon name="underway-o"/><span style="margin-left:8px">休息：{{ r.from_time ? (r.from_time+\' - \'+r.to_time) : \'全天\' }}{{ r.remark? \' · \'+r.remark : \'\' }}</span>',
-      '    </div>',
-      '    <van-empty v-if="!items.length" description="当日暂无课程安排"/>',
-      '    <div v-for="it in items" :key="it.key" class="course-item">',
-      '      <div class="course-time"><div class="b">{{ it.time }}</div><div class="e">{{ it.timeEnd }}</div></div>',
-      '      <div class="flex1">',
-      '        <div class="title">{{ it.title }} <van-tag :type="it.kind===\'pt\'?\'primary\':\'success\'" plain>{{ it.kind===\'pt\'?\'私教\':\'团课\' }}</van-tag></div>',
-      '        <div class="muted mt4">{{ it.sub }}</div>',
+      '    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fff;border-bottom:1px solid #f0f0f0">',
+      '      <van-button size="small" plain round icon="arrow-left" @click="prevWeek">上周</van-button>',
+      '      <div style="text-align:center">',
+      '        <div style="font-weight:700;font-size:14px;color:#1a1a1a">{{ weekLabel }}</div>',
+      '        <div class="muted" style="font-size:12px;margin-top:2px">',
+      '          共 {{ weekStats.pt }} 节私教 · {{ weekStats.group }} 节团课<template v-if="weekStats.rest"> · 休息 {{ weekStats.rest }} 天</template>',
+      '        </div>',
       '      </div>',
-      '      <div style="display:flex;align-items:center" v-if="it.kind===\'pt\'">',
-      '        <d-tag dict="ptStatus" :v="it.status"></d-tag>',
+      '      <div style="display:flex;gap:4px">',
+      '        <van-button v-if="!isCurrentWeek" size="small" plain round type="primary" @click="goCurrentWeek">本周</van-button>',
+      '        <van-button size="small" plain round icon="arrow" @click="nextWeek">下周</van-button>',
       '      </div>',
       '    </div>',
+      '    <div style="display:flex;background:#fff;padding:8px 6px 10px;border-bottom:1px solid #f0f0f0;justify-content:space-around">',
+      '      <div v-for="day in weekSchedule" :key="day.date" @click="scrollToDayCard(day.date)"',
+      '        style="text-align:center;padding:6px 2px;border-radius:8px;min-width:44px;cursor:pointer;transition:all 0.15s"',
+      '        :style="day.isToday ? \'background:#eef7f5;border:1px solid #0d5e56\' : \'background:#f9fafb\'">',
+      '        <div style="font-size:11px;color:#888">{{ day.w }}</div>',
+      '        <div style="font-size:13px;font-weight:700;margin-top:2px" :style="day.isToday ? \'color:#0d5e56\' : \'color:#333\'">{{ day.d.slice(3) }}</div>',
+      '        <div style="margin-top:2px;height:14px">',
+      '          <span v-if="day.items.length" style="display:inline-block;padding:0 5px;border-radius:8px;background:#0d5e56;color:#fff;font-size:10px;transform:scale(0.85)">{{ day.items.length }}</span>',
+      '          <span v-else-if="day.rests.length" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#e6a23c"></span>',
+      '          <span v-else style="display:inline-block;width:4px;height:4px;border-radius:50%;background:#e5e7eb"></span>',
+      '        </div>',
+      '      </div>',
+      '    </div>',
+      '    <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '    <template v-else>',
+      '      <div v-for="day in weekSchedule" :key="day.date" :id="\'week-day-\'+day.date" style="margin:10px 12px;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05);overflow:hidden">',
+      '        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#f9fbfb;border-bottom:1px solid #edf2f1">',
+      '          <div style="display:flex;align-items:center;gap:6px">',
+      '            <span style="font-size:14px;font-weight:700;color:#1f2937">{{ day.d }} {{ day.w }}</span>',
+      '            <van-tag v-if="day.isToday" type="primary" round size="small">今天</van-tag>',
+      '            <van-tag v-if="day.rests.length" type="warning" plain round size="small">休息</van-tag>',
+      '          </div>',
+      '          <div style="display:flex;align-items:center;gap:6px">',
+      '            <span class="muted" style="font-size:12px">{{ day.items.length ? (day.items.length + \' 节课\') : \'无课程\' }}</span>',
+      '            <van-button size="mini" plain round type="primary" @click="jumpToDay(day.date)">单日详情</van-button>',
+      '          </div>',
+      '        </div>',
+      '        <div v-if="day.rests.length" style="padding:6px 12px;background:#fff8f0;color:#d97706;font-size:12px;border-bottom:1px solid #fef3c7">',
+      '          <van-icon name="underway-o"/><span style="margin-left:4px">休息：</span><span v-for="r in day.rests" :key="r.id">{{ r.from_time ? (r.from_time+\' - \'+r.to_time) : \'全天\' }}{{ r.remark ? \' · \'+r.remark : \'\' }}</span>',
+      '        </div>',
+      '        <div v-if="!day.items.length && !day.rests.length" style="padding:16px 0;text-align:center;color:#bbb;font-size:12px">',
+      '          暂无排课',
+      '        </div>',
+      '        <div v-else>',
+      '          <div v-for="it in day.items" :key="it.key" style="padding:10px 12px;border-bottom:1px solid #f5f5f5;display:flex;gap:10px;align-items:flex-start">',
+      '            <div style="flex-shrink:0;width:76px;text-align:center;padding:4px 0;background:#f3f7f6;border-radius:6px">',
+      '              <div style="font-weight:700;font-size:13px;color:#0d5e56">{{ it.time }}</div>',
+      '              <div style="font-size:11px;color:#666">{{ it.timeEnd }}</div>',
+      '            </div>',
+      '            <div style="flex:1;min-width:0">',
+      '              <div style="display:flex;justify-content:space-between;align-items:center">',
+      '                <span style="font-size:13px;font-weight:600;color:#222">{{ it.title }}</span>',
+      '                <van-tag :type="it.kind===\'pt\'?\'primary\':\'success\'" size="small" plain>{{ it.kind===\'pt\'?\'私教\':\'团课\' }}</van-tag>',
+      '              </div>',
+      '              <div class="muted mt4" style="font-size:12px">{{ it.sub }}</div>',
+      '              <div v-if="it.lesson_plan" style="margin-top:6px;padding:5px 8px;background:#f0f9f8;border-left:2px solid #0d5e56;border-radius:4px;font-size:12px;color:#333;line-height:1.4">',
+      '                <span style="font-weight:600;color:#0d5e56"><van-icon name="notes-o"/> 计划：</span>{{ it.lesson_plan }}',
+      '              </div>',
+      '            </div>',
+      '            <div v-if="it.kind===\'pt\'" style="flex-shrink:0">',
+      '              <d-tag dict="ptStatus" :v="it.status"></d-tag>',
+      '            </div>',
+      '          </div>',
+      '        </div>',
+      '      </div>',
+      '    </template>',
       '  </template>',
       '</div>',
     ].join('\n'),
     methods: {
+      calcMonday(dStr) {
+        const d = dayjs(dStr || H.today());
+        const day = d.day();
+        const diff = day === 0 ? -6 : 1 - day;
+        return d.add(diff, 'day').format('YYYY-MM-DD');
+      },
+      switchView(mode) {
+        if (this.viewMode === mode) return;
+        this.viewMode = mode;
+        if (mode === 'day') {
+          this.load();
+          this.scrollDay();
+        } else {
+          this.weekMonday = this.calcMonday(this.date);
+          this.load();
+        }
+      },
+      prevWeek() {
+        this.weekMonday = dayjs(this.weekMonday).subtract(7, 'day').format('YYYY-MM-DD');
+        this.load();
+      },
+      nextWeek() {
+        this.weekMonday = dayjs(this.weekMonday).add(7, 'day').format('YYYY-MM-DD');
+        this.load();
+      },
+      goCurrentWeek() {
+        this.weekMonday = this.calcMonday(H.today());
+        this.load();
+      },
+      jumpToDay(dateStr) {
+        this.date = dateStr;
+        this.viewMode = 'day';
+        this.load();
+        this.scrollDay();
+      },
+      scrollToDayCard(dateStr) {
+        this.$nextTick(() => {
+          const el = document.getElementById('week-day-' + dateStr);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      },
       pick(d) { this.date = d; this.load(); this.scrollDay(); },
       scrollDay() {
         this.$nextTick(() => {
@@ -114,8 +319,15 @@
       async load() {
         this.loading = true;
         try {
-          if (!(await this.ensureCoach())) { this.d = null; return; }
-          this.d = await API.get('/coaches/' + coachId() + '/schedule?from=' + this.date + '&to=' + this.date);
+          if (!(await this.ensureCoach())) { this.d = null; this.weekData = null; return; }
+          const cid = coachId();
+          if (this.viewMode === 'day') {
+            this.d = await API.get('/coaches/' + cid + '/schedule?from=' + this.date + '&to=' + this.date);
+          } else {
+            const mon = this.weekMonday;
+            const sun = dayjs(mon).add(6, 'day').format('YYYY-MM-DD');
+            this.weekData = await API.get('/coaches/' + cid + '/schedule?from=' + mon + '&to=' + sun);
+          }
         } finally { this.loading = false; }
       },
     },
@@ -124,7 +336,7 @@
   };
 
   window.Pages.CoachBookings = {
-    data() { return { days: H.monthDays(), date: H.today(), list: [], loading: true, doing: 0 }; },
+    data() { return { days: H.monthDays(), date: H.today(), list: [], loading: true, doing: 0, planDialog: { show: false, booking: null, text: '' } }; },
     template: [
       '<div class="page">',
       '  <m-nav title="预约管理"></m-nav>',
@@ -146,6 +358,17 @@
       '        <span class="bk-day">{{ H.day(b.date) }}（{{ H.week(b.date) }}）</span></div>',
       '      <div class="muted mt4">上课教练：{{ b.coach_name || \'未指定\' }}</div>',
       '      <div class="muted mt4">{{ b.card_type_name }} · 扣{{ b.card_deduct_num }}课时<template v-if="b.remark"> · 备注：{{ b.remark }}</template></div>',
+      '      <div v-if="b.lesson_plan" style="margin-top:8px;padding:8px 12px;background:#f5fbf9;border-left:3px solid #0d5e56;border-radius:4px;font-size:13px;line-height:1.5;">',
+      '        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">',
+      '          <span style="font-weight:600;color:#0d5e56"><van-icon name="notes-o" style="margin-right:4px"/>本节课训练计划</span>',
+      '          <van-button size="mini" plain round type="primary" @click="editPlan(b)">修改计划</van-button>',
+      '        </div>',
+      '        <div style="white-space:pre-wrap;color:#333">{{ b.lesson_plan }}</div>',
+      '      </div>',
+      '      <div v-else-if="b.status===0 || b.status===1" style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#f9f9f9;border-radius:4px;font-size:12px;color:#888;">',
+      '        <span>暂未填写训练计划</span>',
+      '        <van-button size="mini" plain round type="primary" @click="editPlan(b)">+ 填写计划</van-button>',
+      '      </div>',
       '      <div class="foot" v-if="b.status===0 || b.status===1">',
       '        <template v-if="b.status===0">',
       '          <van-button size="small" round plain @click="cancel(b)">拒绝</van-button>',
@@ -162,6 +385,14 @@
       '      </div>',
       '    </div>',
       '  </template>',
+      '  <van-dialog v-model:show="planDialog.show" title="本节课训练计划" show-cancel-button confirm-button-color="#0d5e56" :before-close="onPlanDialogBeforeClose">',
+      '    <div style="padding:12px 16px 4px">',
+      '      <div v-if="planDialog.booking" class="muted" style="margin-bottom:8px;font-size:12px">',
+      '        {{ planDialog.booking.realname }} · {{ H.day(planDialog.booking.date) }} {{ planDialog.booking.from_time }}-{{ planDialog.booking.to_time }}',
+      '      </div>',
+      '      <van-field v-model="planDialog.text" type="textarea" rows="4" maxlength="500" show-word-limit placeholder="请输入本节课训练计划（例如热身动作、训练动作/组数/次数、拉伸项）" style="border:1px solid #ebedf0;border-radius:6px;padding:8px"/>',
+      '    </div>',
+      '  </van-dialog>',
       '</div>',
     ].join('\n'),
     methods: {
@@ -175,19 +406,27 @@
           strip.scrollTo({ left: el.offsetLeft - strip.clientWidth / 2 + el.offsetWidth / 2, behavior: 'auto' });
         });
       },
-      async load() {
-        this.loading = true;
+      async load(silent = false) {
+        if (!silent) this.loading = true;
+        const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
         try {
           const d = await API.get('/ptrain-bookings?size=100&' + this.qs());
           this.list = d.list || [];
-        } finally { this.loading = false; }
+        } finally {
+          if (!silent) this.loading = false;
+          if (silent) {
+            this.$nextTick(() => {
+              window.scrollTo({ top: scrollY, behavior: 'instant' });
+            });
+          }
+        }
       },
       async confirm(b) {
         this.doing = b.id;
         try {
           await API.post('/ptrain-bookings/' + b.id + '/confirm');
           vant.showToast({ message: '已确认预约', icon: 'success' });
-          this.load();
+          this.load(true);
         } finally { this.doing = 0; }
       },
       async cancel(b) {
@@ -202,7 +441,7 @@
         } catch (e) { return; }
         await API.post('/ptrain-bookings/' + b.id + '/cancel', reason ? { reason } : {});
         vant.showToast('已取消');
-        this.load();
+        this.load(true);
       },
       // 教练直接销课(纪要4.1现状: 教练手动点销课、课时随之扣减); 学员确认为可选双保险
       async finishNow(b) {
@@ -211,14 +450,14 @@
         try {
           await API.post('/ptrain-bookings/' + b.id + '/finish', {});
           vant.showToast({ message: '已销课', icon: 'success' });
-          this.load();
+          this.load(true);
         } finally { this.doing = 0; }
       },
       async noshow(b) {
         try { await vant.showConfirmDialog({ title: '标记爽约', message: '确定将 ' + b.realname + ' 本节课标记为爽约吗？', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
         await API.post('/ptrain-bookings/' + b.id + '/noshow');
         vant.showToast('已标记爽约');
-        this.load();
+        this.load(true);
       },
       async startFinish(b) {
         try { await vant.showConfirmDialog({ title: '发起消课', message: '向 ' + b.realname + ' 发起本节课消课确认？学员确认后自动扣课时。', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
@@ -226,8 +465,25 @@
         try {
           const r = await API.post('/ptrain-bookings/' + b.id + '/start-finish');
           vant.showDialog({ title: '已发起消课', message: (r && r.msg) || '请学员在小程序「待确认消课」中确认', confirmButtonColor: '#0d5e56' });
-          this.load();
+          this.load(true);
         } finally { this.doing = 0; }
+      },
+      editPlan(b) {
+        this.planDialog = { show: true, booking: b, text: b.lesson_plan || '' };
+      },
+      async onPlanDialogBeforeClose(action) {
+        if (action !== 'confirm') return true;
+        const b = this.planDialog.booking;
+        if (!b) return true;
+        try {
+          await API.put('/ptrain-bookings/' + b.id + '/lesson-plan', { lesson_plan: this.planDialog.text });
+          b.lesson_plan = this.planDialog.text;
+          vant.showToast({ message: '训练计划已保存', icon: 'success' });
+          return true;
+        } catch (e) {
+          vant.showToast(e.message || '保存失败');
+          return false;
+        }
       },
     },
     mounted() { this.load(); this.scrollDay(); },

@@ -11,16 +11,32 @@ window.AppPages.MemberDetail = {
       // 合同查看
       contractDlg: false, contract: null,
       // 编辑
-      editDlg: false, form: {}, sources: [], coaches: [], saving: false,
+      editDlg: false, form: {}, sources: [], coaches: [], saving: false, uploadingPhoto: false,
       // 体测
       bodyRecords: [], bodyDlg: false, bodyForm: {}, bodySaving: false,
       // 里程碑
       milestones: [],
+      // 专属完善链接
+      profileLinkDlg: false, profileLinkData: { url: '', token: '', vipName: '' },
+      // 训练风采相册
+      trainingPhotos: [], loadingPhotos: false,
     };
   },
   computed: {
     id() { return this.$route.params.id; },
     profile() { return this.d ? this.d.profile : {}; },
+    comparePhotos() {
+      const p = this.profile && this.profile.target_compare_photos;
+      if (!p) return [];
+      if (Array.isArray(p)) return p;
+      try { return JSON.parse(p); } catch { return []; }
+    },
+    formPhotos() {
+      const p = this.form && this.form.target_compare_photos;
+      if (!p) return [];
+      if (Array.isArray(p)) return p;
+      try { return JSON.parse(p); } catch { return []; }
+    },
     // 体重 + 体脂率 双 y 轴趋势
     bodyChart() {
       const rows = [...this.bodyRecords].sort((a, b) => (String(a.record_date) > String(b.record_date) ? 1 : -1));
@@ -58,18 +74,30 @@ window.AppPages.MemberDetail = {
           <div class="profile-grid">
             <div><span class="lab">手机号</span>{{ profile.phone }}</div>
             <div><span class="lab">性别</span>{{ DICT.gender[profile.gender] }}</div>
-            <div><span class="lab">生日</span>{{ Fmt.date(profile.birthday) }}</div>
+            <div><span class="lab">生日</span>{{ Fmt.date(profile.birthday) || '-' }}</div>
+            <div><span class="lab">星座/MBTI</span>{{ profile.constellation_mbti || '-' }}</div>
+            <div><span class="lab">初始体重</span>{{ profile.initial_weight != null ? (profile.initial_weight + ' kg') : '-' }}</div>
+            <div><span class="lab">目标体重</span>{{ profile.target_weight != null ? (profile.target_weight + ' kg') : '-' }}</div>
+            <div><span class="lab">训练频次</span>{{ profile.training_frequency || '-' }}</div>
             <div><span class="lab">来源</span>{{ profile.source_name || '-' }}</div>
             <div><span class="lab">主教练</span>{{ profile.coach_name || '-' }}</div>
             <div><span class="lab">副教练</span>{{ profile.sub_coach_name || '-' }}</div>
             <div><span class="lab">最近签到</span>{{ Fmt.time(profile.last_sign_time) }}</div>
             <div><span class="lab">建档时间</span>{{ Fmt.time(profile.insert_time) }}</div>
-            <div><span class="lab">最近维护</span>{{ Fmt.time(profile.last_maintain_time) }}</div>
-            <div><span class="lab">最近到期</span>{{ Fmt.date(profile.expire_time) }}</div>
+            <div style="grid-column: span 2"><span class="lab">会馆反馈</span>{{ profile.studio_feedback || '-' }}</div>
+            <div style="grid-column: span 2" v-if="comparePhotos.length">
+              <span class="lab">目标对比图</span>
+              <div style="display:inline-flex;gap:8px;vertical-align:middle;margin-top:4px">
+                <el-image v-for="(img, idx) in comparePhotos" :key="idx" :src="img" :preview-src-list="comparePhotos" fit="cover" style="width:54px;height:54px;border-radius:6px;cursor:pointer;border:1px solid #e5e7eb" />
+              </div>
+            </div>
             <div style="grid-column: span 2"><span class="lab">备注</span>{{ profile.remark || '-' }}</div>
           </div>
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0">
+          <el-button type="success" plain @click="openProfileLinkDialog">
+            <el-icon style="margin-right:4px"><Share /></el-icon>专属完善链接 (免登录+送70分)
+          </el-button>
           <el-button type="primary" @click="$router.push({ path: '/card-open', query: { vip_id: profile.id } })">开卡</el-button>
           <el-button @click="tab = 'maintains'">维护</el-button>
           <el-button @click="openEdit">编辑</el-button>
@@ -220,6 +248,25 @@ window.AppPages.MemberDetail = {
             </el-table-column>
           </el-table>
         </el-tab-pane>
+        <el-tab-pane label="训练风采" name="trainingPhotos">
+          <div v-loading="loadingPhotos" style="padding:10px 0">
+            <div v-if="!trainingPhotos.length">
+              <el-empty description="该会员暂未上传训练风采照片" :image-size="70" />
+            </div>
+            <div v-else style="display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:16px">
+              <div v-for="p in trainingPhotos" :key="p.id" style="background:var(--el-fill-color-light);border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.06);display:flex;flex-direction:column">
+                <el-image :src="p.photo_url" :preview-src-list="trainingPhotos.map(x => x.photo_url)" fit="cover" style="width:100%;height:180px" />
+                <div style="padding:10px;font-size:13px">
+                  <div style="font-weight:600;color:var(--text-main);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.remark || '训练打卡记录' }}</div>
+                  <div style="display:flex;justify-content:space-between;color:var(--text-secondary);font-size:11px">
+                    <span>{{ Fmt.date(p.photo_date) }}</span>
+                    <span>{{ p.month_key }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </div>
 
@@ -293,6 +340,22 @@ window.AppPages.MemberDetail = {
           </el-form-item></el-col>
           <el-col :span="12"><el-form-item label="身份证号"><el-input v-model="form.id_card_number" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="住址"><el-input v-model="form.address" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="初始体重(kg)"><el-input-number v-model="form.initial_weight" :min="20" :max="250" :precision="1" controls-position="right" placeholder="kg" style="width:100%" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="目标体重(kg)"><el-input-number v-model="form.target_weight" :min="20" :max="250" :precision="1" controls-position="right" placeholder="kg" style="width:100%" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="星座/MBTI"><el-input v-model="form.constellation_mbti" placeholder="如：天蝎座 / INTJ" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="训练频次"><el-input v-model="form.training_frequency" placeholder="如：每周3-4次" /></el-form-item></el-col>
+          <el-col :span="24"><el-form-item label="会馆反馈"><el-input v-model="form.studio_feedback" type="textarea" :rows="2" placeholder="会员对场馆设施/课程安排/教练服务的反馈与建议" /></el-form-item></el-col>
+          <el-col :span="24"><el-form-item label="目标对比图">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+              <div v-for="(img, idx) in formPhotos" :key="idx" style="position:relative;width:60px;height:60px;border-radius:6px;overflow:hidden;border:1px solid #dcdfe6">
+                <el-image :src="img" fit="cover" style="width:100%;height:100%" />
+                <div @click="removePhoto(idx)" style="position:absolute;top:0;right:0;background:rgba(0,0,0,0.6);color:#fff;width:18px;height:18px;line-height:18px;text-align:center;cursor:pointer;font-size:12px;border-bottom-left-radius:4px">×</div>
+              </div>
+              <el-upload :show-file-list="false" accept="image/*" :before-upload="uploadComparePhoto">
+                <el-button size="small" type="primary" plain :loading="uploadingPhoto">+ 上传对比图</el-button>
+              </el-upload>
+            </div>
+          </el-form-item></el-col>
           <el-col :span="24"><el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item></el-col>
         </el-row>
       </el-form>
@@ -300,6 +363,28 @@ window.AppPages.MemberDetail = {
         <el-button @click="editDlg=false">取消</el-button>
         <el-button type="primary" :loading="saving" @click="save">保存</el-button>
       </template>
+    </el-dialog>
+
+    <el-dialog v-model="profileLinkDlg" title="会员专属完善资料链接 (免登录)" width="520px" destroy-on-close>
+      <div style="text-align:center;padding:10px 0">
+        <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:6px">
+          会员：{{ profileLinkData.vipName }}
+        </div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+          专属免登录链接（有效时长30天），会员打开即可完善7项档案并最高获得 70 积分奖励
+        </div>
+        <div id="admin-profile-qr" style="display:inline-block;padding:12px;background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);margin-bottom:16px;min-width:170px;min-height:170px"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <el-input :model-value="profileLinkData.url" readonly select-all-on-focus />
+          <el-button type="primary" @click="copyProfileLink">复制链接</el-button>
+        </div>
+        <div style="margin-top:14px;padding:10px 14px;background:var(--el-fill-color-light);border-radius:6px;font-size:12px;color:var(--text-secondary);text-align:left;line-height:1.6">
+          💡 <b>使用提示：</b><br/>
+          1. 复制链接后，可通过微信直接发送给学员；<br/>
+          2. 也可让学员直接使用微信扫描上方二维码；<br/>
+          3. 学员补充初始体重、目标对比照等档案后，系统将自动下发积分并在会员详情实时同步。
+        </div>
+      </div>
     </el-dialog>
   </div>`,
   methods: {
@@ -368,7 +453,31 @@ window.AppPages.MemberDetail = {
       this.form = JSON.parse(JSON.stringify(this.profile));
       if (!this.form.coach_id) this.form.coach_id = null;
       if (!this.form.sub_coach_id) this.form.sub_coach_id = null;
+      if (typeof this.form.target_compare_photos === 'string') {
+        try { this.form.target_compare_photos = JSON.parse(this.form.target_compare_photos); } catch { this.form.target_compare_photos = []; }
+      } else if (!Array.isArray(this.form.target_compare_photos)) {
+        this.form.target_compare_photos = [];
+      }
       this.editDlg = true;
+    },
+    async uploadComparePhoto(file) {
+      if (file.size > 5 * 1024 * 1024) { ElementPlus.ElMessage.warning('图片不能超过 5MB'); return false; }
+      this.uploadingPhoto = true;
+      try {
+        const fd = new FormData(); fd.append('file', file);
+        const resp = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + Auth.getToken() }, body: fd });
+        const j = await resp.json();
+        if (j.code !== 0) throw new Error(j.msg || '上传失败');
+        if (!Array.isArray(this.form.target_compare_photos)) this.form.target_compare_photos = [];
+        this.form.target_compare_photos.push(j.data.url);
+        ElementPlus.ElMessage.success('已上传');
+      } catch (e) { ElementPlus.ElMessage.error(e.message || '上传失败'); }
+      finally { this.uploadingPhoto = false; }
+      return false;
+    },
+    removePhoto(idx) {
+      if (!Array.isArray(this.form.target_compare_photos)) return;
+      this.form.target_compare_photos.splice(idx, 1);
     },
     onSourceChange(v) {
       const s = this.sources.find(x => x.id === v);
@@ -391,7 +500,63 @@ window.AppPages.MemberDetail = {
         this.load();
       } finally { this.saving = false; }
     },
+    async openProfileLinkDialog() {
+      try {
+        const res = await api.get('/members/' + this.id + '/profile-link');
+        if (!res) return;
+        const fullUrl = window.location.origin + '/m/' + (res.link || res.path);
+        this.profileLinkData = {
+          url: fullUrl,
+          token: res.token,
+          vipName: res.vip_name || this.profile.realname || '',
+        };
+        this.profileLinkDlg = true;
+        this.$nextTick(() => {
+          const el = document.getElementById('admin-profile-qr');
+          if (el) {
+            el.innerHTML = '';
+            if (window.QRCode) {
+              new QRCode(el, { text: fullUrl, width: 170, height: 170, colorDark: '#0d5e56', colorLight: '#ffffff' });
+            }
+          }
+        });
+      } catch (e) {
+        ElementPlus.ElMessage.error(e.message || '获取专属链接失败');
+      }
+    },
+    async copyProfileLink() {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(this.profileLinkData.url);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = this.profileLinkData.url;
+          ta.style.position = 'fixed';
+          ta.style.top = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        ElementPlus.ElMessage.success('专属完善资料链接已复制到剪贴板！');
+      } catch (e) {
+        ElementPlus.ElMessage.error('复制失败，请手动长按复制');
+      }
+    },
+    async loadTrainingPhotos() {
+      this.loadingPhotos = true;
+      try {
+        this.trainingPhotos = (await api.get('/members/' + this.id + '/training-photos')) || [];
+      } catch (e) {
+        this.trainingPhotos = [];
+      } finally {
+        this.loadingPhotos = false;
+      }
+    },
   },
-  watch: { '$route.params.id'() { if (this.$route.path.startsWith('/members/')) this.load(); } },
+  watch: {
+    '$route.params.id'() { if (this.$route.path.startsWith('/members/')) this.load(); },
+    tab(v) { if (v === 'trainingPhotos' && !this.trainingPhotos.length) this.loadTrainingPhotos(); },
+  },
   mounted() { this.load(); },
 };

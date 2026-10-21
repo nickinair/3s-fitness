@@ -85,7 +85,12 @@ const upload = multer({
     cb(null, /image\/(jpeg|png|gif|webp)/.test(file.mimetype));
   },
 });
-r.post('/upload', staffAuth(), upload.single('file'), async (req, res, next) => {
+r.post('/upload', (req, res, next) => {
+  const u = parseToken(req);
+  if (!u) return res.status(401).json(fail('未登录或登录已过期', 401));
+  req.user = u;
+  next();
+}, upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) throw new BizError('请选择图片文件（jpg/png/gif/webp，≤5MB）');
     res.json(ok({ url: '/uploads/' + req.file.filename }));

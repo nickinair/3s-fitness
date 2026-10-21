@@ -477,6 +477,17 @@ r.post('/ptrain-bookings/:id/start-finish', staffAuth(), async (req, res, next) 
   } catch (e) { next(e); }
 });
 
+// 更新「本节课训练计划」（教练填写，会员可见）
+r.put('/ptrain-bookings/:id/lesson-plan', staffAuth(), async (req, res, next) => {
+  try {
+    const bk = await db.queryOne('SELECT * FROM biz_ptrain_bespeak_record WHERE id=? AND merchant_id=?', [req.params.id, req.user.mid]);
+    if (!bk) throw new BizError('预约不存在');
+    const lessonPlan = (req.body.lesson_plan || '').trim();
+    await db.exec('UPDATE biz_ptrain_bespeak_record SET lesson_plan=? WHERE id=?', [lessonPlan, bk.id]);
+    res.json(ok({ lesson_plan: lessonPlan }));
+  } catch (e) { next(e); }
+});
+
 // 消课完成（共享: 学员确认 or 员工代确认）
 async function finishPtBooking(bookingId, { receptionId, receptionRemark }) {
   const bk = await db.queryOne('SELECT * FROM biz_ptrain_bespeak_record WHERE id=?', [bookingId]);
