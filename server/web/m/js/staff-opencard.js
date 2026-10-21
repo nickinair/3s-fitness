@@ -9,7 +9,7 @@ window.Pages.StaffOpenCard = {
       cats: [], kind: 0, cat: null,
       clubs: [], staff: [], coaches: [],
       form: { club_id: null, actual_money: '', retainage: '', pay_method: 'wechat', open_card_mode: 1, open_date: '',
-        membership_id: null, membership_name: '', coach_id: null, coach_name: '', remark: '' },
+        membership_id: null, membership_name: '', coach_id: null, coach_name: '', remark: '', custom_counts: 1 },
       payShow: false, modeShow: false, saleShow: false, coachShow: false,
       submitting: false,
       confirmShow: false, fromIntent: null,   // 开卡前的核对页 / 由购卡意向带入的原始记录
@@ -31,6 +31,35 @@ window.Pages.StaffOpenCard = {
     whoPhone() { return this.mode === 'exist' ? (this.vip ? this.vip.phone : '') : this.nm.phone; },
     confirmClub() { const c = this.clubs.find(x => x.id === this.form.club_id); return c ? c.name : ''; },
     stepTitles() { return ['选择会员', '选择卡类型', '收款信息']; },
+    is300PtCard() {
+      if (!this.cat || this.cat.card_kind !== 4) return false;
+      const unit = Math.round(Number(this.cat.price || 0) / (this.cat.total_counts || 1));
+      return unit === 300 || (this.cat.title && this.cat.title.includes('300'));
+    },
+    canAdmin() {
+      const role = (Store.user || {}).role;
+      return ['admin', 'manager', 'platform'].includes(role);
+    },
+    displayCounts() {
+      if (this.is300PtCard && this.canAdmin && this.form.custom_counts) {
+        return Number(this.form.custom_counts);
+      }
+      return (this.cat && this.cat.total_counts) || 0;
+    },
+    displayCardTitle() {
+      if (!this.cat) return '';
+      if (this.is300PtCard && this.canAdmin && this.form.custom_counts && /\(\d+次卡\)/.test(this.cat.title)) {
+        return this.cat.title.replace(/\(\d+次卡\)/, `(${this.form.custom_counts}次卡)`);
+      }
+      return this.cat.title;
+    },
+    expectedPrice() {
+      if (!this.cat) return 0;
+      if (this.is300PtCard && this.canAdmin && this.form.custom_counts) {
+        return Number(this.form.custom_counts) * 300;
+      }
+      return Number(this.cat.price || 0);
+    },
     // 底部主按钮: 前两步是翻页, 第三步唤起核对单
     nextText() {
       if (this.step < 3) return '下一步（' + this.step + '/3）';
@@ -131,10 +160,18 @@ window.Pages.StaffOpenCard = {
     '  <template v-if="step===3">',
     '  <div class="card-box oc-who flex" v-if="cat">',
     '    <van-icon name="card" color="#0d5e56"/>',
-    '    <span style="margin-left:6px"><b>{{ whoName }}</b> · {{ cat.title }}</span>',
-    '    <span class="flex1"></span><span class="price">{{ H.money(cat.price) }}</span>',
+    '    <span style="margin-left:6px"><b>{{ whoName }}</b> · {{ displayCardTitle }}</span>',
+    '    <span class="flex1"></span><span class="price">{{ H.money(expectedPrice) }}</span>',
     '  </div>',
     '  <div class="card-box" style="padding:6px 0">',
+    '    <van-field v-if="is300PtCard && canAdmin" label="制卡次数" required>',
+    '      <template #input>',
+    '        <div style="display:flex;align-items:center;width:100%;justify-content:space-between">',
+    '          <van-stepper v-model="form.custom_counts" :min="1" :max="999" integer @change="onCountsChange" input-width="48px" button-size="28px" />',
+    '          <span class="muted" style="font-size:12px;margin-left:8px">300元/节（管理员可改）</span>',
+    '        </div>',
+    '      </template>',
+    '    </van-field>',
     '    <van-field v-model="form.actual_money" type="number" label="实收金额" placeholder="0.00">',
     '      <template #left-icon><span style="color:#d4380d;font-weight:700">¥</span></template>',
     '    </van-field>',
@@ -165,8 +202,8 @@ window.Pages.StaffOpenCard = {
     '      <div class="oc-cfm">',
     '        <div class="r"><span>会员</span><b>{{ whoName }} <span class="muted" style="font-weight:400">{{ whoPhone }}</span>',
     '          <van-tag v-if="mode===\'new\'" type="primary" style="margin-left:4px">新建档</van-tag></b></div>',
-    '        <div class="r"><span>卡</span><b>{{ cat ? cat.title : \'\' }}</b></div>',
-    '        <div class="r" v-if="cat"><span>规格</span><b>有效期{{ cat.expire_days }}天<template v-if="cat.total_counts"> · {{ cat.total_counts }}次</template></b></div>',
+    '        <div class="r"><span>卡</span><b>{{ displayCardTitle }}</b></div>',
+    '        <div class="r" v-if="cat"><span>规格</span><b>有效期{{ cat.expire_days }}天<template v-if="displayCounts"> · {{ displayCounts }}次</template></b></div>',
     '        <div class="r" v-if="confirmClub"><span>开卡门店</span><b>{{ confirmClub }}</b></div>',
     '        <div class="r"><span>实收</span><b class="hl">{{ H.money(form.actual_money || 0) }}</b></div>',
     '        <div class="r" v-if="Number(form.retainage)"><span>尾款</span><b class="warn">{{ H.money(form.retainage) }}</b></div>',
@@ -176,8 +213,8 @@ window.Pages.StaffOpenCard = {
     '        <div class="r"><span>服务教练</span><b>{{ form.coach_name || \'不指定\' }}</b></div>',
     '        <div class="r" v-if="form.remark"><span>备注</span><b>{{ form.remark }}</b></div>',
     '      </div>',
-    '      <div v-if="cat && Number(form.actual_money) !== Number(cat.price)" class="oc-cfm-tip">',
-    '        <van-icon name="info-o"/> 实收与卡面价 {{ H.money(cat.price) }} 不一致，请确认无误',
+    '      <div v-if="cat && Number(form.actual_money) !== Number(expectedPrice)" class="oc-cfm-tip">',
+    '        <van-icon name="info-o"/> 实收与卡面应收 {{ H.money(expectedPrice) }} 不一致，请确认无误',
     '      </div>',
     '      <div class="flex" style="gap:10px;margin-top:16px">',
     '        <van-button round style="flex:1" @click="confirmShow=false">返回修改</van-button>',
@@ -206,7 +243,18 @@ window.Pages.StaffOpenCard = {
       } finally { this.searching = false; }
     },
     onKw(v) { this.kw = v; clearTimeout(this.kwTimer); this.kwTimer = setTimeout(() => this.search(true), 350); },
-    pickCat(c) { this.cat = c; this.form.actual_money = H.num(c.price); },
+    pickCat(c) {
+      this.cat = c;
+      const unit = Math.round(Number(c.price || 0) / (c.total_counts || 1));
+      const is300 = c.card_kind === 4 && (unit === 300 || (c.title && c.title.includes('300')));
+      this.form.custom_counts = (c && c.total_counts) ? c.total_counts : 1;
+      this.form.actual_money = (is300 && this.canAdmin) ? (this.form.custom_counts * 300) : H.num(c.price);
+    },
+    onCountsChange(val) {
+      const cnt = parseInt(val, 10) || 1;
+      this.form.custom_counts = cnt;
+      this.form.actual_money = cnt * 300;
+    },
     onPay(v) { this.form.pay_method = v.selectedOptions[0].value; this.payShow = false; },
     onMode(v) { this.form.open_card_mode = v.selectedOptions[0].value; this.modeShow = false; },
     onSrc(v) { this.nm.source_id = v.selectedOptions[0].value; this.nm.source_name = v.selectedOptions[0].text; this.srcShow = false; },
@@ -300,6 +348,9 @@ window.Pages.StaffOpenCard = {
         if (!/^1\d{10}$/.test(this.nm.phone)) { vant.showToast('请输入正确的手机号'); return null; }
         body.new_member = { realname: this.nm.realname, phone: this.nm.phone, gender: this.nm.gender, source_id: this.nm.source_id, source_name: this.nm.source_name };
       }
+      if (this.is300PtCard && this.canAdmin && this.form.custom_counts) {
+        body.counts = Number(this.form.custom_counts);
+      }
       return body;
     },
     async submit() {
@@ -316,7 +367,7 @@ window.Pages.StaffOpenCard = {
           await vant.showConfirmDialog({
             title: '开卡成功', confirmButtonColor: '#0d5e56',
             confirmButtonText: '现在签约', cancelButtonText: '稍后再签',
-            message: who + ' · ' + this.cat.title + '\n实收 ' + H.money(body.actual_money)
+            message: who + ' · ' + this.displayCardTitle + '\n实收 ' + H.money(body.actual_money)
               + '\n合同号：' + r.contract_number + '\n\n合同已生成，可请会员当面签署',
           });
           signNow = true;
@@ -332,7 +383,7 @@ window.Pages.StaffOpenCard = {
         this.nm = { realname: '', phone: '', gender: 1, source_id: 0, source_name: '' };
         this.form = { club_id: this.clubs.length === 1 ? this.clubs[0].id : this.form.club_id,
           actual_money: '', retainage: '', pay_method: 'wechat', open_card_mode: 1, open_date: '',
-          membership_id: null, membership_name: '', coach_id: null, coach_name: '', remark: '' };
+          membership_id: null, membership_name: '', coach_id: null, coach_name: '', remark: '', custom_counts: 1 };
       } finally { this.submitting = false; }
     },
   },

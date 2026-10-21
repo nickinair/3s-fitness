@@ -102,7 +102,13 @@ window.Pages.StaffCardDetail = {
   computed: {
     card() { return this.d ? this.d.card : {}; },
     canManage() { return ['admin', 'manager'].includes(this.role); },
+    canAdmin() { return ['admin', 'manager', 'platform'].includes(this.role); },
     canWrite() { return ['admin', 'manager', 'membership', 'reception'].includes(this.role); },
+    is300PtCard() {
+      if (!this.card || this.card.card_kind !== 4) return false;
+      const unit = Math.round(Number(this.card.unit_price || 0));
+      return unit === 300 || (this.card.card_type_name && this.card.card_type_name.includes('300'));
+    },
     payCols() { return Object.keys(DICT.payMethod).map(k => ({ text: DICT.payMethod[k], value: k })); },
     saleCols() { return [{ text: '不指定（默认本人）', value: null }].concat(this.staffSales.map(s => ({ text: s.realname, value: s.id }))); },
     coachCols() { return [{ text: '不指定', value: null }].concat(this.coaches.map(c => ({ text: c.realname, value: c.id }))); },
@@ -291,6 +297,7 @@ window.Pages.StaffCardDetail = {
     '      <van-field label="到期时间">',
     '        <template #input><input type="datetime-local" v-model="editForm.expire_time" style="border:none;outline:none;background:transparent;font-size:14px;color:#323233;width:100%"/></template>',
     '      </van-field>',
+    '      <van-field v-if="is300PtCard && canAdmin" v-model="editForm.counts" type="number" label="制卡总次数" placeholder="300元/节私教卡支持修改"/>',
     '      <van-field v-if="[1,4].includes(card.card_kind)" v-model="editForm.left_counts" type="number" label="剩余次数"/>',
     '      <van-field v-if="card.card_kind===3" v-model="editForm.left_money" type="number" label="余额"/>',
     '      <van-field :model-value="editForm.membership_name || saleName(editForm.membership_id)" label="业绩归属" readonly is-link @click="openPicker(\'editSale\')"/>',
@@ -425,16 +432,18 @@ window.Pages.StaffCardDetail = {
 
     openEdit() {
       this.editForm = {
-        expire_time: this.toLocalInput(this.card.expire_time), left_counts: this.card.left_counts, left_money: Number(this.card.left_money || 0),
+        expire_time: this.toLocalInput(this.card.expire_time), counts: this.card.counts, left_counts: this.card.left_counts, left_money: Number(this.card.left_money || 0),
         membership_id: this.card.membership_id || null, membership_name: this.card.membership_name || '',
         coach_id: this.card.coach_id || null, coach_name: this.card.coach_name || '', reason: '',
       };
       this.editShow = true;
     },
     async doEdit() {
-      if (!this.editForm.reason || !this.editForm.reason.trim()) return vant.showToast('请填写改卡原因');
+      const is300 = this.is300PtCard;
+      if (!this.editForm.reason && !(is300 && Number(this.editForm.counts) !== Number(this.card.counts))) return vant.showToast('请填写改卡原因');
       const f = this.editForm;
-      const body = { expire_time: this.fromLocalInput(f.expire_time), reason: f.reason.trim() };
+      const body = { expire_time: this.fromLocalInput(f.expire_time), reason: (f.reason || '修改300元私教卡次数').trim() };
+      if (is300 && this.canAdmin && f.counts != null) body.counts = Number(f.counts);
       if ([1, 4].includes(this.card.card_kind)) body.left_counts = Number(f.left_counts);
       if (this.card.card_kind === 3) body.left_money = Number(f.left_money);
       if (f.membership_id != null) { body.membership_id = f.membership_id; body.membership_name = f.membership_name || ''; }

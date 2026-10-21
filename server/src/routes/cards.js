@@ -92,10 +92,29 @@ r.post('/cards/open', staffAuth(), async (req, res, next) => {
     const actual = Number(b.actual_money != null ? b.actual_money : cat.price);
     if (isNaN(actual) || actual < 0) throw new BizError('实收金额不合法');
     const retainage = Number(b.retainage || 0);
-    const counts = cat.total_counts;
+
+    // 需求 SYS-01: 仅 300 元/节私教次卡支持管理员自定义/修改制卡次数
+    let counts = cat.total_counts;
+    const catUnitPrice = Math.round(Number(cat.price || 0) / (cat.total_counts || 1));
+    const is300Pt = cat.card_kind === 4 && (catUnitPrice === 300 || (cat.title && cat.title.includes('300')));
+
+    if (b.counts !== undefined && Number(b.counts) !== Number(cat.total_counts)) {
+      const isAdmin = ['admin', 'manager', 'platform'].includes(req.user.role);
+      if (!isAdmin) throw new BizError('仅管理员可修改制卡次数');
+      if (!is300Pt) throw new BizError('仅 300 元/节的私教次卡支持修改制卡总次数');
+      const customCounts = parseInt(b.counts, 10);
+      if (isNaN(customCounts) || customCounts <= 0) throw new BizError('制卡总次数必须为大于0的整数');
+      counts = customCounts;
+    }
+
     const unit = counts > 0 ? +(actual / counts).toFixed(2) : 0;
     const isStore = cat.card_kind === 3;
     const sum = isStore ? actual + Number(cat.gift_money) : 0;
+
+    // 卡名称: 若修改了次数且原卡名包含 (X次卡), 自动同步呈现 (如: 私教次卡(10次卡))
+    const cardTypeName = (counts !== cat.total_counts && /\(\d+次卡\)/.test(cat.title))
+      ? cat.title.replace(/\(\d+次卡\)/, `(${counts}次卡)`)
+      : cat.title;
 
     // 开卡方式: 1立即 2首次使用 3指定日期
     const mode = b.open_card_mode || cat.open_card_mode || 1;
@@ -129,7 +148,7 @@ r.post('/cards/open', staffAuth(), async (req, res, next) => {
           sum_money,left_money,unit_price,actual_money,retainage,open_card_mode,open_card_time,start_use_time,expire_time,expire_days,latest_open_time,
           contract_number,coach_id,coach_name,membership_id,membership_name,ope_user_id,ope_username,pay_method,realname,phone,source_port,remark,status)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [mid, req.clubId, vip.id, cat.card_kind, cat.id, cat.title, counts, counts, sum, sum, unit, actual, retainage,
+        [mid, req.clubId, vip.id, cat.card_kind, cat.id, cardTypeName, counts, counts, sum, sum, unit, actual, retainage,
           mode, openTime, openTime, expireTime, cat.expire_days, latestOpen, cn,
           b.coach_id || vip.coach_id || 0, b.coach_name || vip.coach_name || '', membershipId, membershipName,
           req.user.uid, req.user.name, b.pay_method || 'cash', vip.realname, vip.phone, 1, b.remark || '', status]);
@@ -139,18 +158,18 @@ r.post('/cards/open', staffAuth(), async (req, res, next) => {
         `INSERT INTO biz_card_recharge (merchant_id,club_id,card_id,vip_id,card_kind,card_type_id,card_type_name,type,actual_money,gift_money,
           counts,expire_days,pay_method,membership_id,membership_name,ope_user_id,ope_username,realname,phone,contract_number,is_new_user,remark)
          VALUES (?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [mid, req.clubId, cardId, vip.id, cat.card_kind, cat.id, cat.title, actual, isStore ? cat.gift_money : 0,
+        [mid, req.clubId, cardId, vip.id, cat.card_kind, cat.id, cardTypeName, actual, isStore ? cat.gift_money : 0,
           counts, cat.expire_days, b.pay_method || 'cash', membershipId, membershipName, req.user.uid, req.user.name,
           vip.realname, vip.phone, cn, first.n === 0 ? 1 : 0, b.remark || '']);
       const content = contractTemplate({
-        realname: vip.realname, phone: vip.phone, catTitle: cat.title, actual, counts,
+        realname: vip.realname, phone: vip.phone, catTitle: cardTypeName, actual, counts,
         expireDays: cat.expire_days, payLabel, time: now(),
         retainage, clubName: ((await t.queryOne('SELECT name FROM biz_club WHERE id=?', [req.clubId])) || {}).name || '',
       });
       const contractId = await t.insert(
         `INSERT INTO biz_club_contract (merchant_id,club_id,contract_num,card_id,recharge_id,vip_id,realname,phone,title,type,content,sign_status)
          VALUES (?,?,?,?,?,?,?,?,?,1,?,0)`,
-        [mid, req.clubId, cn, cardId, rechargeId, vip.id, vip.realname, vip.phone, `${cat.title}购卡合同`, content]);
+        [mid, req.clubId, cn, cardId, rechargeId, vip.id, vip.realname, vip.phone, `${cardTypeName}购卡合同`, content]);
       // 潜客自动转正
       await t.exec('UPDATE biz_user_potential SET is_vip_user=1, vip_user_id=? WHERE merchant_id=? AND phone=? AND is_vip_user=0', [vip.id, mid, vip.phone]);
       // 购卡意向自动核销
@@ -161,7 +180,7 @@ r.post('/cards/open', staffAuth(), async (req, res, next) => {
           `UPDATE biz_card_intent SET status=1, handle_user=?, handle_time=NOW(),
              handle_remark=CASE WHEN card_type_id=? THEN handle_remark ELSE ? END
            WHERE id=? AND merchant_id=? AND vip_id=? AND status=0`,
-          [req.user.name, cat.id, `实际开卡：${cat.title}`, b.intent_id, mid, vip.id]);
+          [req.user.name, cat.id, `实际开卡：${cardTypeName}`, b.intent_id, mid, vip.id]);
       } else {
         await t.exec('UPDATE biz_card_intent SET status=1, handle_user=?, handle_time=NOW() WHERE merchant_id=? AND vip_id=? AND card_type_id=? AND status=0',
           [req.user.name, mid, vip.id, cat.id]);
@@ -172,9 +191,9 @@ r.post('/cards/open', staffAuth(), async (req, res, next) => {
     // 购卡成功短信
     await require('../sms').send(mid, {
       vipId: vip.id, realname: vip.realname, phone: vip.phone, scene: 'buy_card',
-      params: { name: vip.realname, card: cat.title, counts: cat.total_counts },
+      params: { name: vip.realname, card: cardTypeName, counts },
     });
-    await logAction(req, '开卡', `${vip.realname} ${cat.title} ¥${actual}`);
+    await logAction(req, '开卡', `${vip.realname} ${cardTypeName} ¥${actual}`);
     res.json(ok(result));
   } catch (e) { next(e); }
 });

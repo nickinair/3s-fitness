@@ -9,7 +9,7 @@ window.AppPages.CardOpen = {
       // 中: 卡类型
       cats: [], cat: null,
       // 右: 参数
-      form: { club_id: null, actual_money: null, retainage: 0, pay_method: 'wechat', open_card_mode: 1, open_date: '', membership_id: null, coach_id: null, remark: '' },
+      form: { club_id: null, actual_money: null, retainage: 0, pay_method: 'wechat', open_card_mode: 1, open_date: '', membership_id: null, coach_id: null, remark: '', custom_counts: 1 },
       sources: [], staffSales: [], coaches: [], clubs: [],
       saving: false,
       doneDlg: false, doneInfo: null,
@@ -24,6 +24,29 @@ window.AppPages.CardOpen = {
         if (items.length) groups.push({ kind: k, name: DICT.cardKind[k], items });
       });
       return groups;
+    },
+    is300PtCard() {
+      if (!this.cat || this.cat.card_kind !== 4) return false;
+      const unit = Math.round(Number(this.cat.price || 0) / (this.cat.total_counts || 1));
+      return unit === 300 || (this.cat.title && this.cat.title.includes('300'));
+    },
+    canAdmin() {
+      const u = Auth.getUser() || {};
+      return ['admin', 'platform', 'manager'].includes(u.role);
+    },
+    displayCardTitle() {
+      if (!this.cat) return '';
+      if (this.is300PtCard && this.canAdmin && this.form.custom_counts && /\(\d+次卡\)/.test(this.cat.title)) {
+        return this.cat.title.replace(/\(\d+次卡\)/, `(${this.form.custom_counts}次卡)`);
+      }
+      return this.cat.title;
+    },
+    expectedPrice() {
+      if (!this.cat) return 0;
+      if (this.is300PtCard && this.canAdmin && this.form.custom_counts) {
+        return Number(this.form.custom_counts) * 300;
+      }
+      return Number(this.cat.price || 0);
     },
   },
   template: `
@@ -110,9 +133,13 @@ window.AppPages.CardOpen = {
       <div style="background:var(--el-color-primary-light-9);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;">
         <div style="margin-bottom:4px"><span class="text-muted">门店：</span><b>{{ (clubs.find(c => c.id === form.club_id) || {}).name || '未选择' }}</b></div>
         <div><span class="text-muted">会员：</span><b>{{ mode === 'exist' ? (member ? member.realname + ' ' + member.phone : '未选择') : (newMember.realname || '新会员') + ' ' + newMember.phone }}</b></div>
-        <div style="margin-top:4px"><span class="text-muted">卡型：</span><b>{{ cat ? cat.title : '未选择' }}</b> <span class="money" v-if="cat">{{ Fmt.money(cat.price) }}</span></div>
+        <div style="margin-top:4px"><span class="text-muted">卡型：</span><b>{{ cat ? displayCardTitle : '未选择' }}</b> <span class="money" v-if="cat">{{ Fmt.money(expectedPrice) }}</span></div>
       </div>
       <el-form label-width="86px" size="default">
+        <el-form-item label="制卡次数" required v-if="is300PtCard && canAdmin">
+          <el-input-number v-model="form.custom_counts" :min="1" :max="999" style="width:100%" controls-position="right" @change="onCountsChange" />
+          <div class="text-muted" style="font-size:12px;margin-top:2px">300元/节私教次卡，修改次数将自动联动实收金额（管理员权限）</div>
+        </el-form-item>
         <el-form-item label="实收金额" required>
           <el-input-number v-model="form.actual_money" :min="0" :precision="2" style="width:100%" controls-position="right" />
         </el-form-item>
@@ -177,8 +204,16 @@ window.AppPages.CardOpen = {
     onKeyword() { clearTimeout(this.kwTimer); this.kwTimer = setTimeout(() => this.search(true), 350); },
     pickCat(c) {
       this.cat = c;
-      this.form.actual_money = Number(c.price);
+      const unit = Math.round(Number(c.price || 0) / (c.total_counts || 1));
+      const is300 = c.card_kind === 4 && (unit === 300 || (c.title && c.title.includes('300')));
+      this.form.custom_counts = (c && c.total_counts) ? c.total_counts : 1;
+      this.form.actual_money = (is300 && this.canAdmin) ? (this.form.custom_counts * 300) : Number(c.price);
       this.form.open_card_mode = c.open_card_mode || 1;
+    },
+    onCountsChange(val) {
+      const cnt = parseInt(val, 10) || 1;
+      this.form.custom_counts = cnt;
+      this.form.actual_money = cnt * 300;
     },
     onNewSource(v) {
       const s = this.sources.find(x => x.id === v);
@@ -208,6 +243,9 @@ window.AppPages.CardOpen = {
         coach_name: coach ? coach.realname : undefined,
         remark: this.form.remark,
       };
+      if (this.is300PtCard && this.canAdmin && this.form.custom_counts) {
+        body.counts = Number(this.form.custom_counts);
+      }
       if (this.mode === 'exist') body.vip_id = this.member.id;
       else body.new_member = this.newMember;
       this.saving = true;
