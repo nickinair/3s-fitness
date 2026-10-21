@@ -62,9 +62,12 @@
         headers: Store.token ? { Authorization: 'Bearer ' + Store.token } : {},
         body: fd,
       });
-      const j = await res.json();
-      if (j.code !== 0) throw new Error(j.msg || '上传失败');
-      return j.data.url;
+      let j = null;
+      try { j = await res.json(); } catch (e) {}
+      if (!res.ok || !j || j.code !== 0) {
+        throw new Error((j && j.msg) || ('上传失败(' + res.status + ')'));
+      }
+      return j.data && j.data.url;
     },
   };
 
