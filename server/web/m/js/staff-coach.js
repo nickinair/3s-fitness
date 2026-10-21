@@ -73,6 +73,7 @@
       const qView = this.$route && this.$route.query && this.$route.query.view;
       return {
         viewMode: qView === 'day' ? 'day' : 'week', // 默认展示周视图: 周视图在前, 日视图在右
+        showCancelled: false, // 日视图默认隐藏已取消课程
         days: H.monthDays(),
         date: today,
         d: null,
@@ -100,9 +101,15 @@
         (this.d.classes || []).forEach(c => arr.push({
           id: c.id, key: 'g' + c.id, time: H.time(c.start_time), timeEnd: H.time(c.end_time), kind: 'group',
           title: c.title, sub: (c.classroom_name || '') + ' · ' + c.booked_count + '/' + c.people_count + '人',
-          classroom: c.classroom_name,
+          classroom: c.classroom_name, status: c.status,
         }));
         return arr.sort((a, b) => a.time < b.time ? -1 : 1);
+      },
+      activeItems() {
+        return (this.items || []).filter(it => Number(it.status) !== 2);
+      },
+      cancelledItems() {
+        return (this.items || []).filter(it => Number(it.status) === 2);
       },
       rests() { return (this.d && this.d.rests) || []; },
       weekSunday() {
@@ -324,7 +331,11 @@
       '        <van-icon name="underway-o"/><span style="margin-left:8px">休息：{{ r.from_time ? (r.from_time+\' - \'+r.to_time) : \'全天\' }}{{ r.remark? \' · \'+r.remark : \'\' }}</span>',
       '      </div>',
       '      <van-empty v-if="!items.length" description="当日暂无课程安排"/>',
-      '      <div v-for="it in items" :key="it.key" class="course-item">',
+      '      <div v-else-if="!activeItems.length && cancelledItems.length" style="text-align:center;padding:36px 16px 12px;color:#9ca3af;font-size:13px">',
+      '        <van-icon name="passed" size="30" color="#cbd5e1" style="display:block;margin-bottom:6px"/>当日暂无待上课程',
+      '      </div>',
+      '      <!-- 待上/有效课程列表 -->',
+      '      <div v-for="it in activeItems" :key="it.key" class="course-item">',
       '        <div class="course-time"><div class="b">{{ it.time }}</div><div class="e">{{ it.timeEnd }}</div></div>',
       '        <div class="flex1" style="min-width:0">',
       '          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">',
@@ -333,6 +344,26 @@
       '          </div>',
       '          <div class="muted mt4">{{ it.sub }}</div>',
       '          <lesson-plan-card v-if="it.kind===\'pt\'" :plan="it.lesson_plan" :booking="it" :can-edit="true" @edit="openPlanEditor(it)"/>',
+      '        </div>',
+      '      </div>',
+      '      <!-- 已取消课程区域（默认隐藏，下拉到底部可点击展开） -->',
+      '      <div v-if="cancelledItems.length" style="padding:16px 16px 24px;text-align:center">',
+      '        <div class="cancelled-toggle-btn" @click="showCancelled=!showCancelled">',
+      '          <van-icon :name="showCancelled ? \'arrow-up\' : \'arrow-down\'" size="13"/>',
+      '          <span>{{ showCancelled ? \'收起已取消课程\' : (\'显示已取消课程 (\' + cancelledItems.length + \')\') }}</span>',
+      '        </div>',
+      '      </div>',
+      '      <div v-if="showCancelled && cancelledItems.length" style="margin-bottom:24px">',
+      '        <div v-for="it in cancelledItems" :key="it.key" class="course-item cancelled">',
+      '          <div class="course-time"><div class="b">{{ it.time }}</div><div class="e">{{ it.timeEnd }}</div></div>',
+      '          <div class="flex1" style="min-width:0">',
+      '            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">',
+      '              <div class="title" style="flex:1;min-width:0">{{ it.title }} <van-tag type="default" plain style="margin-left:4px">{{ it.kind===\'pt\'?\'私教\':\'团课\' }}</van-tag></div>',
+      '              <d-tag v-if="it.kind===\'pt\'" dict="ptStatus" :v="it.status" style="flex-shrink:0"></d-tag>',
+      '            </div>',
+      '            <div class="muted mt4">{{ it.sub }}</div>',
+      '            <lesson-plan-card v-if="it.kind===\'pt\' && it.lesson_plan" :plan="it.lesson_plan" :booking="it" :can-edit="false"/>',
+      '          </div>',
       '        </div>',
       '      </div>',
       '    </template>',
@@ -451,6 +482,7 @@
         if (this.viewMode === mode) return;
         this.viewMode = mode;
         if (mode === 'day') {
+          this.showCancelled = false;
           this.load();
           this.scrollDay();
         } else {
@@ -473,11 +505,12 @@
       jumpToDay(dateStr) {
         this.date = dateStr;
         this.viewMode = 'day';
+        this.showCancelled = false;
         this.detailShow = false;
         this.load();
         this.scrollDay();
       },
-      pick(d) { this.date = d; this.load(); this.scrollDay(); },
+      pick(d) { this.date = d; this.showCancelled = false; this.load(); this.scrollDay(); },
       scrollDay() {
         this.$nextTick(() => {
           const strip = this.$refs.strip; if (!strip) return;
