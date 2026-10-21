@@ -71,6 +71,12 @@
         weekMonday: initialMonday,
         weekData: null,
         loading: true,
+        hours: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+        detailShow: false,
+        curItem: null,
+        editingPlan: false,
+        planText: '',
+        planSaving: false,
       };
     },
     computed: {
@@ -78,13 +84,14 @@
         if (!this.d) return [];
         const arr = [];
         (this.d.bookings || []).forEach(b => arr.push({
-          key: 'pt' + b.id, time: b.from_time, timeEnd: b.to_time, kind: 'pt',
-          title: b.course_title || '私教课', sub: '学员 ' + b.realname, status: b.status, confirm: b.confirm_status,
-          lesson_plan: b.lesson_plan,
+          id: b.id, rawBooking: b, key: 'pt' + b.id, time: b.from_time, timeEnd: b.to_time, kind: 'pt',
+          title: b.course_title || '私教课', sub: '学员 ' + b.realname, studentName: b.realname, phone: b.phone,
+          status: b.status, confirm: b.confirm_status, lesson_plan: b.lesson_plan,
         }));
         (this.d.classes || []).forEach(c => arr.push({
-          key: 'g' + c.id, time: H.time(c.start_time), timeEnd: H.time(c.end_time), kind: 'group',
+          id: c.id, key: 'g' + c.id, time: H.time(c.start_time), timeEnd: H.time(c.end_time), kind: 'group',
           title: c.title, sub: (c.classroom_name || '') + ' · ' + c.booked_count + '/' + c.people_count + '人',
+          classroom: c.classroom_name,
         }));
         return arr.sort((a, b) => a.time < b.time ? -1 : 1);
       },
@@ -100,6 +107,20 @@
         const s = dayjs(this.weekSunday);
         return m.format('YYYY年M月D日') + ' ~ ' + s.format('M月D日');
       },
+      curMonthLabel() {
+        const m = dayjs(this.weekMonday);
+        const s = dayjs(this.weekSunday);
+        if (m.format('M') === s.format('M')) {
+          return m.format('M月');
+        }
+        return m.format('M') + '/' + s.format('M月');
+      },
+      nowLineTop() {
+        const now = dayjs();
+        const min = now.hour() * 60 + now.minute();
+        if (min < 420 || min > 1440) return null;
+        return Math.round(((min - 420) / 60) * 52);
+      },
       weekSchedule() {
         if (!this.weekData) return [];
         const W_NAMES = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
@@ -110,6 +131,12 @@
         const classes = this.weekData.classes || [];
         const rests = this.weekData.rests || [];
 
+        function parseMin(t) {
+          if (!t) return 0;
+          const parts = t.split(':');
+          return parseInt(parts[0], 10) * 60 + parseInt(parts[1] || '0', 10);
+        }
+
         for (let i = 0; i < 7; i++) {
           const cur = mon.add(i, 'day');
           const dStr = cur.format('YYYY-MM-DD');
@@ -118,25 +145,136 @@
           const dayRests = rests.filter(r => H.dateOf(r.rest_date) === dStr);
 
           const items = [];
-          dayBookings.forEach(b => items.push({
-            key: 'pt' + b.id, time: b.from_time, timeEnd: b.to_time, kind: 'pt',
-            title: b.course_title || '私教课', sub: '学员 ' + b.realname + (b.phone ? ' (' + b.phone.slice(-4) + ')' : ''),
-            status: b.status, confirm: b.confirm_status, lesson_plan: b.lesson_plan,
-          }));
-          dayClasses.forEach(c => items.push({
-            key: 'g' + c.id, time: H.time(c.start_time), timeEnd: H.time(c.end_time), kind: 'group',
-            title: c.title, sub: (c.classroom_name || '') + ' · ' + c.booked_count + '/' + c.people_count + '人',
-          }));
-          items.sort((a, b) => a.time < b.time ? -1 : 1);
+          dayBookings.forEach(b => {
+            const sMin = parseMin(b.from_time);
+            let eMin = parseMin(b.to_time);
+            if (eMin <= sMin) eMin = sMin + 60;
+            items.push({
+              id: b.id,
+              rawBooking: b,
+              key: 'pt' + b.id,
+              kind: 'pt',
+              title: b.course_title || '私教课',
+              studentName: b.realname || '学员',
+              shortName: b.realname || '学员',
+              phone: b.phone,
+              time: b.from_time,
+              timeEnd: b.to_time,
+              startMin: sMin,
+              endMin: eMin,
+              durationMin: eMin - sMin,
+              dateStr: dStr,
+              dateFormatted: cur.format('M月D日') + ' ' + W_NAMES[i],
+              shortDate: cur.format('M-D'),
+              status: b.status,
+              confirm: b.confirm_status,
+              lesson_plan: b.lesson_plan,
+              cardInfo: b.card_type_name ? (b.card_type_name + ' · 扣' + (b.card_deduct_num || 1) + '课时') : '',
+              remark: b.remark,
+              col: 0,
+              totalCols: 1,
+            });
+          });
+
+          dayClasses.forEach(c => {
+            const sTime = H.time(c.start_time);
+            const eTime = H.time(c.end_time);
+            const sMin = parseMin(sTime);
+            let eMin = parseMin(eTime);
+            if (eMin <= sMin) eMin = sMin + 60;
+            items.push({
+              id: c.id,
+              key: 'g' + c.id,
+              kind: 'group',
+              title: c.title,
+              studentName: c.title,
+              shortName: c.title,
+              time: sTime,
+              timeEnd: eTime,
+              startMin: sMin,
+              endMin: eMin,
+              durationMin: eMin - sMin,
+              dateStr: dStr,
+              dateFormatted: cur.format('M月D日') + ' ' + W_NAMES[i],
+              shortDate: cur.format('M-D'),
+              classroom: c.classroom_name,
+              bookedCount: c.booked_count,
+              peopleCount: c.people_count,
+              cardInfo: (c.classroom_name || '') + ' · ' + c.booked_count + '/' + c.people_count + '人',
+              col: 0,
+              totalCols: 1,
+            });
+          });
+
+          items.sort((a, b) => a.startMin - b.startMin || b.endMin - a.endMin);
+
+          // 重叠时间分列展示算法 (与主流日历一致)
+          const clusters = [];
+          let curCluster = [];
+          let clusterEnd = -1;
+          items.forEach(it => {
+            if (curCluster.length === 0) {
+              curCluster.push(it);
+              clusterEnd = it.endMin;
+            } else if (it.startMin < clusterEnd) {
+              curCluster.push(it);
+              if (it.endMin > clusterEnd) clusterEnd = it.endMin;
+            } else {
+              clusters.push(curCluster);
+              curCluster = [it];
+              clusterEnd = it.endMin;
+            }
+          });
+          if (curCluster.length) clusters.push(curCluster);
+
+          clusters.forEach(cl => {
+            const colEnds = [];
+            cl.forEach(it => {
+              let placedCol = -1;
+              for (let c = 0; c < colEnds.length; c++) {
+                if (colEnds[c] <= it.startMin) {
+                  placedCol = c;
+                  colEnds[c] = it.endMin;
+                  break;
+                }
+              }
+              if (placedCol === -1) {
+                placedCol = colEnds.length;
+                colEnds.push(it.endMin);
+              }
+              it.col = placedCol;
+            });
+            const totalCols = colEnds.length;
+            cl.forEach(it => {
+              it.totalCols = totalCols;
+              it.widthPct = 100 / totalCols;
+              it.leftPct = it.col * (100 / totalCols);
+            });
+          });
+
+          const timedRests = [];
+          let allDayRest = false;
+          dayRests.forEach(r => {
+            if (r.from_time && r.to_time) {
+              const sMin = parseMin(r.from_time);
+              const eMin = parseMin(r.to_time);
+              timedRests.push({ ...r, startMin: sMin, endMin: eMin });
+            } else {
+              allDayRest = true;
+            }
+          });
 
           res.push({
             date: dStr,
+            dayNum: cur.format('D'),
             d: cur.format('MM-DD'),
             w: W_NAMES[i],
             isToday: dStr === today,
             isPast: cur.isBefore(dayjs().startOf('day')),
             items,
             rests: dayRests,
+            timedRests,
+            allDayRest,
           });
         }
         return res;
@@ -161,7 +299,7 @@
       '  <div style="padding:10px 16px 6px;display:flex;justify-content:center;background:#fff;border-bottom:1px solid #f0f0f0">',
       '    <div style="display:inline-flex;background:#eef2f1;border-radius:20px;padding:3px">',
       '      <div @click="switchView(\'day\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'day\'?\'background:#0d5e56;color:#fff;box-shadow:0 2px 6px rgba(13,94,86,0.25)\':\'color:#555\'">日视图</div>',
-      '      <div @click="switchView(\'week\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'week\'?\'background:#0d5e56;color:#fff;box-shadow:0 2px 6px rgba(13,94,86,0.25)\':\'color:#555\'">周计划</div>',
+      '      <div @click="switchView(\'week\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'week\'?\'background:#0d5e56;color:#fff;box-shadow:0 2px 6px rgba(13,94,86,0.25)\':\'color:#555\'">周视图</div>',
       '    </div>',
       '  </div>',
       /* === 日视图 === */
@@ -192,78 +330,124 @@
       '      </div>',
       '    </template>',
       '  </template>',
-      /* === 周视图 === */
+      /* === 周视图 (参考图二: 2D时间网格) === */
       '  <template v-else>',
-      '    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fff;border-bottom:1px solid #f0f0f0">',
-      '      <van-button size="small" plain round icon="arrow-left" @click="prevWeek">上周</van-button>',
-      '      <div style="text-align:center">',
-      '        <div style="font-weight:700;font-size:14px;color:#1a1a1a">{{ weekLabel }}</div>',
-      '        <div class="muted" style="font-size:12px;margin-top:2px">',
-      '          共 {{ weekStats.pt }} 节私教 · {{ weekStats.group }} 节团课<template v-if="weekStats.rest"> · 休息 {{ weekStats.rest }} 天</template>',
+      '    <div class="timetable-wrap">',
+      '      <div class="timetable-nav">',
+      '        <van-button size="small" plain round icon="arrow-left" @click="prevWeek">上周</van-button>',
+      '        <div style="text-align:center">',
+      '          <div style="font-weight:700;font-size:14px;color:#1a1a1a">{{ weekLabel }}</div>',
+      '          <div class="muted" style="font-size:11px;margin-top:2px">',
+      '            共 {{ weekStats.pt }} 节私教 · {{ weekStats.group }} 节团课<template v-if="weekStats.rest"> · 休息 {{ weekStats.rest }} 天</template>',
+      '          </div>',
+      '        </div>',
+      '        <div style="display:flex;gap:4px">',
+      '          <van-button v-if="!isCurrentWeek" size="small" plain round type="primary" @click="goCurrentWeek">本周</van-button>',
+      '          <van-button size="small" plain round icon="arrow" @click="nextWeek">下周</van-button>',
       '        </div>',
       '      </div>',
-      '      <div style="display:flex;gap:4px">',
-      '        <van-button v-if="!isCurrentWeek" size="small" plain round type="primary" @click="goCurrentWeek">本周</van-button>',
-      '        <van-button size="small" plain round icon="arrow" @click="nextWeek">下周</van-button>',
+      '      <!-- 顶部固定行: 月份 + 7天星期与日期 (对齐图二) -->',
+      '      <div class="timetable-header">',
+      '        <div class="timetable-month-cell">{{ curMonthLabel }}</div>',
+      '        <div class="timetable-days-row">',
+      '          <div v-for="day in weekSchedule" :key="day.date" class="timetable-day-col-head" :class="{\'is-today\': day.isToday}" @click="jumpToDay(day.date)">',
+      '            <div class="timetable-date-num" :class="{\'is-today\': day.isToday}">{{ day.dayNum }}</div>',
+      '            <div class="timetable-week-name">{{ day.w }}</div>',
+      '            <div v-if="day.allDayRest" style="margin-top:1px"><span style="font-size:9px;padding:0 3px;border-radius:3px;background:#fef3c7;color:#b45309">休</span></div>',
+      '          </div>',
+      '        </div>',
+      '      </div>',
+      '      <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载周课表中...</van-loading></div>',
+      '      <!-- 二维时间网格主体 (左侧时间轴 + 右侧7列网格) -->',
+      '      <div v-else class="timetable-body" ref="timeBody">',
+      '        <div class="timetable-time-axis" :style="{ height: (17 * 52) + \'px\' }">',
+      '          <div v-for="(h, idx) in hours" :key="h" class="timetable-time-label" :style="{ top: (idx * 52) + \'px\' }">',
+      '            {{ String(h).padStart(2, \'0\') + \':00\' }}',
+      '          </div>',
+      '        </div>',
+      '        <div class="timetable-grid-area" :style="{ height: (17 * 52) + \'px\' }">',
+      '          <div v-for="day in weekSchedule" :key="day.date" class="timetable-col" :class="{\'is-today\': day.isToday}">',
+      '            <!-- 当前时间指示线 -->',
+      '            <div v-if="day.isToday && nowLineTop !== null" class="timetable-now-line" :style="{ top: nowLineTop + \'px\' }">',
+      '              <div class="timetable-now-dot"></div>',
+      '            </div>',
+      '            <!-- 休息时段 -->',
+      '            <div v-for="r in day.timedRests" :key="\'r\'+r.id" class="timetable-rest-block" :style="calcRestStyle(r)">',
+      '              <span>休 {{ r.from_time }}-{{ r.to_time }}</span>',
+      '            </div>',
+      '            <!-- 课程卡片 (参考图二: 浅暖杏色底 + 橙方块 ▪ + 学员姓名) -->',
+      '            <div v-for="it in day.items" :key="it.key" class="timetable-card" :class="[it.kind, it.status === 2 ? \'cancelled\' : \'\']" :style="calcCardStyle(it)" @click="openItemDetail(it)">',
+      '              <div class="timetable-card-head">',
+      '                <span class="timetable-card-bullet">▪</span>',
+      '                <span class="timetable-card-title">{{ it.shortName }}</span>',
+      '              </div>',
+      '              <div v-if="(it.durationMin || 60) >= 45" class="timetable-card-time">{{ it.time }}</div>',
+      '            </div>',
+      '          </div>',
+      '        </div>',
       '      </div>',
       '    </div>',
-      '    <div style="display:flex;background:#fff;padding:8px 6px 10px;border-bottom:1px solid #f0f0f0;justify-content:space-around">',
-      '      <div v-for="day in weekSchedule" :key="day.date" @click="scrollToDayCard(day.date)"',
-      '        style="text-align:center;padding:6px 2px;border-radius:8px;min-width:44px;cursor:pointer;transition:all 0.15s"',
-      '        :style="day.isToday ? \'background:#eef7f5;border:1px solid #0d5e56\' : \'background:#f9fafb\'">',
-      '        <div style="font-size:11px;color:#888">{{ day.w }}</div>',
-      '        <div style="font-size:13px;font-weight:700;margin-top:2px" :style="day.isToday ? \'color:#0d5e56\' : \'color:#333\'">{{ day.d.slice(3) }}</div>',
-      '        <div style="margin-top:2px;height:14px">',
-      '          <span v-if="day.items.length" style="display:inline-block;padding:0 5px;border-radius:8px;background:#0d5e56;color:#fff;font-size:10px;transform:scale(0.85)">{{ day.items.length }}</span>',
-      '          <span v-else-if="day.rests.length" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#e6a23c"></span>',
-      '          <span v-else style="display:inline-block;width:4px;height:4px;border-radius:50%;background:#e5e7eb"></span>',
-      '        </div>',
-      '      </div>',
-      '    </div>',
-      '    <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
-      '    <template v-else>',
-      '      <div v-for="day in weekSchedule" :key="day.date" :id="\'week-day-\'+day.date" style="margin:10px 12px;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05);overflow:hidden">',
-      '        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#f9fbfb;border-bottom:1px solid #edf2f1">',
-      '          <div style="display:flex;align-items:center;gap:6px">',
-      '            <span style="font-size:14px;font-weight:700;color:#1f2937">{{ day.d }} {{ day.w }}</span>',
-      '            <van-tag v-if="day.isToday" type="primary" round size="small">今天</van-tag>',
-      '            <van-tag v-if="day.rests.length" type="warning" plain round size="small">休息</van-tag>',
-      '          </div>',
-      '          <div style="display:flex;align-items:center;gap:6px">',
-      '            <span class="muted" style="font-size:12px">{{ day.items.length ? (day.items.length + \' 节课\') : \'无课程\' }}</span>',
-      '            <van-button size="mini" plain round type="primary" @click="jumpToDay(day.date)">单日详情</van-button>',
-      '          </div>',
-      '        </div>',
-      '        <div v-if="day.rests.length" style="padding:6px 12px;background:#fff8f0;color:#d97706;font-size:12px;border-bottom:1px solid #fef3c7">',
-      '          <van-icon name="underway-o"/><span style="margin-left:4px">休息：</span><span v-for="r in day.rests" :key="r.id">{{ r.from_time ? (r.from_time+\' - \'+r.to_time) : \'全天\' }}{{ r.remark ? \' · \'+r.remark : \'\' }}</span>',
-      '        </div>',
-      '        <div v-if="!day.items.length && !day.rests.length" style="padding:16px 0;text-align:center;color:#bbb;font-size:12px">',
-      '          暂无排课',
-      '        </div>',
-      '        <div v-else>',
-      '          <div v-for="it in day.items" :key="it.key" style="padding:10px 12px;border-bottom:1px solid #f5f5f5;display:flex;gap:10px;align-items:flex-start">',
-      '            <div style="flex-shrink:0;width:76px;text-align:center;padding:4px 0;background:#f3f7f6;border-radius:6px">',
-      '              <div style="font-weight:700;font-size:13px;color:#0d5e56">{{ it.time }}</div>',
-      '              <div style="font-size:11px;color:#666">{{ it.timeEnd }}</div>',
-      '            </div>',
-      '            <div style="flex:1;min-width:0">',
-      '              <div style="display:flex;justify-content:space-between;align-items:center">',
-      '                <span style="font-size:13px;font-weight:600;color:#222">{{ it.title }}</span>',
-      '                <van-tag :type="it.kind===\'pt\'?\'primary\':\'success\'" size="small" plain>{{ it.kind===\'pt\'?\'私教\':\'团课\' }}</van-tag>',
-      '              </div>',
-      '              <div class="muted mt4" style="font-size:12px">{{ it.sub }}</div>',
-      '              <div v-if="it.lesson_plan" style="margin-top:6px;padding:5px 8px;background:#f0f9f8;border-left:2px solid #0d5e56;border-radius:4px;font-size:12px;color:#333;line-height:1.4">',
-      '                <span style="font-weight:600;color:#0d5e56"><van-icon name="notes-o"/> 计划：</span>{{ it.lesson_plan }}',
-      '              </div>',
-      '            </div>',
-      '            <div v-if="it.kind===\'pt\'" style="flex-shrink:0">',
-      '              <d-tag dict="ptStatus" :v="it.status"></d-tag>',
-      '            </div>',
-      '          </div>',
-      '        </div>',
-      '      </div>',
-      '    </template>',
       '  </template>',
+      '  <!-- 课程详情底部抽屉 (支持查看及快捷修改本节课训练计划) -->',
+      '  <van-popup v-model:show="detailShow" position="bottom" round safe-area-inset-bottom style="max-height:85vh">',
+      '    <div v-if="curItem" style="padding:16px 18px 24px">',
+      '      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">',
+      '        <div style="display:flex;align-items:center;gap:6px">',
+      '          <span style="font-size:16px;font-weight:700;color:#1f2937">{{ curItem.title }}</span>',
+      '          <van-tag :type="curItem.kind===\'pt\'?\'primary\':\'success\'" plain size="small">{{ curItem.kind===\'pt\'?\'私教\':\'团课\' }}</van-tag>',
+      '          <d-tag v-if="curItem.kind===\'pt\'" dict="ptStatus" :v="curItem.status"></d-tag>',
+      '        </div>',
+      '        <van-icon name="cross" size="18" color="#999" @click="detailShow=false" style="cursor:pointer"/>',
+      '      </div>',
+      '      <div style="background:#f9fafb;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.8">',
+      '        <div style="display:flex;justify-content:space-between" v-if="curItem.studentName">',
+      '          <span class="muted">学员：</span>',
+      '          <span style="font-weight:600;color:#1f2937">{{ curItem.studentName }} <span v-if="curItem.phone" style="font-weight:400;color:#666">({{ curItem.phone }})</span></span>',
+      '        </div>',
+      '        <div style="display:flex;justify-content:space-between">',
+      '          <span class="muted">上课时间：</span>',
+      '          <span style="font-weight:600;color:#0d5e56">{{ curItem.dateFormatted }} {{ curItem.time }}-{{ curItem.timeEnd }}</span>',
+      '        </div>',
+      '        <div style="display:flex;justify-content:space-between" v-if="curItem.classroom">',
+      '          <span class="muted">教室：</span>',
+      '          <span>{{ curItem.classroom }}</span>',
+      '        </div>',
+      '        <div style="display:flex;justify-content:space-between" v-if="curItem.cardInfo">',
+      '          <span class="muted">课时信息：</span>',
+      '          <span>{{ curItem.cardInfo }}</span>',
+      '        </div>',
+      '        <div style="display:flex;justify-content:space-between" v-if="curItem.remark">',
+      '          <span class="muted">预约备注：</span>',
+      '          <span>{{ curItem.remark }}</span>',
+      '        </div>',
+      '      </div>',
+      '      <!-- SYS-03 本节课训练计划 -->',
+      '      <div v-if="curItem.kind===\'pt\'" style="margin-bottom:16px">',
+      '        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">',
+      '          <span style="font-size:14px;font-weight:700;color:#0d5e56;display:flex;align-items:center;gap:4px">',
+      '            <van-icon name="notes-o"/> 本节课训练计划',
+      '          </span>',
+      '          <van-button v-if="!editingPlan" size="mini" round plain type="primary" @click="startEditPlan">',
+      '            {{ curItem.lesson_plan ? \'修改计划\' : \'+ 填写计划\' }}',
+      '          </van-button>',
+      '        </div>',
+      '        <div v-if="!editingPlan">',
+      '          <div v-if="curItem.lesson_plan" style="padding:10px 12px;background:#f0f9f8;border-left:3px solid #0d5e56;border-radius:6px;font-size:13px;line-height:1.6;color:#2c3e50;white-space:pre-wrap">{{ curItem.lesson_plan }}</div>',
+      '          <div v-else style="padding:12px;text-align:center;background:#f9f9f9;border-radius:6px;color:#999;font-size:12px">暂未填写训练计划，点击右上角可填写</div>',
+      '        </div>',
+      '        <div v-else style="background:#f9fbfb;border:1px solid #cce3de;border-radius:8px;padding:10px">',
+      '          <van-field v-model="planText" type="textarea" rows="3" maxlength="500" show-word-limit placeholder="请输入本节课训练动作、组数、次数、拉伸项..." style="padding:0;background:transparent"/>',
+      '          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">',
+      '            <van-button size="small" round plain @click="editingPlan=false">取消</van-button>',
+      '            <van-button size="small" round type="primary" :loading="planSaving" @click="savePlan">保存计划</van-button>',
+      '          </div>',
+      '        </div>',
+      '      </div>',
+      '      <div style="display:flex;gap:10px">',
+      '        <van-button block round plain type="primary" @click="jumpToDay(curItem.dateStr)">查看该日详情（{{ curItem.shortDate }}）</van-button>',
+      '      </div>',
+      '    </div>',
+      '  </van-popup>',
       '</div>',
     ].join('\n'),
     methods: {
@@ -281,32 +465,27 @@
           this.scrollDay();
         } else {
           this.weekMonday = this.calcMonday(this.date);
-          this.load();
+          this.load().then(() => this.autoScrollWeekGrid());
         }
       },
       prevWeek() {
         this.weekMonday = dayjs(this.weekMonday).subtract(7, 'day').format('YYYY-MM-DD');
-        this.load();
+        this.load().then(() => this.autoScrollWeekGrid());
       },
       nextWeek() {
         this.weekMonday = dayjs(this.weekMonday).add(7, 'day').format('YYYY-MM-DD');
-        this.load();
+        this.load().then(() => this.autoScrollWeekGrid());
       },
       goCurrentWeek() {
         this.weekMonday = this.calcMonday(H.today());
-        this.load();
+        this.load().then(() => this.autoScrollWeekGrid());
       },
       jumpToDay(dateStr) {
         this.date = dateStr;
         this.viewMode = 'day';
+        this.detailShow = false;
         this.load();
         this.scrollDay();
-      },
-      scrollToDayCard(dateStr) {
-        this.$nextTick(() => {
-          const el = document.getElementById('week-day-' + dateStr);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
       },
       pick(d) { this.date = d; this.load(); this.scrollDay(); },
       scrollDay() {
@@ -315,6 +494,78 @@
           const el = strip.querySelector('.day-item.on'); if (!el) return;
           strip.scrollTo({ left: el.offsetLeft - strip.clientWidth / 2 + el.offsetWidth / 2, behavior: 'auto' });
         });
+      },
+      autoScrollWeekGrid() {
+        this.$nextTick(() => {
+          const body = this.$refs.timeBody;
+          if (!body) return;
+          let minStart = 1440;
+          (this.weekSchedule || []).forEach(day => {
+            (day.items || []).forEach(it => {
+              if (it.startMin && it.startMin < minStart) {
+                minStart = it.startMin;
+              }
+            });
+          });
+          const targetMin = minStart < 1440 ? Math.max(420, minStart - 30) : 510;
+          const targetTop = Math.round(((targetMin - 420) / 60) * 52);
+          body.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+        });
+      },
+      calcCardStyle(it) {
+        const sMin = Math.max(420, it.startMin || 420);
+        const eMin = Math.min(1440, it.endMin || (sMin + 60));
+        const top = Math.round(((sMin - 420) / 60) * 52);
+        const duration = Math.max(25, eMin - sMin);
+        const height = Math.max(26, Math.round((duration / 60) * 52) - 2);
+        const widthPct = it.widthPct || 100;
+        const leftPct = it.leftPct || 0;
+        return {
+          top: top + 'px',
+          height: height + 'px',
+          left: 'calc(' + leftPct + '% + 1px)',
+          width: 'calc(' + widthPct + '% - 2px)',
+        };
+      },
+      calcRestStyle(r) {
+        const sMin = Math.max(420, r.startMin || 420);
+        const eMin = Math.min(1440, r.endMin || (sMin + 60));
+        const top = Math.round(((sMin - 420) / 60) * 52);
+        const duration = Math.max(20, eMin - sMin);
+        const height = Math.max(20, Math.round((duration / 60) * 52) - 2);
+        return {
+          top: top + 'px',
+          height: height + 'px',
+        };
+      },
+      openItemDetail(it) {
+        this.curItem = it;
+        this.planText = it.lesson_plan || '';
+        this.editingPlan = false;
+        this.detailShow = true;
+      },
+      startEditPlan() {
+        this.planText = (this.curItem && this.curItem.lesson_plan) || '';
+        this.editingPlan = true;
+      },
+      async savePlan() {
+        if (!this.curItem || !this.curItem.id) return;
+        this.planSaving = true;
+        try {
+          await API.put('/ptrain-bookings/' + this.curItem.id + '/lesson-plan', {
+            lesson_plan: this.planText,
+          });
+          this.curItem.lesson_plan = this.planText;
+          if (this.curItem.rawBooking) {
+            this.curItem.rawBooking.lesson_plan = this.planText;
+          }
+          vant.showToast({ message: '计划已保存', icon: 'success' });
+          this.editingPlan = false;
+        } catch (e) {
+          vant.showToast({ message: e.message || '保存失败', icon: 'fail' });
+        } finally {
+          this.planSaving = false;
+        }
       },
       async load() {
         this.loading = true;
@@ -332,7 +583,12 @@
       },
     },
     mixins: [CoachPick],
-    mounted() { this.load(); this.scrollDay(); },
+    mounted() {
+      this.load().then(() => {
+        if (this.viewMode === 'week') this.autoScrollWeekGrid();
+      });
+      this.scrollDay();
+    },
   };
 
   window.Pages.CoachBookings = {
