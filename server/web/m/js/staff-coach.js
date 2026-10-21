@@ -344,7 +344,7 @@
       '            <d-tag v-if="it.kind===\'pt\'" dict="ptStatus" :v="it.status" style="flex-shrink:0"></d-tag>',
       '          </div>',
       '          <div class="muted mt4" style="display:flex;justify-content:space-between;align-items:center">',
-      '            <span>{{ it.sub }}</span>',
+      '            <span :style="it.vipId ? \'cursor:pointer\' : \'\'" @click="it.vipId && $router.push(\'/staff/member/\' + it.vipId)">{{ it.sub }}</span>',
       '            <span v-if="it.vipId" @click="$router.push(\'/staff/member/\' + it.vipId)" style="color:#0d5e56;font-size:12px;cursor:pointer"><van-icon name="user-o"/> 学员风采</span>',
       '          </div>',
       '          <lesson-plan-card v-if="it.kind===\'pt\'" :plan="it.lesson_plan" :booking="it" :can-edit="true" @edit="openPlanEditor(it)"/>',
