@@ -239,7 +239,7 @@
       '  <van-collapse v-model="open" class="fn-collapse">',
       // name 用分组标题而非下标: 菜单增删后已展开的分组不会串位
       '    <van-collapse-item v-for="g in groups" :key="g.title" :name="g.title">',
-      '      <template #title><van-icon :name="g.icon" color="#0d5e56" style="margin-right:6px;vertical-align:-2px"/>{{ g.title }}<span class="muted" style="margin-left:6px;font-size:12px">{{ g.children.length }}</span></template>',
+      '      <template #title><van-icon :name="g.icon" color="var(--brand)" style="margin-right:6px;vertical-align:-2px"/>{{ g.title }}<span class="muted" style="margin-left:6px;font-size:12px">{{ g.children.length }}</span></template>',
       '      <van-cell v-for="c in g.children" :key="c.to" :title="c.t" is-link @click="$router.push(c.to)"/>',
       '    </van-collapse-item>',
       '  </van-collapse>',
@@ -274,7 +274,7 @@
         } catch (e) { /* API 层已 toast 错误 */ }
       },
       async resetLayout() {
-        try { await vant.showConfirmDialog({ title: '恢复默认', message: '将恢复为当前角色的默认布局，确定吗？', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+        try { await vant.showConfirmDialog({ title: '恢复默认', message: '将恢复为当前角色的默认布局，确定吗？', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
         this.layout = [...(ROLE_MENUS[this.role] || [])];
       },
     },
@@ -370,7 +370,7 @@
         this.$router.replace('/login');
       },
       async logout() {
-        try { await vant.showConfirmDialog({ title: '退出登录', message: '确定退出当前账号吗？', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+        try { await vant.showConfirmDialog({ title: '退出登录', message: '确定退出当前账号吗？', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
         Store.logout();
         this.$router.replace('/login');
       },

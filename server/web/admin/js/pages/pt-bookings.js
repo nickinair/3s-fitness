@@ -55,7 +55,7 @@ window.AppPages.PtBookings = {
           <template #default="{ row }">
             <div v-if="row.lesson_plan" style="display:flex;align-items:center;justify-content:space-between">
               <el-tooltip :content="row.lesson_plan" placement="top" :max-width="300">
-                <span style="display:inline-block;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;color:#0d5e56;font-size:13px" @click="openPlan(row)">{{ row.lesson_plan }}</span>
+                <span style="display:inline-block;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;color:var(--brand);font-size:13px" @click="openPlan(row)">{{ row.lesson_plan }}</span>
               </el-tooltip>
               <el-button link type="primary" size="small" @click="openPlan(row)">修改</el-button>
             </div>

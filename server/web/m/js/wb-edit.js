@@ -245,7 +245,7 @@
       '         @mousedown="down($event, idx)"',
       '         @click="tap(c.key)">',
       '      <i v-if="editing" class="wb-del" @touchstart.stop @mousedown.stop @click.stop="del(idx)">',
-      '        <van-icon name="cross" size="10" color="#ee0a24"/>',
+      '        <van-icon name="cross" size="10" color="var(--danger)"/>',
       '      </i>',
       '      <div class="wb-ic">',
       '        <van-badge :content="badges[c.key] || \'\'" :show-zero="false">',

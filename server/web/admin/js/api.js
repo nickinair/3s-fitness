@@ -165,6 +165,8 @@
   window.api = api;
   window.DICT = DICT;
   function fmtNum(v) { const n = Number(v); return isNaN(n) ? String(v) : n.toLocaleString('zh-CN', { maximumFractionDigits: 2 }); }
+  // 读取 theme.css 里的配色变量实际值, 给 ECharts/二维码这类不认 var() 的地方用
+  window.themeColor = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   window.Fmt = { money: fmtMoney, time: fmtTime, date: fmtDate, dayDiff, num: fmtNum };
   window.AppPages = {};
 })();

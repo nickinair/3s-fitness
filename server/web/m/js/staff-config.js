@@ -32,7 +32,7 @@
     template: [
       '<div class="page">',
       '  <m-nav title="卡类型配置"></m-nav>',
-      '  <van-tabs v-model:active="kind" color="#0d5e56" sticky>',
+      '  <van-tabs v-model:active="kind" color="var(--brand)" sticky>',
       '    <van-tab title="全部" name="0"></van-tab>',
       '    <van-tab title="次卡" name="1"></van-tab>',
       '    <van-tab title="时间卡" name="2"></van-tab>',
@@ -40,7 +40,7 @@
       '    <van-tab title="私教卡" name="4"></van-tab>',
       '  </van-tabs>',
       '  <div style="margin:10px 12px" v-if="canEdit"><van-button type="primary" block round icon="plus" @click="openAdd">新增卡类型</van-button></div>',
-      '  <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else>',
       '    <van-empty v-if="!filtered.length" description="暂无卡类型"/>',
       '    <div v-for="c in filtered" :key="c.id" class="rec-item">',
@@ -70,7 +70,7 @@
       '    <div class="pop-scroll">',
       '      <div class="pop-head">{{ form.id ? (\'编辑卡类型 - \'+form.title) : \'新增卡类型\' }}</div>',
 
-      '      <div style="font-size:13px;font-weight:600;color:#0d5e56;margin:6px 0 8px">基础信息</div>',
+      '      <div style="font-size:13px;font-weight:600;color:var(--brand);margin:6px 0 8px">基础信息</div>',
       '      <div class="muted mt4" style="margin-bottom:6px">卡种{{ form.id ? \'（创建后不可修改）\' : \'\' }}</div>',
       '      <div class="unit-seg">',
       '        <span v-for="k in kindOpts" :key="k.v" :class="{on:form.card_kind===k.v}" :style="form.id?\'opacity:.55\':\'\'" @click="!form.id && (form.card_kind=k.v)">{{ k.t }}</span>',
@@ -84,7 +84,7 @@
       '      <van-field v-if="form.card_kind===3" v-model="form.gift_money" type="number" label="赠送金额(¥)" placeholder="选填"/>',
       '      <van-field v-model="form.sort" type="number" label="排序" :border="false"/>',
 
-      '      <div style="font-size:13px;font-weight:600;color:#0d5e56;margin:14px 0 8px">课程权限</div>',
+      '      <div style="font-size:13px;font-weight:600;color:var(--brand);margin:14px 0 8px">课程权限</div>',
       '      <van-field v-model="form.course_permission" type="textarea" rows="2" autosize placeholder="描述该卡可上的课程范围（展示用），如：全部团课 + 自由训练" :border="false"/>',
 
       '      <van-collapse v-model="open" class="fn-collapse" style="margin:16px 0 0">',
@@ -121,10 +121,10 @@
       '          <div class="muted" v-if="form.milestone_type>0" style="margin-top:6px">每{{ form.milestone_interval||\'N\' }}{{ form.milestone_type===1?\'节课\':\'天\' }}生成一次里程碑，提醒教练总结并短信通知会员</div>',
       '        </van-collapse-item>',
       '        <van-collapse-item title="售卖控制" name="sale">',
-      '          <van-field label="线上可售"><template #input><van-switch v-model="form.online_sale" :active-value="1" :inactive-value="0" size="20" active-color="#0d5e56"/></template></van-field>',
-      '          <van-field label="仅学生可购"><template #input><van-switch v-model="form.student_only" :active-value="1" :inactive-value="0" size="20" active-color="#0d5e56"/></template></van-field>',
+      '          <van-field label="线上可售"><template #input><van-switch v-model="form.online_sale" :active-value="1" :inactive-value="0" size="20" active-color="var(--brand)"/></template></van-field>',
+      '          <van-field label="仅学生可购"><template #input><van-switch v-model="form.student_only" :active-value="1" :inactive-value="0" size="20" active-color="var(--brand)"/></template></van-field>',
       '          <van-field v-model="form.purchase_limit" type="number" label="每人限购(张)"/>',
-      '          <van-field v-if="form.id" label="上架状态" :border="false"><template #input><van-switch v-model="form.status" :active-value="1" :inactive-value="0" size="20" active-color="#0d5e56"/></template></van-field>',
+      '          <van-field v-if="form.id" label="上架状态" :border="false"><template #input><van-switch v-model="form.status" :active-value="1" :inactive-value="0" size="20" active-color="var(--brand)"/></template></van-field>',
       '        </van-collapse-item>',
       '      </van-collapse>',
 
@@ -201,14 +201,14 @@
     template: [
       '<div class="page">',
       '  <m-nav title="动作库"></m-nav>',
-      '  <van-tabs v-model:active="part" color="#0d5e56" sticky @change="load">',
+      '  <van-tabs v-model:active="part" color="var(--brand)" sticky @change="load">',
       '    <van-tab v-for="p in parts" :key="p" :title="p" :name="p"></van-tab>',
       '  </van-tabs>',
       '  <van-search v-model="keyword" placeholder="动作名称关键词" show-action @search="load" @clear="load">',
-      '    <template #action><div @click="load" style="color:#0d5e56">搜索</div></template>',
+      '    <template #action><div @click="load" style="color:var(--brand)">搜索</div></template>',
       '  </van-search>',
       '  <div style="margin:0 12px 10px" v-if="canEdit"><van-button type="primary" plain block round icon="plus" @click="openAdd">新增自定义动作</van-button></div>',
-      '  <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else>',
       '    <van-empty v-if="!list.length" description="暂无动作"/>',
       '    <van-swipe-cell v-for="a in list" :key="a.id" :disabled="!(canEdit && a.merchant_id>0)">',
@@ -221,7 +221,7 @@
       '        <div class="muted mt4" v-if="a.description">{{ a.description }}</div>',
       '      </div>',
       '      <template #right v-if="canEdit && a.merchant_id>0">',
-      '        <div style="height:100%;width:64px;background:#ee0a24;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px" @click="del(a)">删除</div>',
+      '        <div style="height:100%;width:64px;background:var(--danger);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px" @click="del(a)">删除</div>',
       '      </template>',
       '    </van-swipe-cell>',
       '  </template>',
@@ -271,7 +271,7 @@
       },
       async del(row) {
         try {
-          await vant.showConfirmDialog({ title: '删除动作', message: '确定删除自定义动作「' + row.name + '」？', confirmButtonColor: '#ee0a24' });
+          await vant.showConfirmDialog({ title: '删除动作', message: '确定删除自定义动作「' + row.name + '」？', confirmButtonColor: 'var(--danger)' });
         } catch (e) { return; }
         await API.del('/training-actions/' + row.id);
         vant.showToast({ message: '已删除', icon: 'success' });
@@ -293,7 +293,7 @@
       '<div class="page">',
       '  <m-nav title="教练档案"></m-nav>',
       '  <div style="margin:10px 12px" v-if="canEdit"><van-button type="primary" block round icon="plus" @click="openAdd">新增教练</van-button></div>',
-      '  <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else>',
       '    <van-empty v-if="!list.length" description="暂无教练"/>',
       '    <div v-for="c in list" :key="c.id" class="rec-item flex">',
@@ -317,11 +317,11 @@
       '    <div class="pop-scroll">',
       '      <div class="pop-head">{{ form.id ? (\'编辑教练档案 - \'+(form.realname||\'\')) : \'新增教练\' }}</div>',
       '      <template v-if="!form.id">',
-      '        <div style="font-size:13px;font-weight:600;color:#0d5e56;margin:6px 0 8px">登录账号（员工端/后台登录用）</div>',
+      '        <div style="font-size:13px;font-weight:600;color:var(--brand);margin:6px 0 8px">登录账号（员工端/后台登录用）</div>',
       '        <van-field v-model="form.username" label="登录账号" placeholder="如 coach04" required/>',
       '        <van-field v-model="form.password" label="初始密码" placeholder="默认 admin123"/>',
       '        <van-field v-model="form.phone" type="tel" maxlength="11" label="手机号" placeholder="选填"/>',
-      '        <div style="font-size:13px;font-weight:600;color:#0d5e56;margin:14px 0 8px">教练档案（会员端展示）</div>',
+      '        <div style="font-size:13px;font-weight:600;color:var(--brand);margin:14px 0 8px">教练档案（会员端展示）</div>',
       '      </template>',
       '      <van-field v-model="form.realname" label="姓名" placeholder="教练姓名" required/>',
       '      <van-field v-model="form.nickname" label="昵称" placeholder="选填"/>',
@@ -331,7 +331,7 @@
       '      <van-field v-model="form.desc" type="textarea" rows="2" autosize label="简介" placeholder="选填"/>',
       '      <van-field v-model="form.detail" type="textarea" rows="4" autosize label="详细介绍" placeholder="认证资质 / 执教经历 / 教学风格等"/>',
       '      <van-field v-model="form.sort" type="number" label="排序" :border="!!form.id"/>',
-      '      <van-field v-if="form.id" label="在职状态" :border="false"><template #input><van-switch v-model="form.status" :active-value="1" :inactive-value="0" size="20" active-color="#0d5e56"/></template></van-field>',
+      '      <van-field v-if="form.id" label="在职状态" :border="false"><template #input><van-switch v-model="form.status" :active-value="1" :inactive-value="0" size="20" active-color="var(--brand)"/></template></van-field>',
       '      <div class="mt12"><van-button type="primary" block round :loading="saving" @click="save">{{ form.id ? \'保存\' : \'创建教练\' }}</van-button></div>',
       '    </div>',
       '  </van-popup>',
@@ -369,7 +369,7 @@
             await vant.showDialog({
               title: '创建成功',
               message: '教练「' + body.realname + '」已创建。\n登录账号：' + body.username + '\n初始密码：' + (body.password || 'admin123') + '\n可用于登录员工端(H5)与管理后台。',
-              confirmButtonText: '知道了', confirmButtonColor: '#0d5e56',
+              confirmButtonText: '知道了', confirmButtonColor: 'var(--brand)',
             });
           }
           this.popup = false;
@@ -401,7 +401,7 @@
       '    <div style="margin:8px 0 4px"><van-button type="primary" block round :loading="adding" @click="add">新增渠道</van-button></div>',
       '  </div>',
       '  <div class="sec-title">渠道列表（{{ list.length }}）</div>',
-      '  <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else>',
       '    <van-empty v-if="!list.length" description="暂无来源渠道"/>',
       '    <van-swipe-cell v-for="s in list" :key="s.id" :disabled="!canEdit">',
@@ -410,10 +410,10 @@
       '          <span class="name">{{ s.title }}</span>',
       '          <div class="muted mt4">排序 {{ s.sort }} · #{{ s.id }}</div>',
       '        </div>',
-      '        <van-icon v-if="canEdit" name="edit" color="#c8c9cc"/>',
+      '        <van-icon v-if="canEdit" name="edit" color="var(--c-text-4)"/>',
       '      </div>',
       '      <template #right v-if="canEdit">',
-      '        <div style="height:100%;width:64px;background:#ee0a24;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px" @click="del(s)">删除</div>',
+      '        <div style="height:100%;width:64px;background:var(--danger);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px" @click="del(s)">删除</div>',
       '      </template>',
       '    </van-swipe-cell>',
       '  </template>',
@@ -457,7 +457,7 @@
       },
       async del(row) {
         try {
-          await vant.showConfirmDialog({ title: '删除渠道', message: '确定删除渠道「' + row.title + '」？', confirmButtonColor: '#ee0a24' });
+          await vant.showConfirmDialog({ title: '删除渠道', message: '确定删除渠道「' + row.title + '」？', confirmButtonColor: 'var(--danger)' });
         } catch (e) { return; }
         await API.del('/sources/' + row.id);
         vant.showToast({ message: '已删除', icon: 'success' });

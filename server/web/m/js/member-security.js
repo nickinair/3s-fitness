@@ -21,7 +21,7 @@ window.Pages.MemberSecurity = {
   template: [
     '<div class="page">',
     '  <van-nav-bar class="m-nav" :title="title" left-arrow :border="false" @click-left="back"/>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
 
     /* ---- 账号与安全首页 ---- */
     '  <template v-else-if="step===\'home\'">',
@@ -110,7 +110,7 @@ window.Pages.MemberSecurity = {
         this.tick();
         if (d && d.mock_code) {
           // 演示环境: 短信为模拟发送, 直接提示验证码
-          vant.showDialog({ title: '演示环境验证码', message: '验证码 ' + d.mock_code + '\n（已同时记入后台短信记录）', confirmButtonColor: '#0d5e56' });
+          vant.showDialog({ title: '演示环境验证码', message: '验证码 ' + d.mock_code + '\n（已同时记入后台短信记录）', confirmButtonColor: 'var(--brand)' });
           if (scene === 'new_phone') this.newCode = d.mock_code; else this.vCode = d.mock_code;
         } else {
           vant.showToast('验证码已发送至 ' + (d && d.sent_to || ''));

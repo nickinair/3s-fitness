@@ -12,7 +12,7 @@ window.AppPages.MemberOverview = {
         grid: { left: 40, right: 20, top: 30, bottom: 30 },
         xAxis: { type: 'category', data: this.d.trend.map(x => x.month) },
         yAxis: { type: 'value', minInterval: 1 },
-        series: [{ name: '新增会员', type: 'line', smooth: true, areaStyle: { opacity: .15 }, color: '#0d5e56', data: this.d.trend.map(x => x.cnt) }],
+        series: [{ name: '新增会员', type: 'line', smooth: true, areaStyle: { opacity: .15 }, color: themeColor('--brand'), data: this.d.trend.map(x => x.cnt) }],
       };
     },
     byCardOpt() {
@@ -43,7 +43,7 @@ window.AppPages.MemberOverview = {
       </div>
       <div class="metric-card">
         <div class="m-icon"><el-icon size="20"><CircleCheck /></el-icon></div>
-        <div class="m-label">在籍会员</div><div class="m-value" style="color:#0d5e56">{{ d.counts.active || 0 }}</div>
+        <div class="m-label">在籍会员</div><div class="m-value" style="color:var(--brand)">{{ d.counts.active || 0 }}</div>
       </div>
       <div class="metric-card">
         <div class="m-icon"><el-icon size="20"><WarningFilled /></el-icon></div>

@@ -24,7 +24,7 @@ window.Pages.MemberSchedule = {
   template: [
     '<div class="page has-tabbar">',
     '  <m-nav title="约课" :back="false"></m-nav>',
-    '  <van-tabs v-model:active="tab" color="#0d5e56" title-active-color="#0d5e56" line-width="28" @change="onTab">',
+    '  <van-tabs v-model:active="tab" color="var(--brand)" title-active-color="var(--brand)" line-width="28" @change="onTab">',
     '    <van-tab title="私教课" name="pt"></van-tab>',
     '    <van-tab title="团课" name="group"></van-tab>',
     '  </van-tabs>',
@@ -33,7 +33,7 @@ window.Pages.MemberSchedule = {
     '      <div class="w">{{ d.w }}</div><div class="d">{{ d.d }}</div>',
     '    </div>',
     '  </div>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
 
     /* ================= 私教课 ================= */
     '  <template v-else-if="tab===\'pt\'">',
@@ -47,7 +47,7 @@ window.Pages.MemberSchedule = {
     '            <van-tag round :type="ptTag(b).type" style="flex-shrink:0">{{ ptTag(b).text }}</van-tag>',
     '          </div>',
     '          <div class="muted mt4">教练 {{ b.coach_name }}<template v-if="b.club_name"> · {{ b.club_name }}</template></div>',
-    '          <div v-if="b.lesson_plan" class="mt4" style="font-size:12px;color:#0d5e56;background:#eef7f5;padding:2px 8px;border-radius:4px;display:inline-block"><van-icon name="notes-o" style="margin-right:2px"/>计划：{{ planLabel(b.lesson_plan) }}</div>',
+    '          <div v-if="b.lesson_plan" class="mt4" style="font-size:12px;color:var(--brand);background:var(--brand-soft);padding:2px 8px;border-radius:4px;display:inline-block"><van-icon name="notes-o" style="margin-right:2px"/>计划：{{ planLabel(b.lesson_plan) }}</div>',
     '        </div>',
     '      </div>',
     '    </template>',
@@ -83,7 +83,7 @@ window.Pages.MemberSchedule = {
     '      <div class="flex1">',
     '        <div class="title">{{ it.title }} <span class="stars">{{ H.stars(it.difficulty) }}</span></div>',
     '        <div class="muted mt4">{{ it.coach_name || \'待定\' }} · {{ it.classroom_name }}<template v-if="it.deduct_num"> · 扣{{ it.deduct_num }}次</template></div>',
-    '        <div class="mt4" v-if="it.club_name"><van-tag plain color="#0d5e56">{{ it.club_name }}</van-tag></div>',
+    '        <div class="mt4" v-if="it.club_name"><van-tag plain color="var(--brand)">{{ it.club_name }}</van-tag></div>',
     '        <div class="mt8">',
     '          <van-tag plain type="primary" v-if="it.my_booked">我已约</van-tag>',
     '          <span class="muted" style="margin-left:4px">已约 {{ it.booked_count }} / 满 {{ it.people_count }}</span>',
@@ -118,11 +118,11 @@ window.Pages.MemberSchedule = {
     '            <div style="font-size:14px;font-weight:600">{{ cs.title }}</div>',
     '            <div class="muted mt4">{{ cs.duration }}分钟 · {{ cs.people_count===1 ? \'1对1\' : cs.people_count+\'人小团\' }}</div>',
     '          </div>',
-    '          <van-radio :name="cs.id" checked-color="#0d5e56"/>',
+    '          <van-radio :name="cs.id" checked-color="var(--brand)"/>',
     '        </div>',
     '      </van-radio-group>',
     '      <div class="sec-title" style="margin:14px 0 6px">选择支付卡</div>',
-    '      <div v-if="ptCards===null" style="text-align:center;padding:14px"><van-loading size="20" color="#0d5e56"/></div>',
+    '      <div v-if="ptCards===null" style="text-align:center;padding:14px"><van-loading size="20" color="var(--brand)"/></div>',
     '      <template v-else>',
     '        <van-radio-group v-model="ptCardId">',
     '          <div v-for="c in usablePtCards" :key="c.id" class="cat-pick flex" :class="{on:ptCardId===c.id}" @click="ptCardId=c.id">',
@@ -130,7 +130,7 @@ window.Pages.MemberSchedule = {
     '              <div style="font-size:14px;font-weight:600">{{ c.card_type_name }}</div>',
     '              <div class="muted mt4">{{ cardDesc(c) }}<template v-if="c.expire_time"> · {{ H.dateOf(c.expire_time) }}到期</template></div>',
     '            </div>',
-    '            <van-radio :name="c.id" checked-color="#0d5e56"/>',
+    '            <van-radio :name="c.id" checked-color="var(--brand)"/>',
     '          </div>',
     '        </van-radio-group>',
     '        <div v-for="c in blockedPtCards" :key="c.id" class="cat-pick flex dis">',
@@ -159,7 +159,7 @@ window.Pages.MemberSchedule = {
     '        <span class="muted">已约 {{ cur.booked_count }} / 满 {{ cur.people_count }}<template v-if="cur.deduct_num"> · 次卡扣 {{ cur.deduct_num }} 次</template></span></div>',
     '      <template v-if="btn(cur).action===\'book\'">',
     '        <div class="sec-title" style="margin:16px 0 8px">选择支付卡</div>',
-    '        <div v-if="cardLoading" style="text-align:center;padding:14px"><van-loading size="20" color="#0d5e56"/></div>',
+    '        <div v-if="cardLoading" style="text-align:center;padding:14px"><van-loading size="20" color="var(--brand)"/></div>',
     '        <template v-else-if="cards">',
     '          <van-radio-group v-model="cardId">',
     '            <div v-for="c in usableCards" :key="c.id" class="cat-pick flex" :class="{on:cardId===c.id}" @click="cardId=c.id">',
@@ -167,7 +167,7 @@ window.Pages.MemberSchedule = {
     '                <div style="font-size:14px;font-weight:600">{{ c.card_type_name }}</div>',
     '                <div class="muted mt4">{{ cardDesc(c) }}<template v-if="c.expire_time"> · {{ H.dateOf(c.expire_time) }}到期</template></div>',
     '              </div>',
-    '              <van-radio :name="c.id" checked-color="#0d5e56"/>',
+    '              <van-radio :name="c.id" checked-color="var(--brand)"/>',
     '            </div>',
     '          </van-radio-group>',
     '          <div v-for="c in blockedCards" :key="c.id" class="cat-pick flex dis">',
@@ -259,7 +259,7 @@ window.Pages.MemberSchedule = {
         });
         this.ptShow = false;
         vant.showDialog({
-          title: '预约已提交', confirmButtonColor: '#0d5e56',
+          title: '预约已提交', confirmButtonColor: 'var(--brand)',
           message: H.day(this.date) + ' ' + from + ' · ' + (course ? course.title : '私教课') + '\n已提交给 ' + coach.realname + ' 教练，确认后生效',
         });
         this.load();
@@ -297,7 +297,7 @@ window.Pages.MemberSchedule = {
         const r = await API.post('/member/schedule/' + this.cur.id + '/book', { card_id: this.cardId });
         this.show = false;
         if (r && r.waitlist) {
-          vant.showDialog({ title: '已加入候补', message: '当前课程已满员，您已排队候补第 ' + r.queue_no + ' 位，有人取消将自动转正。', confirmButtonColor: '#0d5e56' });
+          vant.showDialog({ title: '已加入候补', message: '当前课程已满员，您已排队候补第 ' + r.queue_no + ' 位，有人取消将自动转正。', confirmButtonColor: 'var(--brand)' });
         } else {
           vant.showToast({ message: '预约成功', icon: 'success' });
         }
@@ -305,7 +305,7 @@ window.Pages.MemberSchedule = {
       } finally { this.submitting = false; }
     },
     async doCancel(it) {
-      try { await vant.showConfirmDialog({ title: '取消预约', message: '确定取消「' + it.title + '」的预约吗？', confirmButtonColor: '#0d5e56' }); }
+      try { await vant.showConfirmDialog({ title: '取消预约', message: '确定取消「' + it.title + '」的预约吗？', confirmButtonColor: 'var(--brand)' }); }
       catch (e) { return; }
       this.submitting = true;
       try {
@@ -314,7 +314,7 @@ window.Pages.MemberSchedule = {
         if (!bk) { vant.showToast('未找到预约记录'); return; }
         const r = await API.post('/member/group-bookings/' + bk.id + '/cancel');
         this.show = false;
-        if (r && r.penalty) vant.showDialog({ title: '已取消', message: r.penalty, confirmButtonColor: '#0d5e56' });
+        if (r && r.penalty) vant.showDialog({ title: '已取消', message: r.penalty, confirmButtonColor: 'var(--brand)' });
         else vant.showToast('已取消预约');
         this.load();
       } finally { this.submitting = false; }

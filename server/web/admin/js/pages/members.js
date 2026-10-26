@@ -138,7 +138,7 @@ window.AppPages.Members = {
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="profileLink">
-                      <span style="color:#0d5e56">专属完善链接 (送70分)</span>
+                      <span style="color:var(--brand)">专属完善链接 (送70分)</span>
                     </el-dropdown-item>
                     <el-dropdown-item command="black" divided>
                       <span :style="{color: row.is_black ? 'var(--el-color-success)' : 'var(--el-color-danger)'}">{{ row.is_black ? '移出黑名单' : '加入黑名单' }}</span>
@@ -395,7 +395,7 @@ window.AppPages.Members = {
           if (el) {
             el.innerHTML = '';
             if (window.QRCode) {
-              new QRCode(el, { text: fullUrl, width: 170, height: 170, colorDark: '#0d5e56', colorLight: '#ffffff' });
+              new QRCode(el, { text: fullUrl, width: 170, height: 170, colorDark: themeColor('--brand'), colorLight: '#ffffff' });
             }
           }
         });

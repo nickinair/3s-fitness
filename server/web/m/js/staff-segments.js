@@ -44,7 +44,7 @@
       '      <van-icon :name="sort===\'desc\' ? \'sort\' : \'sort\'" size="14"/> {{ sortText }}',
       '    </div>',
       '  </div>',
-      '  <div v-if="first && loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="first && loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <van-empty v-else-if="!list.length" description="暂无符合条件的会员"/>',
       '  <van-list v-else v-model:loading="loading" :finished="finished" finished-text="没有更多了" @load="load">',
       '    <div class="card-box" style="padding:2px 8px">',

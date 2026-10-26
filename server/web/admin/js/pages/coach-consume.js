@@ -29,7 +29,7 @@ window.AppPages.CoachConsume = {
         yAxis: { type: 'category', data: rows.map(r => r.name) },
         series: [{
           type: 'bar', data: rows.map(r => Number(r.lessons || 0)), barMaxWidth: 26,
-          itemStyle: { color: '#0d5e56', borderRadius: [0, 6, 6, 0] },
+          itemStyle: { color: themeColor('--brand'), borderRadius: [0, 6, 6, 0] },
           label: { show: true, position: 'right', formatter: '{c} 节' },
         }],
       };
@@ -43,7 +43,7 @@ window.AppPages.CoachConsume = {
         if (!byCoach[x.coach_name]) byCoach[x.coach_name] = {};
         byCoach[x.coach_name][x.d] = Number(x.lessons || 0);
       });
-      const colors = ['#0d5e56', '#3a7bd5', '#c98a2d', '#7b52ab', '#d43a3a', '#2a9d8f', '#e07b39'];
+      const colors = [themeColor('--brand'), '#3a7bd5', themeColor('--money'), '#7b52ab', '#d43a3a', '#2a9d8f', '#e07b39'];
       const names = Object.keys(byCoach);
       return {
         tooltip: { trigger: 'axis' },

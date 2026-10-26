@@ -52,7 +52,7 @@ window.Pages.StaffSchedule = {
     '  <m-nav title="排课表"></m-nav>',
     '  <div class="flex" style="justify-content:space-between;padding:10px 14px 0">',
     '    <van-icon name="arrow-left" size="18" @click="shiftWeek(-1)"/>',
-    '    <span style="font-size:14px;font-weight:600;color:#1f2329" @click="goToday">{{ weekLabel }}</span>',
+    '    <span style="font-size:14px;font-weight:600;color:var(--c-title)" @click="goToday">{{ weekLabel }}</span>',
     '    <van-icon name="arrow" size="18" @click="shiftWeek(1)"/>',
     '  </div>',
     '  <van-dropdown-menu v-if="coaches.length" style="box-shadow:none">',
@@ -67,7 +67,7 @@ window.Pages.StaffSchedule = {
     '    <van-button size="small" round plain style="flex:1" @click="copyLastWeek">复制上周排课</van-button>',
     '    <van-button size="small" round type="primary" style="flex:1" @click="openAdd">新增排课</van-button>',
     '  </div>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!dayList.length" description="当天暂无排课"/>',
     '    <div v-for="s in dayList" :key="s.id" class="course-item" @click="openDetail(s)">',
@@ -80,7 +80,7 @@ window.Pages.StaffSchedule = {
     '        <div class="muted mt4">{{ s.coach_name || \'未排教练\' }} · {{ s.classroom_name || \'未排教室\' }}</div>',
     '        <div class="muted mt4">已约 {{ s.booked_count }} / 满员 {{ s.people_count }}</div>',
     '      </div>',
-    '      <van-icon name="arrow" color="#c8c9cc"/>',
+    '      <van-icon name="arrow" color="var(--c-text-4)"/>',
     '    </div>',
     '  </template>',
 
@@ -93,7 +93,7 @@ window.Pages.StaffSchedule = {
     '          · {{ detail.syllabus.coach_name || \'未排教练\' }} · {{ detail.syllabus.classroom_name || \'未排教室\' }}</div>',
     '        <div class="muted mt4">已约 {{ detail.syllabus.booked_count }} / 满员 {{ detail.syllabus.people_count }}<template v-if="detail.syllabus.deduct_num"> · 扣卡 {{ detail.syllabus.deduct_num }} 次</template></div>',
     '      </div>',
-    '      <div v-if="detailLoading" style="text-align:center;padding:20px"><van-loading size="20" color="#0d5e56"/></div>',
+    '      <div v-if="detailLoading" style="text-align:center;padding:20px"><van-loading size="20" color="var(--brand)"/></div>',
     '      <template v-else>',
     '        <div class="sec-title" style="margin:10px 0 6px">预约名单（{{ detail.bookings.length }}）</div>',
     '        <van-empty v-if="!detail.bookings.length" description="暂无预约" image-size="60"/>',
@@ -124,12 +124,12 @@ window.Pages.StaffSchedule = {
     '          </div>',
     '          <template v-if="bookForm.vip_id">',
     '            <div class="sec-title" style="margin:10px 0 6px">选择扣课卡</div>',
-    '            <div v-if="memberCards===null" style="text-align:center;padding:10px"><van-loading size="18" color="#0d5e56"/></div>',
+    '            <div v-if="memberCards===null" style="text-align:center;padding:10px"><van-loading size="18" color="var(--brand)"/></div>',
     '            <van-empty v-else-if="!memberCards.length" description="该会员无可用会员卡" image-size="50"/>',
     '            <van-radio-group v-model="cardId" v-else>',
     '              <div v-for="c in memberCards" :key="c.id" class="cat-pick flex" :class="{on:cardId===c.id}" @click="cardId=c.id">',
     '                <div class="flex1">{{ c.card_type_name }}<span class="muted" style="margin-left:6px">{{ c.card_kind===2 ? \'时间卡不限次\' : (c.card_kind===3 ? (\'余额 ¥\'+H.money(c.left_money)) : (\'剩\'+c.left_counts+\'次\')) }}</span></div>',
-    '                <van-radio :name="c.id" checked-color="#0d5e56"/>',
+    '                <van-radio :name="c.id" checked-color="var(--brand)"/>',
     '              </div>',
     '            </van-radio-group>',
     '          </template>',
@@ -173,16 +173,16 @@ window.Pages.StaffSchedule = {
     '      <van-field :model-value="coachName(addForm.coach_id) || \'不指定\'" label="教练" readonly is-link @click="openPicker(\'coach\')"/>',
     '      <van-field :model-value="roomName(addForm.classroom_id) || \'不指定\'" label="教室" readonly is-link @click="openPicker(\'room\')"/>',
     '      <van-field label="开课日期" required>',
-    '        <template #input><input type="date" v-model="addDate" style="border:none;outline:none;background:transparent;font-size:14px;color:#323233"/></template>',
+    '        <template #input><input type="date" v-model="addDate" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--c-text)"/></template>',
     '      </van-field>',
     '      <van-field label="开课时间" required>',
-    '        <template #input><input type="time" v-model="addTime" style="border:none;outline:none;background:transparent;font-size:14px;color:#323233"/></template>',
+    '        <template #input><input type="time" v-model="addTime" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--c-text)"/></template>',
     '      </van-field>',
     '      <van-field label="满员人数"><template #input><van-stepper v-model="addForm.people_count" min="1" button-size="22"/></template></van-field>',
     '      <van-field label="开课下限"><template #input><van-stepper v-model="addForm.lower_limit" min="0" button-size="22"/></template></van-field>',
     '      <van-field label="扣卡次数"><template #input><van-stepper v-model="addForm.deduct_num" min="0" button-size="22"/></template></van-field>',
-    '      <van-field label="会员可自约"><template #input><van-switch v-model="addForm.is_vipuser_sub" :active-value="1" :inactive-value="0" size="20" active-color="#0d5e56"/></template></van-field>',
-    '      <van-field label="会员可自取消" :border="false"><template #input><van-switch v-model="addForm.self_cancel" :active-value="1" :inactive-value="0" size="20" active-color="#0d5e56"/></template></van-field>',
+    '      <van-field label="会员可自约"><template #input><van-switch v-model="addForm.is_vipuser_sub" :active-value="1" :inactive-value="0" size="20" active-color="var(--brand)"/></template></van-field>',
+    '      <van-field label="会员可自取消" :border="false"><template #input><van-switch v-model="addForm.self_cancel" :active-value="1" :inactive-value="0" size="20" active-color="var(--brand)"/></template></van-field>',
     '      <div class="mt12"><van-button type="primary" block round :loading="saving" @click="doAdd">保存排课</van-button></div>',
     '    </div>',
     '  </van-popup>',
@@ -284,7 +284,7 @@ window.Pages.StaffSchedule = {
       } finally { this.cancelling = false; }
     },
     async settle() {
-      try { await vant.showConfirmDialog({ title: '课后结算', message: '未核销的已约会员将标记为爽约，候补作废，课程结课。', confirmButtonColor: '#0d5e56' }); }
+      try { await vant.showConfirmDialog({ title: '课后结算', message: '未核销的已约会员将标记为爽约，候补作废，课程结课。', confirmButtonColor: 'var(--brand)' }); }
       catch (e) { return; }
       this.settling = true;
       try {
@@ -296,7 +296,7 @@ window.Pages.StaffSchedule = {
     copyLastWeek() {
       const from = dayjs(this.weekStart).subtract(7, 'day').format('YYYY-MM-DD');
       vant.showConfirmDialog({
-        title: '复制上周排课', confirmButtonColor: '#0d5e56',
+        title: '复制上周排课', confirmButtonColor: 'var(--brand)',
         message: '将 ' + from + ' 起一周的排课复制到本周（' + this.weekStart + ' 起），已过期与重复课程自动跳过。',
       }).then(async () => {
         const d = await API.post('/syllabus/copy-week', { from_week_start: from, to_week_start: this.weekStart });
@@ -377,7 +377,7 @@ window.Pages.StaffGroupCourses = {
     '<div class="page">',
     '  <m-nav title="团课课程库"></m-nav>',
     '  <div style="padding:10px 12px 0" v-if="canManage"><van-button type="primary" round block icon="plus" @click="openAdd">新增团课</van-button></div>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="暂无团课课程"/>',
     '    <div v-for="c in list" :key="c.id" class="rec-item" @click="canManage && openEdit(c)">',
@@ -409,11 +409,11 @@ window.Pages.StaffGroupCourses = {
     '      <div class="sec-title" style="margin:12px 0 4px">适用卡（不选=全部次卡/时间卡）</div>',
     '      <div v-for="c in groupCards" :key="c.id" class="cat-pick flex" :class="{on:form.card_scope.includes(c.id)}" @click="toggleCard(c.id)">',
     '        <div class="flex1">{{ c.title }} <span class="muted">（{{ DICT.cardKind[c.card_kind] }}）</span></div>',
-    '        <van-icon v-if="form.card_scope.includes(c.id)" name="checked" color="#0d5e56" size="18"/>',
+    '        <van-icon v-if="form.card_scope.includes(c.id)" name="checked" color="var(--brand)" size="18"/>',
     '      </div>',
     '      <van-field v-model="form.tags" label="标签" placeholder="逗号分隔，如：燃脂,搏击"/>',
     '      <van-field v-model="form.intro" type="textarea" rows="2" label="简介" placeholder="选填"/>',
-    '      <van-field label="状态" :border="false"><template #input><van-switch v-model="form.status" :active-value="1" :inactive-value="0" size="20" active-color="#0d5e56"/></template></van-field>',
+    '      <van-field label="状态" :border="false"><template #input><van-switch v-model="form.status" :active-value="1" :inactive-value="0" size="20" active-color="var(--brand)"/></template></van-field>',
     '      <div class="mt12"><van-button type="primary" block round :loading="saving" @click="save">保存</van-button></div>',
     '    </div>',
     '  </van-popup>',
@@ -474,7 +474,7 @@ window.Pages.StaffClassrooms = {
     '<div class="page">',
     '  <m-nav title="教室管理"></m-nav>',
     '  <div style="padding:10px 12px 0" v-if="canManage"><van-button type="primary" round block icon="plus" @click="openAdd">新增教室</van-button></div>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="暂无教室"/>',
     '    <div v-for="c in list" :key="c.id" class="rec-item">',
@@ -519,7 +519,7 @@ window.Pages.StaffClassrooms = {
       } finally { this.saving = false; }
     },
     async disable(row) {
-      try { await vant.showConfirmDialog({ title: '停用教室', message: '确定停用教室「' + row.title + '」？', confirmButtonColor: '#0d5e56' }); }
+      try { await vant.showConfirmDialog({ title: '停用教室', message: '确定停用教室「' + row.title + '」？', confirmButtonColor: 'var(--brand)' }); }
       catch (e) { return; }
       await API.put('/classrooms/' + row.id, { title: row.title, capacity: row.capacity, status: 0 });
       vant.showToast('已停用');
@@ -543,7 +543,7 @@ window.Pages.StaffPtCourses = {
     '<div class="page">',
     '  <m-nav title="私教课程"></m-nav>',
     '  <div style="padding:10px 12px 0" v-if="canManage"><van-button type="primary" round block icon="plus" @click="openAdd">新增私教课程</van-button></div>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="暂无私教课程"/>',
     '    <div v-for="c in list" :key="c.id" class="rec-item" @click="canManage && openEdit(c)">',
@@ -571,16 +571,16 @@ window.Pages.StaffPtCourses = {
     '      <div class="sec-title" style="margin:12px 0 4px">授课教练（不选=全部教练）</div>',
     '      <div v-for="c in coaches" :key="c.id" class="cat-pick flex" :class="{on:form.coach_ids.includes(c.id)}" @click="toggleCoach(c.id)">',
     '        <div class="flex1">{{ c.realname }}</div>',
-    '        <van-icon v-if="form.coach_ids.includes(c.id)" name="checked" color="#0d5e56" size="18"/>',
+    '        <van-icon v-if="form.coach_ids.includes(c.id)" name="checked" color="var(--brand)" size="18"/>',
     '      </div>',
     '      <div class="sec-title" style="margin:12px 0 4px">适用私教卡（不选=全部私教卡）</div>',
     '      <div v-for="c in ptCards" :key="c.id" class="cat-pick flex" :class="{on:form.card_scope.includes(c.id)}" @click="toggleCard(c.id)">',
     '        <div class="flex1">{{ c.title }}</div>',
-    '        <van-icon v-if="form.card_scope.includes(c.id)" name="checked" color="#0d5e56" size="18"/>',
+    '        <van-icon v-if="form.card_scope.includes(c.id)" name="checked" color="var(--brand)" size="18"/>',
     '      </div>',
     '      <van-field v-model="form.intro" type="textarea" rows="2" label="简介" placeholder="选填"/>',
     '      <van-field label="排序"><template #input><van-stepper v-model="form.sort" min="0" button-size="22"/></template></van-field>',
-    '      <van-field label="状态" :border="false"><template #input><van-switch v-model="form.status" :active-value="1" :inactive-value="0" size="20" active-color="#0d5e56"/></template></van-field>',
+    '      <van-field label="状态" :border="false"><template #input><van-switch v-model="form.status" :active-value="1" :inactive-value="0" size="20" active-color="var(--brand)"/></template></van-field>',
     '      <div class="mt12"><van-button type="primary" block round :loading="saving" @click="save">保存</van-button></div>',
     '    </div>',
     '  </van-popup>',

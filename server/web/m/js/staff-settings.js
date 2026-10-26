@@ -12,11 +12,11 @@ window.Pages.StaffSettingsClub = {
     '<div class="page">',
     '  <m-nav title="门店信息"></m-nav>',
     '  <div class="sec-title">门店列表（{{ clubs.length }}）<span v-if="canEdit" class="more brand-text" @click="openAdd"><van-icon name="add-o"/> 新增门店</span></div>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!clubs.length" description="暂无门店"/>',
     '    <div v-for="c in clubs" :key="c.id" class="rec-item" @click="canEdit && openEdit(c)">',
-    '      <div class="head"><span class="name">{{ c.name }}</span><van-icon v-if="canEdit" name="edit" color="#969799"/></div>',
+    '      <div class="head"><span class="name">{{ c.name }}</span><van-icon v-if="canEdit" name="edit" color="var(--c-text-3)"/></div>',
     '      <div class="muted mt4">{{ c.address || \'未填写地址\' }}</div>',
     '      <div class="muted mt4">{{ c.phone || \'未填写电话\' }} · {{ c.open_time || \'未设置营业时间\' }}</div>',
     '      <div class="muted mt4" v-if="c.intro">{{ c.intro }}</div>',
@@ -94,7 +94,7 @@ window.Pages.StaffSettingsStaff = {
     '<div class="page">',
     '  <m-nav title="员工与角色"></m-nav>',
     '  <div class="sec-title">员工列表（{{ list.length }}）<span v-if="canEdit" class="more brand-text" @click="openAdd"><van-icon name="add-o"/> 新增员工</span></div>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="暂无员工"/>',
     '    <div v-for="s in list" :key="s.id" class="rec-item">',
@@ -182,7 +182,7 @@ window.Pages.StaffSettingsStaff = {
         await vant.showConfirmDialog({
           title: status ? '启用员工' : '停用员工',
           message: (status ? '启用' : '停用') + '员工「' + row.realname + '」？',
-          confirmButtonColor: '#0d5e56',
+          confirmButtonColor: 'var(--brand)',
         });
       } catch (e) { return; }
       await API.put('/staff/' + row.id, { realname: row.realname, phone: row.phone, role: row.role, club_id: row.club_id, status });
@@ -208,7 +208,7 @@ window.Pages.StaffNotices = {
     '<div class="page">',
     '  <m-nav title="公告"></m-nav>',
     '  <div class="sec-title">公告列表（{{ list.length }}）<span v-if="canEdit" class="more brand-text" @click="openAdd"><van-icon name="add-o"/> 发布公告</span></div>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="暂无公告"/>',
     '    <div v-for="n in list" :key="n.id" class="rec-item">',
@@ -216,7 +216,7 @@ window.Pages.StaffNotices = {
     '        <van-tag :type="n.scope===1?\'danger\':\'primary\'" plain size="small">{{ n.scope===1 ? \'平台公告\' : \'门店公告\' }}</van-tag>',
     '        <span class="muted">{{ H.full(n.insert_time) }}</span>',
     '      </div>',
-    '      <div style="font-size:15px;font-weight:600;color:#1f2329;margin-top:8px">{{ n.title }}</div>',
+    '      <div style="font-size:15px;font-weight:600;color:var(--c-title);margin-top:8px">{{ n.title }}</div>',
     '      <div class="muted mt4" style="white-space:pre-wrap">{{ n.content }}</div>',
     '      <div class="foot" v-if="canEdit && n.scope===2">',
     '        <van-button size="small" round plain type="danger" @click="offline(n)">下线</van-button>',
@@ -252,7 +252,7 @@ window.Pages.StaffNotices = {
     },
     async offline(row) {
       try {
-        await vant.showConfirmDialog({ title: '下线公告', message: '确定下线公告「' + row.title + '」？会员端将不再展示。', confirmButtonColor: '#0d5e56' });
+        await vant.showConfirmDialog({ title: '下线公告', message: '确定下线公告「' + row.title + '」？会员端将不再展示。', confirmButtonColor: 'var(--brand)' });
       } catch (e) { return; }
       await API.del('/notices/' + row.id);
       vant.showToast({ message: '已下线', icon: 'success' });
@@ -275,7 +275,7 @@ window.Pages.StaffBanners = {
     '  <m-nav title="首页 Banner"></m-nav>',
     '  <div class="sec-title">Banner 列表（{{ list.length }}）<span v-if="canEdit" class="more brand-text" @click="openAdd"><van-icon name="add-o"/> 新增 Banner</span></div>',
     '  <div class="muted" style="margin:-4px 12px 10px">展示在会员端小程序首页轮播位；未上传图片时会员端以品牌渐变底展示标题文字</div>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="暂无 Banner"/>',
     '    <div v-for="b in list" :key="b.id" class="rec-item">',
@@ -363,7 +363,7 @@ window.Pages.StaffBanners = {
     },
     async del(row) {
       try {
-        await vant.showConfirmDialog({ title: '删除 Banner', message: '确定删除该 Banner？', confirmButtonColor: '#0d5e56' });
+        await vant.showConfirmDialog({ title: '删除 Banner', message: '确定删除该 Banner？', confirmButtonColor: 'var(--brand)' });
       } catch (e) { return; }
       await API.del('/banners/' + row.id);
       vant.showToast({ message: '已删除', icon: 'success' });

@@ -4,7 +4,7 @@ window.Pages.StaffGroupToday = {
   template: [
     '<div class="page">',
     '  <m-nav title="今日团课核销"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="今日暂无团课"/>',
     '    <div v-for="s in list" :key="s.id" class="course-item" @click="$router.push(\'/staff/group/\'+s.id)">',
@@ -16,7 +16,7 @@ window.Pages.StaffGroupToday = {
     '      </div>',
     '      <div style="display:flex;align-items:center;gap:6px">',
     '        <d-tag dict="syllabusStatus" :v="s.status"></d-tag>',
-    '        <van-icon name="arrow" color="#c8c9cc"/>',
+    '        <van-icon name="arrow" color="var(--c-text-4)"/>',
     '      </div>',
     '    </div>',
     '  </template>',
@@ -37,7 +37,7 @@ window.Pages.StaffGroupDetail = {
   template: [
     '<div class="page">',
     '  <m-nav title="预约名单"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else-if="s">',
     '    <div class="card-box">',
     '      <div class="flex">',
@@ -80,7 +80,7 @@ window.Pages.StaffGroupDetail = {
     async cancelBooking(b) {
       try {
         await vant.showConfirmDialog({
-          title: '取消预约', confirmButtonColor: '#0d5e56',
+          title: '取消预约', confirmButtonColor: 'var(--brand)',
           message: '确定取消 ' + b.realname + ' 的预约吗？\n名额释放后候补会员将自动转正；课时在核销时才扣，不受影响',
         });
       } catch (e) { return; }
@@ -97,11 +97,11 @@ window.Pages.StaffGroupDetail = {
       } finally { this.doing = 0; }
     },
     async settle() {
-      try { await vant.showConfirmDialog({ title: '课后结算', message: '未核销的「已预约」会员将标记为爽约，候补自动取消。确认结算？', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+      try { await vant.showConfirmDialog({ title: '课后结算', message: '未核销的「已预约」会员将标记为爽约，候补自动取消。确认结算？', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
       this.settling = true;
       try {
         const r = await API.post('/syllabus/' + this.s.id + '/settle');
-        vant.showDialog({ title: '结算完成', message: '本节课已结课，爽约 ' + ((r && r.noshow) || 0) + ' 人。', confirmButtonColor: '#0d5e56' });
+        vant.showDialog({ title: '结算完成', message: '本节课已结课，爽约 ' + ((r && r.noshow) || 0) + ' 人。', confirmButtonColor: 'var(--brand)' });
         this.load();
       } finally { this.settling = false; }
     },
@@ -114,8 +114,8 @@ window.Pages.StaffTodayBookings = {
   template: [
     '<div class="page">',
     '  <m-nav title="今日预约"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
-    '  <van-tabs v-else v-model:active="tab" color="#0d5e56" sticky offset-top="46">',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
+    '  <van-tabs v-else v-model:active="tab" color="var(--brand)" sticky offset-top="46">',
     '    <van-tab :title="\'私教(\'+pt.length+\')\'">',
     '      <van-empty v-if="!pt.length" description="今日暂无私教预约"/>',
     '      <div v-for="b in pt" :key="b.id" class="rec-item">',

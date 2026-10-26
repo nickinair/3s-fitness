@@ -9,11 +9,11 @@ window.Pages.StaffMilestones = {
   template: [
     '<div class="page">',
     '  <m-nav title="里程碑总结"></m-nav>',
-    '  <van-tabs v-model:active="tab" color="#0d5e56" sticky offset-top="46" @change="load">',
+    '  <van-tabs v-model:active="tab" color="var(--brand)" sticky offset-top="46" @change="load">',
     '    <van-tab title="待总结" :name="0"></van-tab>',
     '    <van-tab title="已总结" :name="1"></van-tab>',
     '  </van-tabs>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     // 空列表时把玩法讲清楚: 这个功能不常触发, 教练第一次进来容易不知道它是干嘛的
     '    <template v-if="!list.length">',
@@ -48,7 +48,7 @@ window.Pages.StaffMilestones = {
     '    <div v-if="cur" style="padding:20px 16px 24px">',
     '      <div style="font-size:16px;font-weight:600">阶段总结 · {{ cur.realname }}</div>',
     '      <div class="muted mt4">{{ cur.type===2 ? (\'第 \'+cur.node_value+\' 天\') : (\'第 \'+cur.node_value+\' 节课\') }} 里程碑，总结将展示在学员的里程碑页</div>',
-    '      <van-field v-model="summary" type="textarea" rows="4" placeholder="写下这个阶段的训练成果、进步与下一阶段建议..." maxlength="500" show-word-limit style="margin-top:10px;background:#f7f8fa;border-radius:10px"/>',
+    '      <van-field v-model="summary" type="textarea" rows="4" placeholder="写下这个阶段的训练成果、进步与下一阶段建议..." maxlength="500" show-word-limit style="margin-top:10px;background:var(--c-bg-2);border-radius:10px"/>',
     '      <div class="mt12"><van-button type="primary" block round :loading="saving" @click="submit">提交总结</van-button></div>',
     '    </div>',
     '  </van-popup>',

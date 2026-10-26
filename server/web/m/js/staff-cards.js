@@ -27,7 +27,7 @@ window.Pages.StaffCardList = {
     '<div class="page">',
     '  <m-nav title="会员卡列表"></m-nav>',
     '  <van-search v-model="query.keyword" placeholder="会员姓名 / 手机号" @search="reload" @clear="reload">',
-    '    <template #action><div @click="reload" style="color:#0d5e56">搜索</div></template>',
+    '    <template #action><div @click="reload" style="color:var(--brand)">搜索</div></template>',
     '  </van-search>',
     '  <van-dropdown-menu>',
     '    <van-dropdown-item v-model="query.status" :options="statusOpts" @change="reload"></van-dropdown-item>',
@@ -160,7 +160,7 @@ window.Pages.StaffCardDetail = {
   template: [
     '<div class="page">',
     '  <m-nav title="会员卡详情"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else-if="d">',
     '    <div class="vip-face block" :class="H.faceCls(card)">',
     '      <div class="flex">',
@@ -215,7 +215,7 @@ window.Pages.StaffCardDetail = {
 
     '    <template v-if="canManage">',
     '      <div class="sec-title">操作记录</div>',
-    '      <van-loading v-if="logsLoading" color="#0d5e56" style="margin:10px 14px" size="18">加载中...</van-loading>',
+    '      <van-loading v-if="logsLoading" color="var(--brand)" style="margin:10px 14px" size="18">加载中...</van-loading>',
     '      <van-empty v-else-if="!cardLogs.length" description="暂无相关操作记录" image-size="60"/>',
     '      <div class="card-box" v-else style="padding:2px 8px">',
     '        <van-cell v-for="l in cardLogs" :key="l.id" :title="l.action+\' · \'+H.full(l.insert_time)" :label="(l.username?(l.username+\' · \'):\'\')+l.detail"/>',
@@ -295,7 +295,7 @@ window.Pages.StaffCardDetail = {
     '    <div style="padding:20px 16px 24px;max-height:78vh;overflow-y:auto" v-if="d">',
     '      <div style="font-size:16px;font-weight:600;margin-bottom:6px">改卡 · {{ card.realname }} {{ card.card_type_name }}</div>',
     '      <van-field label="到期时间">',
-    '        <template #input><input type="datetime-local" v-model="editForm.expire_time" style="border:none;outline:none;background:transparent;font-size:14px;color:#323233;width:100%"/></template>',
+    '        <template #input><input type="datetime-local" v-model="editForm.expire_time" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--c-text);width:100%"/></template>',
     '      </van-field>',
     '      <van-field v-if="is300PtCard && canAdmin" v-model="editForm.counts" type="number" label="制卡总次数" placeholder="300元/节私教卡支持修改"/>',
     '      <van-field v-if="[1,4].includes(card.card_kind)" v-model="editForm.left_counts" type="number" label="剩余次数"/>',
@@ -380,7 +380,7 @@ window.Pages.StaffCardDetail = {
       } finally { this.saving = false; }
     },
     async resume() {
-      try { await vant.showConfirmDialog({ title: '恢复会员卡', message: '确定恢复该卡？未用完的暂停天数将从到期时间扣回。', confirmButtonColor: '#0d5e56' }); }
+      try { await vant.showConfirmDialog({ title: '恢复会员卡', message: '确定恢复该卡？未用完的暂停天数将从到期时间扣回。', confirmButtonColor: 'var(--brand)' }); }
       catch (e) { return; }
       await API.post('/cards/' + this.card.id + '/resume');
       vant.showToast({ message: '已恢复', icon: 'success' });
@@ -398,7 +398,7 @@ window.Pages.StaffCardDetail = {
       } finally { this.saving = false; }
     },
     async enable() {
-      try { await vant.showConfirmDialog({ title: '启用会员卡', message: '确定重新启用该卡？', confirmButtonColor: '#0d5e56' }); }
+      try { await vant.showConfirmDialog({ title: '启用会员卡', message: '确定重新启用该卡？', confirmButtonColor: 'var(--brand)' }); }
       catch (e) { return; }
       await API.post('/cards/' + this.card.id + '/enable');
       vant.showToast({ message: '已启用', icon: 'success' });
@@ -477,7 +477,7 @@ window.Pages.StaffContracts = {
     '<div class="page">',
     '  <m-nav title="合同管理"></m-nav>',
     '  <van-search v-model="query.keyword" placeholder="会员 / 手机号 / 合同号" @search="reload" @clear="reload">',
-    '    <template #action><div @click="reload" style="color:#0d5e56">搜索</div></template>',
+    '    <template #action><div @click="reload" style="color:var(--brand)">搜索</div></template>',
     '  </van-search>',
     '  <van-dropdown-menu>',
     '    <van-dropdown-item v-model="query.sign_status" :options="signOpts" @change="reload"></van-dropdown-item>',
@@ -489,14 +489,14 @@ window.Pages.StaffContracts = {
     '  <van-list v-model:loading="loading" :finished="finished" :finished-text="list.length ? \'没有更多了\' : \'\'" @load="onLoad">',
     '    <van-empty v-if="finished && !list.length" description="暂无合同"></van-empty>',
     '    <div v-for="c in list" :key="c.id" class="rec-item flex" @click="view(c)">',
-    '      <van-icon name="notes-o" size="26" color="#0d5e56"></van-icon>',
+    '      <van-icon name="notes-o" size="26" color="var(--brand)"></van-icon>',
     '      <div class="flex1" style="margin-left:12px">',
     '        <div class="name">{{ c.title }}</div>',
     '        <div class="muted mt4">{{ c.contract_num }}</div>',
     '        <div class="muted mt4">{{ c.realname }} {{ c.phone }} · {{ H.full(c.insert_time) }}</div>',
     '      </div>',
     '      <d-tag dict="signStatus" :v="c.sign_status"></d-tag>',
-    '      <van-icon name="arrow" color="#c8c9cc" style="margin-left:4px"></van-icon>',
+    '      <van-icon name="arrow" color="var(--c-text-4)" style="margin-left:4px"></van-icon>',
     '    </div>',
     '  </van-list>',
 

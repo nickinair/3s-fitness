@@ -69,7 +69,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-page); fo
 
 /* ============ 登录页 ============ */
 .login-wrap { height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #062724 0%, #0d5e56 55%, #1b7d6f 100%); position: relative; overflow: hidden; }
+  background: var(--brand-grad-deep); position: relative; overflow: hidden; }
 .login-wrap::before { content: ''; position: absolute; width: 620px; height: 620px; border-radius: 50%;
   background: rgba(255,255,255,.05); top: -220px; right: -160px; }
 .login-wrap::after { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%;
@@ -85,7 +85,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-page); fo
 .layout { display: flex; height: 100vh; }
 .sidebar { width: 220px; flex-shrink: 0; background: var(--sidebar-bg); display: flex; flex-direction: column; overflow: hidden; }
 .sidebar .brand { height: 60px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--sidebar-sub); flex-shrink: 0; }
-.sidebar .brand .badge { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg,#18a08d,#0d5e56); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
+.sidebar .brand .badge { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg,#18a08d,var(--brand)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
 .sidebar .brand span { color: #fff; font-weight: 600; font-size: 16px; letter-spacing: .5px; white-space: nowrap; }
 /* 「管理后台」做成小标签, 避免标题折行 */
 .sidebar .brand .brand-tag { font-style: normal; font-size: 11px; color: rgba(255,255,255,.82);
@@ -127,7 +127,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-page); fo
 .stat-strip .item.tap { cursor: pointer; padding: 2px 10px; margin: -2px -4px; border-radius: 8px;
   transition: background .15s; }
 .stat-strip .item.tap:hover { background: var(--hover-bg); }
-.stat-strip .item.tap.on { background: rgba(13, 94, 86, .12); color: var(--brand); font-weight: 600; }
+.stat-strip .item.tap.on { background: rgba(var(--brand-rgb), .12); color: var(--brand); font-weight: 600; }
 
 /* ============ 指标卡 ============ */
 .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
@@ -183,7 +183,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-page); fo
 .checkin-result { text-align: center; padding: 26px 10px; }
 .checkin-result .big { font-size: 40px; }
 .member-profile-card { display: flex; gap: 14px; align-items: flex-start; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
-.avatar-circle { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,#18a08d,#0d5e56); color: #fff;
+.avatar-circle { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,#18a08d,var(--brand)); color: #fff;
   display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; flex-shrink: 0; }
 .black-warn { background: #fdeaea; border: 1px solid #f5b5b5; color: #c22; border-radius: 8px; padding: 8px 12px; margin-top: 8px; font-size: 13px; }
 html.dark .black-warn { background: #3a1a1a; border-color: #6e2c2c; color: #ff9a9a; }
@@ -195,7 +195,7 @@ html.dark .black-warn { background: #3a1a1a; border-color: #6e2c2c; color: #ff9a
 .right-card { border-radius: 10px; padding: 14px 16px; color: #fff; position: relative; overflow: hidden;
   background: linear-gradient(135deg, #16826f, #0b4a42); }
 .right-card.k2 { background: linear-gradient(135deg, #3a7bd5, #24508f); }
-.right-card.k3 { background: linear-gradient(135deg, #c98a2d, #8f5c14); }
+.right-card.k3 { background: linear-gradient(135deg, var(--money), #8f5c14); }
 .right-card.k4 { background: linear-gradient(135deg, #7b52ab, #4b2e72); }
 .right-card.dead { background: linear-gradient(135deg, #9aa7a5, #6f7c7a); }
 .right-card .rc-title { font-weight: 600; font-size: 14px; }

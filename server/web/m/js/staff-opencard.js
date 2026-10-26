@@ -95,7 +95,7 @@ window.Pages.StaffOpenCard = {
 
     '  <template v-else-if="step===1">',
     '  <div class="card-box oc-pick" style="padding:10px 12px">',
-    '    <van-tabs v-model:active="mode" type="card" color="#0d5e56" style="margin-bottom:10px">',
+    '    <van-tabs v-model:active="mode" type="card" color="var(--brand)" style="margin-bottom:10px">',
     '      <van-tab title="已有会员" name="exist"></van-tab>',
     '      <van-tab title="新会员建档" name="new"></van-tab>',
     '    </van-tabs>',
@@ -106,9 +106,9 @@ window.Pages.StaffOpenCard = {
     '        <div v-for="m in results" :key="m.id" class="cat-pick flex" :class="{on:vip && vip.id===m.id}" @click="vip=m">',
     '          <div class="flex1"><b>{{ m.realname || \'未命名\' }}</b> <span class="muted">{{ m.phone }}</span>',
     '            <van-tag v-if="m.is_black" type="danger" style="margin-left:4px">黑名单</van-tag></div>',
-    '          <van-icon v-if="vip && vip.id===m.id" name="checked" color="#0d5e56" size="20"/>',
+    '          <van-icon v-if="vip && vip.id===m.id" name="checked" color="var(--brand)" size="20"/>',
     '        </div>',
-    '        <div v-if="searching" style="text-align:center;padding:8px"><van-loading size="20" color="#0d5e56"/></div>',
+    '        <div v-if="searching" style="text-align:center;padding:8px"><van-loading size="20" color="var(--brand)"/></div>',
     '        <van-empty v-else-if="!results.length" description="没有匹配的会员" image-size="60"/>',
     '        <div v-else-if="results.length < rTotal" style="text-align:center;padding:6px 0 2px" @click="search(false)"><span class="brand-text" style="font-size:13px">加载更多（还有 {{ rTotal - results.length }} 人）</span></div>',
     '      </div>',
@@ -128,7 +128,7 @@ window.Pages.StaffOpenCard = {
     /* ===== 第 2 步: 选择门店与卡 ===== */
     '  <template v-if="step===2">',
     '  <div class="card-box oc-who flex" v-if="whoName">',
-    '    <van-icon name="manager-o" color="#0d5e56"/>',
+    '    <van-icon name="manager-o" color="var(--brand)"/>',
     '    <span style="margin-left:6px">为 <b>{{ whoName }}</b> <span class="muted">{{ whoPhone }}</span> 开卡</span>',
     '  </div>',
     // 门店决定卡归属, 放在卡种 tab 之前先定下来
@@ -142,7 +142,7 @@ window.Pages.StaffOpenCard = {
     '    </div>',
     '  </div>',
     '  <div class="card-box" style="padding:10px 12px">',
-    '    <van-tabs v-model:active="kind" type="card" color="#0d5e56" style="margin-bottom:10px">',
+    '    <van-tabs v-model:active="kind" type="card" color="var(--brand)" style="margin-bottom:10px">',
     '      <van-tab v-for="k in kinds" :key="k" :title="DICT.cardKind[k]" :name="k"></van-tab>',
     '    </van-tabs>',
     '    <div class="oc-cat-t">选择卡</div>',
@@ -159,7 +159,7 @@ window.Pages.StaffOpenCard = {
     /* ===== 第 3 步: 收款信息 ===== */
     '  <template v-if="step===3">',
     '  <div class="card-box oc-who flex" v-if="cat">',
-    '    <van-icon name="card" color="#0d5e56"/>',
+    '    <van-icon name="card" color="var(--brand)"/>',
     '    <span style="margin-left:6px"><b>{{ whoName }}</b> · {{ displayCardTitle }}</span>',
     '    <span class="flex1"></span><span class="price">{{ H.money(expectedPrice) }}</span>',
     '  </div>',
@@ -173,7 +173,7 @@ window.Pages.StaffOpenCard = {
     '      </template>',
     '    </van-field>',
     '    <van-field v-model="form.actual_money" type="number" label="实收金额" placeholder="0.00">',
-    '      <template #left-icon><span style="color:#d4380d;font-weight:700">¥</span></template>',
+    '      <template #left-icon><span style="color:var(--up);font-weight:700">¥</span></template>',
     '    </van-field>',
     '    <van-field :model-value="DICT.payMethod[form.pay_method]" label="支付方式" readonly is-link @click="payShow=true"/>',
     '    <van-field :model-value="DICT.openMode[form.open_card_mode]" label="开卡方式" readonly is-link @click="modeShow=true"/>',
@@ -365,7 +365,7 @@ window.Pages.StaffOpenCard = {
         let signNow = false;
         try {
           await vant.showConfirmDialog({
-            title: '开卡成功', confirmButtonColor: '#0d5e56',
+            title: '开卡成功', confirmButtonColor: 'var(--brand)',
             confirmButtonText: '现在签约', cancelButtonText: '稍后再签',
             message: who + ' · ' + this.displayCardTitle + '\n实收 ' + H.money(body.actual_money)
               + '\n合同号：' + r.contract_number + '\n\n合同已生成，可请会员当面签署',

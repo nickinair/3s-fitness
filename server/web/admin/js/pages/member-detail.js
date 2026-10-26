@@ -53,9 +53,9 @@ window.AppPages.MemberDetail = {
           { type: 'value', name: '体脂率(%)', scale: true },
         ],
         series: [
-          { name: '体重(kg)', type: 'line', smooth: true, connectNulls: true, itemStyle: { color: '#0d5e56' },
+          { name: '体重(kg)', type: 'line', smooth: true, connectNulls: true, itemStyle: { color: themeColor('--brand') },
             areaStyle: { opacity: .1 }, data: rows.map(r => r.weight != null ? Number(r.weight) : null) },
-          { name: '体脂率(%)', type: 'line', smooth: true, connectNulls: true, yAxisIndex: 1, itemStyle: { color: '#c98a2d' },
+          { name: '体脂率(%)', type: 'line', smooth: true, connectNulls: true, yAxisIndex: 1, itemStyle: { color: themeColor('--money') },
             data: rows.map(r => r.body_fat != null ? Number(r.body_fat) : null) },
         ],
       };
@@ -551,7 +551,7 @@ window.AppPages.MemberDetail = {
           if (el) {
             el.innerHTML = '';
             if (window.QRCode) {
-              new QRCode(el, { text: fullUrl, width: 170, height: 170, colorDark: '#0d5e56', colorLight: '#ffffff' });
+              new QRCode(el, { text: fullUrl, width: 170, height: 170, colorDark: themeColor('--brand'), colorLight: '#ffffff' });
             }
           }
         });

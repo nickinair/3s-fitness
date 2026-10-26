@@ -27,7 +27,7 @@
   window.MComponents['m-line-chart'] = {
     props: {
       data: { type: Array, default: function () { return []; } }, // [{label,value}]
-      color: { type: String, default: '#0d5e56' },
+      color: { type: String, default: 'var(--brand)' },
     },
     computed: {
       geo() {
@@ -67,10 +67,10 @@
       '  <svg v-if="geo.pts.length" :viewBox="\'0 0 \'+geo.W+\' \'+geo.HT" preserveAspectRatio="none" style="width:100%;display:block">',
       '    <line v-for="t in geo.ticks" :key="\'g\'+t.y" :x1="geo.padL" :x2="geo.W-geo.padR" :y1="t.y" :y2="t.y" stroke="#f0f1f3" stroke-width="1"/>',
       '    <text v-for="t in geo.ticks" :key="\'t\'+t.y" x="1" :y="t.y+3" font-size="9" fill="#b0b3b8">{{ t.v }}</text>',
-      '    <path :d="areaPath" :fill="color" opacity=".12" stroke="none"/>',
-      '    <path :d="linePath" fill="none" :stroke="color" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-      '    <circle v-for="(p,i) in geo.pts" :key="\'c\'+i" :cx="p.x" :cy="p.y" r="2.6" :fill="color"/>',
-      '    <text v-for="(p,i) in geo.pts" :key="\'x\'+i" :x="p.x" :y="geo.HT-6" text-anchor="middle" font-size="9" fill="#969799"',
+      '    <path :d="areaPath" :style="{ fill: color }" opacity=".12" stroke="none"/>',
+      '    <path :d="linePath" fill="none" :style="{ stroke: color }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      '    <circle v-for="(p,i) in geo.pts" :key="\'c\'+i" :cx="p.x" :cy="p.y" r="2.6" :style="{ fill: color }"/>',
+      '    <text v-for="(p,i) in geo.pts" :key="\'x\'+i" :x="p.x" :y="geo.HT-6" text-anchor="middle" font-size="9" style="fill:var(--c-text-3)"',
       '      :transform="geo.rotate ? (\'rotate(-40 \'+p.x+\' \'+(geo.HT-6)+\')\') : null">{{ p.label }}</text>',
       '  </svg>',
       '  <div v-else class="muted" style="text-align:center;padding:30px 0">暂无数据</div>',
@@ -154,7 +154,7 @@
       '<div class="page">',
       '  <m-nav title="数据看板"></m-nav>',
       '  <div class="rpt-topbar">',
-      '    <van-tabs v-model:active="period" type="card" color="#0d5e56" @change="load">',
+      '    <van-tabs v-model:active="period" type="card" color="var(--brand)" @change="load">',
       '      <van-tab title="日" name="day"></van-tab>',
       '      <van-tab title="周" name="week"></van-tab>',
       '      <van-tab title="月" name="month"></van-tab>',
@@ -162,7 +162,7 @@
       '    <div class="rpt-date-btn" @click="openDate">{{ d ? d.label : \'\' }}<van-icon name="arrow-down" size="12"/></div>',
       '  </div>',
       '  <div v-if="isAdmin" class="rpt-club-btn" @click="clubPop=true"><van-icon name="shop-o" size="13"/><span class="flex1" style="margin-left:6px">{{ clubName }}</span><van-icon name="arrow-down" size="12"/></div>',
-      '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else-if="d">',
       '    <div class="rpt-metric-grid">',
       '      <div class="rpt-metric-cell" v-for="m in metrics" :key="m.key">',
@@ -247,7 +247,7 @@
       '<div class="page">',
       '  <m-nav title="报表"></m-nav>',
       '  <div style="padding:10px 16px 0">',
-      '    <van-tabs v-model:active="tab" type="card" color="#0d5e56" @change="onTab">',
+      '    <van-tabs v-model:active="tab" type="card" color="var(--brand)" @change="onTab">',
       '      <van-tab title="用户数据" name="members"></van-tab>',
       '      <van-tab title="财务数据" name="finance"></van-tab>',
       '    </van-tabs>',
@@ -255,7 +255,7 @@
       '  <div class="rpt-month-btn" @click="openMonth">{{ monthLabel }} <van-icon name="arrow-down" size="12"/></div>',
 
       '  <template v-if="tab===\'members\'">',
-      '    <div v-if="loadingMembers" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '    <div v-if="loadingMembers" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '    <template v-else-if="membersData">',
       '      <div class="rpt-kpi-row">',
       '        <div class="rpt-kpi"><div class="l">累计会员</div><div class="v">{{ H.num(membersData.summary.total_members) }}</div><div :class="[\'rpt-kpi-pct\', pctCls(membersData.summary.total_pct)]">{{ pctText(membersData.summary.total_pct) }}</div></div>',
@@ -281,7 +281,7 @@
       '  </template>',
 
       '  <template v-else>',
-      '    <div v-if="loadingFinance" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '    <div v-if="loadingFinance" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '    <template v-else-if="financeData">',
       '      <div class="rpt-kpi-row">',
       '        <div class="rpt-kpi"><div class="l">月度营收</div><div class="v">{{ H.money(financeData.summary.revenue) }}</div><div :class="[\'rpt-kpi-pct\', pctCls(financeData.summary.revenue_pct)]">{{ pctText(financeData.summary.revenue_pct) }}</div></div>',
@@ -388,7 +388,7 @@
       '  <div class="rpt-month-btn" @click="openMonth">{{ monthLabel }} <van-icon name="arrow-down" size="12"/></div>',
       '  <div v-if="isManagerRole" class="coach-pick" @click="staffPop=true"><van-icon name="manager-o"/><span style="margin-left:6px">查看员工</span><div class="flex1"></div><b>{{ staffName }}</b><van-icon name="exchange" style="margin-left:6px"/></div>',
 
-      '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else-if="d">',
       '    <div v-if="noIncomeCfg" class="rpt-warn-tip"><van-icon name="warning-o"/> 尚未配置固定工资与提成比例，请联系管理员在「员工与角色」设置</div>',
       '    <div class="rpt-income-card">',
@@ -426,9 +426,9 @@
       '    <div class="card-box"><m-ratio-list :list="mapRanking(d.ranking.list)" money></m-ratio-list></div>',
 
       '    <div class="rpt-bottom-row">',
-      '      <div class="rpt-bottom-cell"><van-icon name="friends-o" size="20" color="#0d5e56"/><div class="v">{{ d.members.active }}</div><div class="l">在籍会员</div></div>',
-      '      <div class="rpt-bottom-cell"><van-icon name="warning-o" size="20" color="#0d5e56"/><div class="v">{{ d.members.expired }}</div><div class="l">过期会员</div></div>',
-      '      <div class="rpt-bottom-cell"><van-icon name="contact" size="20" color="#0d5e56"/><div class="v">{{ d.members.visitors }}</div><div class="l">游客</div></div>',
+      '      <div class="rpt-bottom-cell"><van-icon name="friends-o" size="20" color="var(--brand)"/><div class="v">{{ d.members.active }}</div><div class="l">在籍会员</div></div>',
+      '      <div class="rpt-bottom-cell"><van-icon name="warning-o" size="20" color="var(--brand)"/><div class="v">{{ d.members.expired }}</div><div class="l">过期会员</div></div>',
+      '      <div class="rpt-bottom-cell"><van-icon name="contact" size="20" color="var(--brand)"/><div class="v">{{ d.members.visitors }}</div><div class="l">游客</div></div>',
       '    </div>',
       '  </template>',
 
@@ -504,7 +504,7 @@ window.Pages.StaffReportDetail = {
   template: [
     '<div class="page">',
     '  <m-nav :title="d ? d.title : \'导出明细\'"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else-if="d">',
     '    <div class="dl-bar">',
     '      <div class="flex1">',

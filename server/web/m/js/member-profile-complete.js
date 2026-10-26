@@ -173,7 +173,7 @@
         title="完善档案 · 领专属积分"
         left-arrow
         @click-left="$router.back()"
-        style="--van-nav-bar-background:#0d5e56;--van-nav-bar-title-text-color:#fff;--van-nav-bar-icon-color:#fff"
+        style="--van-nav-bar-background:var(--brand);--van-nav-bar-title-text-color:#fff;--van-nav-bar-icon-color:#fff"
       >
         <template #right>
           <span style="color:#a7f3d0;font-size:13px" @click="goToHome">前往首页</span>
@@ -184,7 +184,7 @@
 
       <div v-else style="padding:14px">
         <!-- 礼遇积分激励卡片 (极具质感的设计) -->
-        <div style="background:linear-gradient(135deg, #0d5e56 0%, #15803d 100%);color:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 6px 16px rgba(13,94,86,0.22);margin-bottom:14px">
+        <div style="background:linear-gradient(135deg, var(--brand) 0%, #15803d 100%);color:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 6px 16px rgba(var(--brand-rgb),0.22);margin-bottom:14px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div>
               <div style="font-size:13px;opacity:0.85">尊贵会员</div>
@@ -215,9 +215,9 @@
 
         <!-- 档案填写表单 -->
         <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.04);margin-bottom:12px">
-          <div style="padding:12px 16px 8px;font-size:14px;font-weight:700;color:#374151;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
+          <div style="padding:12px 16px 8px;font-size:14px;font-weight:700;color:var(--c-text);border-bottom:1px solid var(--c-bg-2);display:flex;align-items:center;justify-content:space-between">
             <span>基础信息</span>
-            <span style="font-size:12px;color:#9ca3af;font-weight:400">核对您的个人基础资料</span>
+            <span style="font-size:12px;color:var(--c-text-3);font-weight:400">核对您的个人基础资料</span>
           </div>
           <van-field v-model="form.realname" label="姓名" placeholder="您的真实姓名" />
           <van-field label="性别">
@@ -232,7 +232,7 @@
 
         <!-- 7 项积分档案内容 -->
         <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.04);margin-bottom:12px">
-          <div style="padding:12px 16px 8px;font-size:14px;font-weight:700;color:#374151;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
+          <div style="padding:12px 16px 8px;font-size:14px;font-weight:700;color:var(--c-text);border-bottom:1px solid var(--c-bg-2);display:flex;align-items:center;justify-content:space-between">
             <span>健康与目标档案</span>
             <van-tag type="success" plain>7项专享 · 满额70分</van-tag>
           </div>
@@ -256,7 +256,7 @@
           <!-- 3. 生日 -->
           <van-field label="生日">
             <template #input>
-              <input type="date" v-model="form.birthday" style="border:none;outline:none;background:transparent;font-size:14px;color:#323233;width:100%" />
+              <input type="date" v-model="form.birthday" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--c-text);width:100%" />
             </template>
             <template #extra>
               <van-tag v-if="isItemRewarded('birthday')" type="success" round>✓ 已领 10 分</van-tag>
@@ -271,13 +271,13 @@
               <van-tag v-else type="warning" plain round>+10 积分</van-tag>
             </template>
           </van-field>
-          <div style="padding:4px 16px 12px;background:#fafafa;border-bottom:1px solid #f3f4f6">
-            <div style="font-size:11px;color:#9ca3af;margin-bottom:6px">点击快捷填入星座与性格标签：</div>
+          <div style="padding:4px 16px 12px;background:var(--c-bg-2);border-bottom:1px solid var(--c-bg-2)">
+            <div style="font-size:11px;color:var(--c-text-3);margin-bottom:6px">点击快捷填入星座与性格标签：</div>
             <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
               <van-tag v-for="c in ['白羊','金牛','双子','巨蟹','狮子','处女','天秤','天蝎','射手','摩羯','水瓶','双鱼']" :key="c" plain size="small" type="primary" style="cursor:pointer" @click="appendTag('constellation_mbti', c + '座')">{{ c }}</van-tag>
             </div>
             <div style="display:flex;gap:5px;flex-wrap:wrap">
-              <van-tag v-for="m in ['INTJ','INFP','ENTP','ENFJ','ISTJ','ESFP','INFJ','ENTJ']" :key="m" plain size="small" style="cursor:pointer;color:#0d5e56;border-color:#a7f3d0" @click="appendTag('constellation_mbti', m)">{{ m }}</van-tag>
+              <van-tag v-for="m in ['INTJ','INFP','ENTP','ENFJ','ISTJ','ESFP','INFJ','ENTJ']" :key="m" plain size="small" style="cursor:pointer;color:var(--brand);border-color:#a7f3d0" @click="appendTag('constellation_mbti', m)">{{ m }}</van-tag>
             </div>
           </div>
 
@@ -288,20 +288,20 @@
               <van-tag v-else type="warning" plain round>+10 积分</van-tag>
             </template>
           </van-field>
-          <div style="padding:4px 16px 12px;background:#fafafa;border-bottom:1px solid #f3f4f6">
+          <div style="padding:4px 16px 12px;background:var(--c-bg-2);border-bottom:1px solid var(--c-bg-2)">
             <div style="display:flex;gap:6px;flex-wrap:wrap">
               <van-tag v-for="f in ['每周1-2次','每周3-4次','每周5次及以上','工作日每天']" :key="f" :type="form.training_frequency === f ? 'primary' : 'default'" plain size="medium" style="cursor:pointer" @click="setFreq(f)">{{ f }}</van-tag>
             </div>
           </div>
 
           <!-- 6. 身材目标对比图 -->
-          <div style="padding:12px 16px;border-bottom:1px solid #f3f4f6">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--c-bg-2)">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-              <span style="font-size:14px;color:#323233;font-weight:500">身材目标对比照 (最多3张)</span>
+              <span style="font-size:14px;color:var(--c-text);font-weight:500">身材目标对比照 (最多3张)</span>
               <van-tag v-if="isItemRewarded('target_compare_photos')" type="success" round>✓ 已领 10 分</van-tag>
               <van-tag v-else type="warning" plain round>+10 积分</van-tag>
             </div>
-            <div style="font-size:12px;color:#9ca3af;margin-bottom:10px">上传您希望达到的身材范例或本人体型记录照片</div>
+            <div style="font-size:12px;color:var(--c-text-3);margin-bottom:10px">上传您希望达到的身材范例或本人体型记录照片</div>
             <van-uploader
               v-model="uploaderFileList"
               :max-count="3"
@@ -328,7 +328,7 @@
           </van-field>
         </div>
 
-        <div style="font-size:12px;color:#9ca3af;text-align:center;line-height:1.6;padding:8px 0">
+        <div style="font-size:12px;color:var(--c-text-3);text-align:center;line-height:1.6;padding:8px 0">
           • 积分可用于兑换场馆饮品、专属体测或私教课程抵扣<br/>
           • 本链接为您的专属会员链接，无需重新输入账号密码
         </div>
@@ -336,8 +336,8 @@
 
       <!-- 底部吸底操作栏 -->
       <div style="position:fixed;bottom:0;left:0;right:0;background:#fff;padding:10px 16px;box-shadow:0 -2px 10px rgba(0,0,0,0.06);display:flex;gap:12px;z-index:99;box-sizing:border-box">
-        <van-button plain round style="flex:1;border-color:#0d5e56;color:#0d5e56" @click="goToHome">进入会员中心</van-button>
-        <van-button type="primary" round style="flex:2;background:#0d5e56;border-color:#0d5e56;font-weight:600" :loading="submitting" @click="onSubmit">
+        <van-button plain round style="flex:1;border-color:var(--brand);color:var(--brand)" @click="goToHome">进入会员中心</van-button>
+        <van-button type="primary" round style="flex:2;background:var(--brand);border-color:var(--brand);font-weight:600" :loading="submitting" @click="onSubmit">
           保存并领取积分 🎁
         </van-button>
       </div>
@@ -347,19 +347,19 @@
         <div style="padding:18px 20px;text-align:center">
           <div v-if="rewardResult.pointsGained > 0">
             <div style="font-size:40px;margin-bottom:8px">🎁</div>
-            <div style="font-size:18px;font-weight:700;color:#0d5e56;margin-bottom:6px">
+            <div style="font-size:18px;font-weight:700;color:var(--brand);margin-bottom:6px">
               本次获得 +{{ rewardResult.pointsGained }} 积分
             </div>
-            <div style="font-size:14px;color:#6b7280">
+            <div style="font-size:14px;color:var(--c-text-2)">
               当前会员积分总额：<span style="color:#d97706;font-weight:700">{{ rewardResult.totalPoints }}</span> 分
             </div>
-            <div style="margin-top:12px;font-size:12px;color:#9ca3af">
+            <div style="margin-top:12px;font-size:12px;color:var(--c-text-3)">
               积分已即时计入您的会员账户，可随时在【我的】页面查看与消费抵扣。
             </div>
           </div>
           <div v-else>
             <div style="font-size:14px;color:#4b5563">您的档案资料已成功更新保存！</div>
-            <div style="margin-top:8px;font-size:12px;color:#9ca3af">当前可用积分：{{ rewardResult.totalPoints }} 分</div>
+            <div style="margin-top:8px;font-size:12px;color:var(--c-text-3)">当前可用积分：{{ rewardResult.totalPoints }} 分</div>
           </div>
         </div>
       </van-dialog>

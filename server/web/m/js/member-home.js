@@ -28,7 +28,7 @@
   },
   template: [
     '<div class="page has-tabbar">',
-    '  <div v-if="loading" style="text-align:center;padding:80px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:80px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else-if="home">',
     '    <div class="black-warn" v-if="home.vip && home.vip.is_black"><van-icon name="warning" /> 您的账号已被列入黑名单，签到与预约受限，请联系门店处理</div>',
     '    <div class="home-hero">',
@@ -100,7 +100,7 @@
     '      <div class="vip-add" @click="$router.push(\'/buy\')"><van-icon name="plus" size="20"/><span>新增会员卡</span></div>',
     '    </div>',
     '    <div class="card-box flex" v-else @click="$router.push(\'/buy\')">',
-    '      <van-icon name="credit-pay" color="#0d5e56" size="22"/>',
+    '      <van-icon name="credit-pay" color="var(--brand)" size="22"/>',
     '      <span class="flex1" style="margin-left:10px;font-size:14px">还没有会员卡，去挑选一张开启训练吧</span>',
     '      <van-button type="primary" size="small" round>去买卡</van-button>',
     '    </div>',
@@ -119,7 +119,7 @@
     '        <div class="wb-reset" @click="resetLayout"><van-icon name="replay"/> 恢复默认布局</div>',
     '      </template>',
     '    </div>',
-    '    <van-dialog :show="!!notice" @update:show="notice=null" :title="notice && notice.title" confirm-button-text="知道了" confirm-button-color="#0d5e56">',
+    '    <van-dialog :show="!!notice" @update:show="notice=null" :title="notice && notice.title" confirm-button-text="知道了" confirm-button-color="var(--brand)">',
     '      <div style="padding:16px 20px;font-size:13px;line-height:1.8;color:#555">{{ notice && notice.content }}</div>',
     '    </van-dialog>',
     '  </template>',
@@ -147,7 +147,7 @@
       } catch (e) { /* API 层已 toast 错误 */ }
     },
     async resetLayout() {
-      try { await vant.showConfirmDialog({ title: '恢复默认', message: '将恢复为默认的常用功能布局，确定吗？', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+      try { await vant.showConfirmDialog({ title: '恢复默认', message: '将恢复为默认的常用功能布局，确定吗？', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
       this.layout = [...QUICK_DEFAULT];
     },
     watchLayout() { try { localStorage.setItem(this.layoutKey, JSON.stringify(this.layout || [])); } catch (e) { /* ignore */ } },

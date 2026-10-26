@@ -22,7 +22,7 @@ window.Pages.MemberMine = {
     '  </div>',
     '  <div class="card-box" style="padding:4px 8px">',
     '    <van-cell title="训练风采" icon="photograph" is-link to="/training-photos">',
-    '      <template #value><span style="font-size:12px;color:#0d5e56;font-weight:600">{{ photoQuotaText || \'成长相册\' }}</span></template>',
+    '      <template #value><span style="font-size:12px;color:var(--brand);font-weight:600">{{ photoQuotaText || \'成长相册\' }}</span></template>',
     '    </van-cell>',
     '    <van-cell title="我的里程碑" icon="medal-o" is-link to="/milestones" />',
     '    <van-cell title="训练计划" icon="todo-list-o" is-link to="/plans">',
@@ -46,7 +46,7 @@ window.Pages.MemberMine = {
   ].join('\n'),
   methods: {
     async logout() {
-      try { await vant.showConfirmDialog({ title: '退出登录', message: '确定退出当前账号吗？', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+      try { await vant.showConfirmDialog({ title: '退出登录', message: '确定退出当前账号吗？', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
       Store.logout();
       this.$router.replace('/login');
     },
@@ -80,7 +80,7 @@ window.Pages.MemberProfile = {
   template: [
     '<div class="page">',
     '  <m-nav title="编辑资料"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <div class="card-box" style="padding:6px 0">',
     '      <van-field v-model="form.realname" label="姓名" placeholder="真实姓名" />',
@@ -93,7 +93,7 @@ window.Pages.MemberProfile = {
     '        </template>',
     '      </van-field>',
     '      <van-field label="生日">',
-    '        <template #input><input type="date" v-model="form.birthday" style="border:none;outline:none;background:transparent;font-size:14px;color:#323233"/></template>',
+    '        <template #input><input type="date" v-model="form.birthday" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--c-text)"/></template>',
     '      </van-field>',
     '      <van-field v-model="form.initial_weight" type="number" label="初始体重(kg)" placeholder="如 70.5"/>',
     '      <van-field v-model="form.target_weight" type="number" label="目标体重(kg)" placeholder="如 62.0"/>',
@@ -101,14 +101,14 @@ window.Pages.MemberProfile = {
     '      <van-field v-model="form.training_frequency" label="训练频次" placeholder="如 每周3-4次"/>',
     '      <van-field v-model="form.studio_feedback" type="textarea" rows="2" label="会馆反馈" placeholder="对场馆设施/课程/教练的建议与反馈"/>',
     '      <div style="padding:10px 16px 4px">',
-    '        <div style="font-size:14px;color:#646566;margin-bottom:8px">目标对比图</div>',
+    '        <div style="font-size:14px;color:var(--c-text-2);margin-bottom:8px">目标对比图</div>',
     '        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">',
-    '          <div v-for="(img, idx) in form.target_compare_photos" :key="idx" style="position:relative;width:56px;height:56px;border-radius:6px;overflow:hidden;border:1px solid #ebedf0">',
+    '          <div v-for="(img, idx) in form.target_compare_photos" :key="idx" style="position:relative;width:56px;height:56px;border-radius:6px;overflow:hidden;border:1px solid var(--c-line)">',
     '            <van-image :src="img" width="56" height="56" fit="cover"/>',
     '            <div @click="removePhoto(idx)" style="position:absolute;top:0;right:0;background:rgba(0,0,0,0.6);color:#fff;width:18px;height:18px;line-height:18px;text-align:center;font-size:12px">×</div>',
     '          </div>',
     '          <van-uploader :after-read="afterReadPhoto" accept="image/*" max-count="9">',
-    '            <div style="width:56px;height:56px;border:1px dashed #dcdee0;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#969799">',
+    '            <div style="width:56px;height:56px;border:1px dashed #dcdee0;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--c-text-3)">',
     '              <van-icon name="plus" size="18"/><span style="font-size:10px;margin-top:2px">上传</span>',
     '            </div>',
     '          </van-uploader>',

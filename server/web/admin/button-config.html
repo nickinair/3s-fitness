@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vant@4/lib/vant.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@4/lib/index.css">
+  <link rel="stylesheet" href="/static/theme.css">
   <link rel="stylesheet" href="../css/app.css">
   <style>
     .config-container {
@@ -40,14 +41,14 @@
     }
 
     .button-item:hover {
-      border-color: #0d5e56;
-      box-shadow: 0 2px 8px rgba(13,94,86,0.1);
+      border-color: var(--brand);
+      box-shadow: 0 2px 8px rgba(var(--brand-rgb),0.1);
     }
 
     .button-item.selected {
-      border-color: #0d5e56;
+      border-color: var(--brand);
       background: #f0f9ff;
-      box-shadow: 0 2px 8px rgba(13,94,86,0.15);
+      box-shadow: 0 2px 8px rgba(var(--brand-rgb),0.15);
     }
 
     .button-icon {
@@ -97,7 +98,7 @@
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: #ee0a24;
+      background: var(--danger);
       color: white;
       font-size: 12px;
       display: flex;
@@ -153,7 +154,7 @@
 
     .role-btn.active {
       border-color: var(--brand);
-      background: #eef6f5;
+      background: var(--brand-soft);
       color: var(--brand);
     }
   </style>
@@ -230,7 +231,7 @@
           <div
             v-if="dragPlaceholderIndex >= 0"
             class="sorted-item"
-            style="border: 2px dashed var(--brand); background: rgba(13,94,86,0.05);"
+            style="border: 2px dashed var(--brand); background: rgba(var(--brand-rgb),0.05);"
           >
             释放到此处
           </div>

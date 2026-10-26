@@ -65,7 +65,7 @@
             title: '本月额度已满',
             message: '您本月已上传 5 张训练风采照片（达到自然月上限）。下月1日将自动恢复 5 张额度！',
             confirmButtonText: '我知道了',
-            confirmButtonColor: '#0d5e56',
+            confirmButtonColor: 'var(--brand)',
           });
         }
         this.uploadFileList = [];
@@ -125,7 +125,7 @@
             title: '删除照片',
             message: '确定要删除这张训练风采照片吗？',
             confirmButtonText: '确定删除',
-            confirmButtonColor: '#ee0a24',
+            confirmButtonColor: 'var(--danger)',
           });
         } catch {
           return;
@@ -154,7 +154,7 @@
         title="训练风采"
         left-arrow
         @click-left="$router.back()"
-        style="--van-nav-bar-background:#0d5e56;--van-nav-bar-title-text-color:#fff;--van-nav-bar-icon-color:#fff"
+        style="--van-nav-bar-background:var(--brand);--van-nav-bar-title-text-color:#fff;--van-nav-bar-icon-color:#fff"
       >
         <template #right>
           <span style="color:#a7f3d0;font-size:14px;font-weight:600" @click="openUploadModal">
@@ -165,7 +165,7 @@
 
       <div style="padding:14px">
         <!-- 每月限额与成长激励卡片 -->
-        <div style="background:linear-gradient(135deg, #0d5e56 0%, #15803d 100%);color:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 6px 16px rgba(13,94,86,0.22);margin-bottom:16px">
+        <div style="background:linear-gradient(135deg, var(--brand) 0%, #15803d 100%);color:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 6px 16px rgba(var(--brand-rgb),0.22);margin-bottom:16px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div>
               <div style="font-size:17px;font-weight:700">📸 训练风采专属相册</div>
@@ -197,9 +197,9 @@
         <!-- 空状态 -->
         <div v-else-if="!list.length" style="background:#fff;border-radius:12px;padding:40px 16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.04)">
           <div style="font-size:44px;margin-bottom:10px">🏋️‍♂️</div>
-          <div style="font-size:15px;font-weight:600;color:#374151;margin-bottom:4px">还没有训练风采照片</div>
-          <div style="font-size:12px;color:#9ca3af;margin-bottom:18px">记录每一次暴汗打卡，留住最好的自己</div>
-          <van-button type="primary" round style="background:#0d5e56;border-color:#0d5e56;padding:0 24px" @click="openUploadModal">
+          <div style="font-size:15px;font-weight:600;color:var(--c-text);margin-bottom:4px">还没有训练风采照片</div>
+          <div style="font-size:12px;color:var(--c-text-3);margin-bottom:18px">记录每一次暴汗打卡，留住最好的自己</div>
+          <van-button type="primary" round style="background:var(--brand);border-color:var(--brand);padding:0 24px" @click="openUploadModal">
             立即上传首张照片
           </van-button>
         </div>
@@ -210,10 +210,10 @@
             <!-- 月份组标题 -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px">
               <div style="display:flex;align-items:center;gap:6px">
-                <span style="font-size:15px;font-weight:700;color:#1f2937">{{ g.label }}</span>
+                <span style="font-size:15px;font-weight:700;color:var(--c-title)">{{ g.label }}</span>
                 <van-tag type="primary" plain round size="small">{{ g.count }} 张</van-tag>
               </div>
-              <span v-if="g.month_key === currentMonth" style="font-size:11px;color:#0d5e56;font-weight:500">本月</span>
+              <span v-if="g.month_key === currentMonth" style="font-size:11px;color:var(--brand);font-weight:500">本月</span>
             </div>
 
             <!-- 照片网格 (2列瀑布质感布局) -->
@@ -225,7 +225,7 @@
                 @click="viewPhoto(p)"
               >
                 <!-- 照片封面 -->
-                <div style="position:relative;width:100%;padding-top:100%;background:#e5e7eb">
+                <div style="position:relative;width:100%;padding-top:100%;background:var(--c-line)">
                   <img
                     :src="p.photo_url"
                     style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover"
@@ -239,12 +239,12 @@
 
                 <!-- 备注/心得文字 -->
                 <div style="padding:8px 10px;flex:1;display:flex;flex-direction:column;justify-content:space-between">
-                  <div style="font-size:12px;color:#374151;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">
+                  <div style="font-size:12px;color:var(--c-text);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">
                     {{ p.remark || '训练打卡记录' }}
                   </div>
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-                    <span style="font-size:10px;color:#9ca3af">{{ p.month_key }}</span>
-                    <van-icon name="arrow" size="12" color="#9ca3af" />
+                    <span style="font-size:10px;color:var(--c-text-3)">{{ p.month_key }}</span>
+                    <van-icon name="arrow" size="12" color="var(--c-text-3)" />
                   </div>
                 </div>
               </div>
@@ -261,13 +261,13 @@
             <van-tag type="success" plain round>本月还可上传 {{ remainingQuota }} 张</van-tag>
           </div>
 
-          <div style="font-size:12px;color:#6b7280;margin-bottom:12px">
+          <div style="font-size:12px;color:var(--c-text-2);margin-bottom:12px">
             记录健身蜕变历程（单月限5张，支持展示于专属相册流）。
           </div>
 
           <!-- 图片上传器 -->
           <div style="padding:8px 0 12px">
-            <div style="font-size:13px;color:#374151;font-weight:600;margin-bottom:8px">照片 (必填)</div>
+            <div style="font-size:13px;color:var(--c-text);font-weight:600;margin-bottom:8px">照片 (必填)</div>
             <van-uploader
               v-model="uploadFileList"
               :max-count="1"
@@ -279,7 +279,7 @@
           <!-- 拍摄/记录日期 -->
           <van-field label="记录日期">
             <template #input>
-              <input type="date" v-model="uploadForm.photo_date" style="border:none;outline:none;background:transparent;font-size:14px;color:#323233;width:100%" />
+              <input type="date" v-model="uploadForm.photo_date" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--c-text);width:100%" />
             </template>
           </van-field>
 
@@ -297,7 +297,7 @@
 
           <div style="display:flex;gap:10px;margin-top:10px">
             <van-button plain round block @click="showUpload=false" style="flex:1">取消</van-button>
-            <van-button type="primary" round block :loading="uploading" style="flex:2;background:#0d5e56;border-color:#0d5e56" @click="submitUpload">
+            <van-button type="primary" round block :loading="uploading" style="flex:2;background:var(--brand);border-color:var(--brand)" @click="submitUpload">
               发布到相册 📸
             </van-button>
           </div>
@@ -319,11 +319,11 @@
           </div>
 
           <div style="background:#f9fafb;border-radius:8px;padding:10px 12px;margin-bottom:12px">
-            <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:4px">心得随笔：</div>
+            <div style="font-size:13px;font-weight:600;color:var(--c-text);margin-bottom:4px">心得随笔：</div>
             <div style="font-size:13px;color:#4b5563;line-height:1.5">
               {{ activePhoto.remark || '暂未填写训练心得' }}
             </div>
-            <div style="font-size:11px;color:#9ca3af;margin-top:6px">
+            <div style="font-size:11px;color:var(--c-text-3);margin-top:6px">
               记录日期：{{ formatDate(activePhoto.photo_date) }} · 归属月份：{{ activePhoto.month_key }}
             </div>
           </div>

@@ -94,6 +94,8 @@
 
   const WEEK = '日一二三四五六';
   const H = {
+    // 读取 theme.css 里的配色变量实际值, 给 canvas/二维码这类不认 var() 的地方用
+    color(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); },
     num(v) { const n = Number(v || 0); return Math.abs(n % 1) > 0.004 ? n.toFixed(2) : String(Math.round(n)); },
     money(v) { return '¥' + H.num(v); },
     dateOf(s) { return s ? String(s).slice(0, 10) : ''; },

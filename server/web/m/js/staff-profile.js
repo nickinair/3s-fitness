@@ -9,7 +9,7 @@ window.Pages.StaffCoachProfile = {
   template: [
     '<div class="page">',
     '  <m-nav title="我的主页"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     /* 预览: 与会员看到的教练主页一致 */
     '    <div class="home-hero coach-hero" :class="{cover: form.cover}" :style="form.cover ? {backgroundImage:\'linear-gradient(180deg,rgba(6,20,18,.35),rgba(6,20,18,.82)),url(\'+form.cover+\')\'} : {}" style="padding-bottom:20px">',

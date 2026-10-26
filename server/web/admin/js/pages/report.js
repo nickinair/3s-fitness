@@ -161,7 +161,7 @@ window.AppPages.ReportCenter = {
         grid: { left: 55, right: 20, top: 20, bottom: 30 },
         xAxis: { type: 'category', data: trend.map(x => x.label) },
         yAxis: { type: 'value' },
-        series: [{ name: this.tab === 'finance' ? '营收' : '新增会员', type: 'line', smooth: true, color: '#0d5e56', areaStyle: { opacity: .12 },
+        series: [{ name: this.tab === 'finance' ? '营收' : '新增会员', type: 'line', smooth: true, color: themeColor('--brand'), areaStyle: { opacity: .12 },
           data: trend.map(x => Number(x.value || 0)) }],
       };
     },

@@ -315,8 +315,8 @@
       PICK_BAR,
       '  <div style="padding:10px 16px 6px;display:flex;justify-content:center;background:#fff;border-bottom:1px solid #f0f0f0">',
       '    <div style="display:inline-flex;background:#eef2f1;border-radius:20px;padding:3px">',
-      '      <div @click="switchView(\'week\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'week\'?\'background:#0d5e56;color:#fff;box-shadow:0 2px 6px rgba(13,94,86,0.25)\':\'color:#555\'">周视图</div>',
-      '      <div @click="switchView(\'day\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'day\'?\'background:#0d5e56;color:#fff;box-shadow:0 2px 6px rgba(13,94,86,0.25)\':\'color:#555\'">日视图</div>',
+      '      <div @click="switchView(\'week\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'week\'?\'background:var(--brand);color:#fff;box-shadow:0 2px 6px rgba(var(--brand-rgb),0.25)\':\'color:#555\'">周视图</div>',
+      '      <div @click="switchView(\'day\')" style="padding:5px 22px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s" :style="viewMode===\'day\'?\'background:var(--brand);color:#fff;box-shadow:0 2px 6px rgba(var(--brand-rgb),0.25)\':\'color:#555\'">日视图</div>',
       '    </div>',
       '  </div>',
       /* === 日视图 === */
@@ -326,13 +326,13 @@
       '        <div class="w">{{ dd.w }}</div><div class="d">{{ dd.d }}</div>',
       '      </div>',
       '    </div>',
-      '    <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '    <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '    <template v-else>',
-      '      <div class="pending-bar" v-for="r in rests" :key="r.id" style="background:#f0f9f8;border-color:#9fc6c1;color:#0d5e56">',
+      '      <div class="pending-bar" v-for="r in rests" :key="r.id" style="background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand)">',
       '        <van-icon name="underway-o"/><span style="margin-left:8px">休息：{{ r.from_time ? (r.from_time+\' - \'+r.to_time) : \'全天\' }}{{ r.remark? \' · \'+r.remark : \'\' }}</span>',
       '      </div>',
       '      <van-empty v-if="!items.length" description="当日暂无课程安排"/>',
-      '      <div v-else-if="!activeItems.length && cancelledItems.length" style="text-align:center;padding:36px 16px 12px;color:#9ca3af;font-size:13px">',
+      '      <div v-else-if="!activeItems.length && cancelledItems.length" style="text-align:center;padding:36px 16px 12px;color:var(--c-text-3);font-size:13px">',
       '        <van-icon name="passed" size="30" color="#cbd5e1" style="display:block;margin-bottom:6px"/>当日暂无待上课程',
       '      </div>',
       '      <!-- 待上/有效课程列表 -->',
@@ -345,7 +345,7 @@
       '          </div>',
       '          <div class="muted mt4" style="display:flex;justify-content:space-between;align-items:center">',
       '            <span :style="it.vipId ? \'cursor:pointer\' : \'\'" @click="it.vipId && $router.push(\'/staff/member/\' + it.vipId)">{{ it.sub }}</span>',
-      '            <span v-if="it.vipId" @click="$router.push(\'/staff/member/\' + it.vipId)" style="color:#0d5e56;font-size:12px;cursor:pointer"><van-icon name="user-o"/> 学员风采</span>',
+      '            <span v-if="it.vipId" @click="$router.push(\'/staff/member/\' + it.vipId)" style="color:var(--brand);font-size:12px;cursor:pointer"><van-icon name="user-o"/> 学员风采</span>',
       '          </div>',
       '          <lesson-plan-card v-if="it.kind===\'pt\'" :plan="it.lesson_plan" :booking="it" :can-edit="true" @edit="openPlanEditor(it)"/>',
       '        </div>',
@@ -399,7 +399,7 @@
       '          </div>',
       '        </div>',
       '      </div>',
-      '      <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载周课表中...</van-loading></div>',
+      '      <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载周课表中...</van-loading></div>',
       '      <!-- 二维时间网格主体 (左侧时间轴 + 右侧7列网格) -->',
       '      <div v-else class="timetable-body" ref="timeBody">',
       '        <div class="timetable-time-axis" :style="{ height: (17 * 52) + \'px\' }">',
@@ -435,20 +435,20 @@
       '    <div v-if="curItem" style="padding:16px 18px 24px">',
       '      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">',
       '        <div style="display:flex;align-items:center;gap:6px">',
-      '          <span style="font-size:16px;font-weight:700;color:#1f2937">{{ curItem.title }}</span>',
+      '          <span style="font-size:16px;font-weight:700;color:var(--c-title)">{{ curItem.title }}</span>',
       '          <van-tag :type="curItem.kind===\'pt\'?\'primary\':\'success\'" plain size="small">{{ curItem.kind===\'pt\'?\'私教\':\'团课\' }}</van-tag>',
       '          <d-tag v-if="curItem.kind===\'pt\'" dict="ptStatus" :v="curItem.status"></d-tag>',
       '        </div>',
-      '        <van-icon name="cross" size="18" color="#999" @click="detailShow=false" style="cursor:pointer"/>',
+      '        <van-icon name="cross" size="18" color="var(--c-text-3)" @click="detailShow=false" style="cursor:pointer"/>',
       '      </div>',
       '      <div style="background:#f9fafb;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.8">',
       '        <div style="display:flex;justify-content:space-between" v-if="curItem.studentName">',
       '          <span class="muted">学员：</span>',
-      '          <span style="font-weight:600;color:#1f2937">{{ curItem.studentName }} <span v-if="curItem.phone" style="font-weight:400;color:#666">({{ curItem.phone }})</span></span>',
+      '          <span style="font-weight:600;color:var(--c-title)">{{ curItem.studentName }} <span v-if="curItem.phone" style="font-weight:400;color:var(--c-text-2)">({{ curItem.phone }})</span></span>',
       '        </div>',
       '        <div style="display:flex;justify-content:space-between">',
       '          <span class="muted">上课时间：</span>',
-      '          <span style="font-weight:600;color:#0d5e56">{{ curItem.dateFormatted }} {{ curItem.time }}-{{ curItem.timeEnd }}</span>',
+      '          <span style="font-weight:600;color:var(--brand)">{{ curItem.dateFormatted }} {{ curItem.time }}-{{ curItem.timeEnd }}</span>',
       '        </div>',
       '        <div style="display:flex;justify-content:space-between" v-if="curItem.classroom">',
       '          <span class="muted">教室：</span>',
@@ -627,7 +627,7 @@
       '      <div class="w">{{ dd.w }}</div><div class="d">{{ dd.d }}</div>',
       '    </div>',
       '  </div>',
-      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else>',
       '    <van-empty v-if="!list.length" :description="H.day(date) + \'暂无预约\'"/>',
       '    <div v-for="b in list" :key="b.id" class="rec-item">',
@@ -699,7 +699,7 @@
         let reason = '';
         try {
           const r = await vant.showDialog({
-            title: '取消预约', confirmButtonColor: '#0d5e56', showCancelButton: true,
+            title: '取消预约', confirmButtonColor: 'var(--brand)', showCancelButton: true,
             message: b.realname + ' ' + H.day(b.date) + ' ' + b.from_time + '\n取消后该时段释放；课时在销课时才扣，不受影响',
           });
           reason = (r && r.value) || '';
@@ -710,7 +710,7 @@
       },
       // 教练直接销课(纪要4.1现状: 教练手动点销课、课时随之扣减); 学员确认为可选双保险
       async finishNow(b) {
-        try { await vant.showConfirmDialog({ title: '确认销课', message: b.realname + ' ' + H.day(b.date) + ' ' + b.from_time + ' 本节课已上完？将扣减 ' + (b.card_deduct_num || 1) + ' 课时并短信通知学员。', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+        try { await vant.showConfirmDialog({ title: '确认销课', message: b.realname + ' ' + H.day(b.date) + ' ' + b.from_time + ' 本节课已上完？将扣减 ' + (b.card_deduct_num || 1) + ' 课时并短信通知学员。', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
         this.doing = b.id;
         try {
           await API.post('/ptrain-bookings/' + b.id + '/finish', {});
@@ -719,17 +719,17 @@
         } finally { this.doing = 0; }
       },
       async noshow(b) {
-        try { await vant.showConfirmDialog({ title: '标记爽约', message: '确定将 ' + b.realname + ' 本节课标记为爽约吗？', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+        try { await vant.showConfirmDialog({ title: '标记爽约', message: '确定将 ' + b.realname + ' 本节课标记为爽约吗？', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
         await API.post('/ptrain-bookings/' + b.id + '/noshow');
         vant.showToast('已标记爽约');
         this.load(true);
       },
       async startFinish(b) {
-        try { await vant.showConfirmDialog({ title: '发起消课', message: '向 ' + b.realname + ' 发起本节课消课确认？学员确认后自动扣课时。', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+        try { await vant.showConfirmDialog({ title: '发起消课', message: '向 ' + b.realname + ' 发起本节课消课确认？学员确认后自动扣课时。', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
         this.doing = b.id;
         try {
           const r = await API.post('/ptrain-bookings/' + b.id + '/start-finish');
-          vant.showDialog({ title: '已发起消课', message: (r && r.msg) || '请学员在小程序「待确认消课」中确认', confirmButtonColor: '#0d5e56' });
+          vant.showDialog({ title: '已发起消课', message: (r && r.msg) || '请学员在小程序「待确认消课」中确认', confirmButtonColor: 'var(--brand)' });
           this.load(true);
         } finally { this.doing = 0; }
       },
@@ -750,7 +750,7 @@
       '<div class="page">',
       '  <m-nav :title="needPick ? \'学员管理\' : \'我的学员\'"></m-nav>',
       PICK_BAR,
-      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else>',
       '    <van-empty v-if="!list.length" description="暂无学员"/>',
       '    <div v-for="s in list" :key="s.card_id" class="rec-item flex" @click="$router.push(\'/staff/member/\' + s.id)" style="cursor:pointer">',
@@ -762,7 +762,7 @@
       '        <div class="muted mt4">{{ s.phone }} · {{ s.card_type_name }}</div>',
       '        <div class="muted mt4">剩余 <b class="brand-text">{{ s.left_counts }}</b>/{{ s.counts }} 课时 · 近30天 {{ s.lessons_30d }} 节 · 最近 {{ s.last_lesson_time ? H.day(s.last_lesson_time) : \'从未上课\' }}</div>',
       '      </div>',
-      '      <van-icon name="arrow" color="#c8c9cc" style="align-self:center;margin-left:6px"/>',
+      '      <van-icon name="arrow" color="var(--c-text-4)" style="align-self:center;margin-left:6px"/>',
       '    </div>',
       '  </template>',
       '</div>',
@@ -788,7 +788,7 @@
     template: [
       '<div class="page">',
       '  <m-nav :title="isCoach ? \'我的业绩\' : \'教练业绩\'"></m-nav>',
-      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else>',
       '    <div class="muted" style="padding:12px 16px 0">{{ month }} 月度统计</div>',
       '    <template v-if="isCoach">',
@@ -835,11 +835,11 @@
       PICK_BAR,
       '  <div class="muted" style="padding:12px 16px 0">设置休息后，对应时段会员将无法预约{{ needPick ? \'该教练\' : \'您\' }}的私教课。</div>',
       '  <div style="margin:12px 16px"><van-button type="primary" block round icon="plus" @click="openAdd">新增休息</van-button></div>',
-      '  <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else>',
       '    <van-empty v-if="!list.length" description="暂无休息安排"/>',
       '    <div v-for="r in list" :key="r.id" class="rec-item flex">',
-      '      <van-icon name="underway-o" size="24" color="#0d5e56"/>',
+      '      <van-icon name="underway-o" size="24" color="var(--brand)"/>',
       '      <div class="flex1" style="margin-left:12px">',
       '        <div class="name">{{ H.day(r.rest_date) }}（{{ H.week(r.rest_date) }}）</div>',
       '        <div class="muted mt4">{{ r.from_time ? (r.from_time+\' - \'+r.to_time) : \'全天休息\' }}{{ r.remark ? \' · \'+r.remark : \'\' }}</div>',
@@ -854,7 +854,7 @@
       '        <template #input><input type="date" v-model="form.rest_date" style="border:none;outline:none;background:transparent;font-size:14px"/></template>',
       '      </van-field>',
       '      <van-field label="全天休息">',
-      '        <template #input><van-switch v-model="form.allDay" size="20" active-color="#0d5e56"/></template>',
+      '        <template #input><van-switch v-model="form.allDay" size="20" active-color="var(--brand)"/></template>',
       '      </van-field>',
       '      <template v-if="!form.allDay">',
       '        <van-field label="开始时间"><template #input><input type="time" v-model="form.from_time" style="border:none;outline:none;background:transparent;font-size:14px"/></template></van-field>',
@@ -892,7 +892,7 @@
         } finally { this.saving = false; }
       },
       async del(r) {
-        try { await vant.showConfirmDialog({ title: '删除休息', message: '确定删除 ' + H.day(r.rest_date) + ' 的休息安排吗？', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+        try { await vant.showConfirmDialog({ title: '删除休息', message: '确定删除 ' + H.day(r.rest_date) + ' 的休息安排吗？', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
         await API.del('/coach-rests/' + r.id);
         vant.showToast('已删除');
         this.load();

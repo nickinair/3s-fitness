@@ -13,9 +13,9 @@
       '  <m-nav title="训练计划"></m-nav>',
       '  <div class="flex" style="margin:12px 12px 0;gap:10px">',
       '    <van-button type="primary" round size="small" icon="plus" style="flex:1" @click="$router.push(\'/staff/plan-edit\')">新建计划</van-button>',
-      '    <van-checkbox v-model="onlyTpl" shape="square" icon-size="16" checked-color="#0d5e56" style="flex-shrink:0">仅看模板</van-checkbox>',
+      '    <van-checkbox v-model="onlyTpl" shape="square" icon-size="16" checked-color="var(--brand)" style="flex-shrink:0">仅看模板</van-checkbox>',
       '  </div>',
-      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else>',
       '    <van-empty v-if="!shown.length" description="暂无训练计划，点上方按钮新建"/>',
       '    <div v-for="p in shown" :key="p.id" class="rec-item">',
@@ -60,7 +60,7 @@
       async remove(p) {
         try {
           await vant.showConfirmDialog({
-            title: '删除计划', confirmButtonColor: '#ee0a24', confirmButtonText: '删除',
+            title: '删除计划', confirmButtonColor: 'var(--danger)', confirmButtonText: '删除',
             message: '确定删除「' + p.title + '」吗？'
               + (p.pushed ? '\n该计划已推送，删除后学员也将看不到。' : ''),
           });
@@ -75,7 +75,7 @@
       async push(p) {
         try {
           await vant.showConfirmDialog({
-            title: '推送给学员', confirmButtonColor: '#0d5e56',
+            title: '推送给学员', confirmButtonColor: 'var(--brand)',
             message: '将「' + p.title + '」推送给 ' + (p.realname || '学员') + '，并发送短信通知，确定吗？',
           });
         } catch (e) { return; }
@@ -116,7 +116,7 @@
     template: [
       '<div class="page" style="padding-bottom:90px">',
       '  <m-nav :title="id ? \'编辑计划\' : \'新建计划\'"></m-nav>',
-      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else>',
 
       '    <div class="ai-box">',
@@ -146,7 +146,7 @@
       '      <van-field v-model="form.title" label="计划标题" placeholder="如：胸部训练日" />',
       '      <van-field :model-value="form.vip_id ? form.realname : \'不选学员（存为模板）\'" label="学员" readonly is-link @click="openStu"/>',
       '      <van-field label="日期">',
-      '        <template #input><input type="date" v-model="form.plan_date" style="border:none;outline:none;background:transparent;font-size:14px;color:#323233"/></template>',
+      '        <template #input><input type="date" v-model="form.plan_date" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--c-text)"/></template>',
       '      </van-field>',
       '      <van-field v-model="form.note" label="备注" placeholder="教练叮嘱，随计划展示给学员" :border="false"/>',
       '    </div>',
@@ -162,7 +162,7 @@
       '            <div v-for="s in sugs" :key="s.id" class="sug-item" @mousedown.prevent="pickSug(i,s)">{{ s.name }}<span class="muted" style="margin-left:6px">{{ s.part }}</span></div>',
       '          </div>',
       '        </div>',
-      '        <van-icon name="cross" color="#c8c9cc" size="18" @click="items.splice(i,1)"/>',
+      '        <van-icon name="cross" color="var(--c-text-4)" size="18" @click="items.splice(i,1)"/>',
       '      </div>',
       '      <div class="flex mt8" style="gap:10px;flex-wrap:wrap">',
       '        <div class="flex"><span class="muted" style="margin-right:4px">组数</span><van-stepper v-model="it.sets" min="1" max="20" integer button-size="22"/></div>',
@@ -186,11 +186,11 @@
       '      <van-search v-model="stuKw" placeholder="搜索姓名 / 手机号" style="padding:0 0 8px" clearable/>',
       '      <div class="cat-pick flex" :class="{on:!form.vip_id}" @click="pickStu(null)">',
       '        <div class="flex1">不选学员 <span class="muted">存为通用模板</span></div>',
-      '        <van-icon v-if="!form.vip_id" name="checked" color="#0d5e56" size="18"/>',
+      '        <van-icon v-if="!form.vip_id" name="checked" color="var(--brand)" size="18"/>',
       '      </div>',
       '      <div v-for="s in filteredStudents" :key="s.card_id" class="cat-pick flex" :class="{on:form.vip_id===s.id}" @click="pickStu(s)">',
       '        <div class="flex1"><b>{{ s.realname }}</b> <span class="muted">{{ s.phone }} · 剩 {{ s.left_counts }} 课时</span></div>',
-      '        <van-icon v-if="form.vip_id===s.id" name="checked" color="#0d5e56" size="18"/>',
+      '        <van-icon v-if="form.vip_id===s.id" name="checked" color="var(--brand)" size="18"/>',
       '      </div>',
       '      <van-empty v-if="!filteredStudents.length" :description="stuKw ? \'没有匹配的学员\' : \'暂无私教学员\'" image-size="60"/>',
       '    </div>',

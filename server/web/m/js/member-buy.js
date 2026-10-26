@@ -24,9 +24,9 @@ window.Pages.MemberBuy = {
   template: [
     '<div class="page">',
     '  <m-nav title="购卡"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
-    '    <van-tabs v-model:active="kind" color="#0d5e56" sticky offset-top="46">',
+    '    <van-tabs v-model:active="kind" color="var(--brand)" sticky offset-top="46">',
     '      <van-tab v-for="k in kinds" :key="k" :title="DICT.cardKind[k]" :name="k"></van-tab>',
     '    </van-tabs>',
     '    <van-empty v-if="!curList.length" description="暂无在售卡" />',
@@ -59,7 +59,7 @@ window.Pages.MemberBuy = {
     '      </div>',
     '      <div style="font-size:13px;color:#555;line-height:1.8">{{ detail.intro || \'暂无介绍\' }}</div>',
     '      <div class="muted mt8" v-if="Number(detail.gift_money)">充值加赠 {{ H.money(detail.gift_money) }}，到账 {{ H.money(Number(detail.price)+Number(detail.gift_money)) }}</div>',
-    '      <div class="muted mt8" v-if="intentedIds[detail.id]" style="color:#2a9d4a"><van-icon name="checked"/> 您已提交该卡购买意向，工作人员将与您联系</div>',
+    '      <div class="muted mt8" v-if="intentedIds[detail.id]" style="color:var(--down)"><van-icon name="checked"/> 您已提交该卡购买意向，工作人员将与您联系</div>',
     '      <div class="flex mt12">',
     '        <div class="flex1"><span class="price" style="font-size:22px">{{ H.money(detail.price) }}</span>',
     '          <span class="line-through" style="margin-left:6px" v-if="Number(detail.original_price)>Number(detail.price)">{{ H.money(detail.original_price) }}</span></div>',
@@ -91,7 +91,7 @@ window.Pages.MemberBuy = {
         this.intentShow = false;
         this.loadIntents();
         vant.showDialog({
-          title: '意向已提交', confirmButtonColor: '#0d5e56', confirmButtonText: '知道了',
+          title: '意向已提交', confirmButtonColor: 'var(--brand)', confirmButtonText: '知道了',
           message: '「' + this.intentCard.title + '」购买意向已提交\n工作人员将尽快与您联系，到店办理即可',
         });
       } finally { this.submitting = false; }

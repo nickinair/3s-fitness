@@ -103,9 +103,9 @@ window.AppPages.Dashboard = {
         yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
         series: [
           { name: '预收流水', type: 'line', smooth: true, data: pick(this.monthly.revenueTrend),
-            itemStyle: { color: '#0d5e56' }, areaStyle: { opacity: 0.12 } },
+            itemStyle: { color: themeColor('--brand') }, areaStyle: { opacity: 0.12 } },
           { name: '耗卡金额', type: 'line', smooth: true, data: pick(this.monthly.spendTrend),
-            itemStyle: { color: '#c98a2d' }, areaStyle: { opacity: 0.1 } },
+            itemStyle: { color: themeColor('--money') }, areaStyle: { opacity: 0.1 } },
         ],
       };
     },
@@ -115,7 +115,7 @@ window.AppPages.Dashboard = {
       return {
         tooltip: { trigger: 'item', valueFormatter: v => '¥' + Number(v).toFixed(2) },
         legend: { bottom: 0 },
-        color: ['#0d5e56', '#3a7bd5', '#c98a2d'],
+        color: [themeColor('--brand'), '#3a7bd5', themeColor('--money')],
         series: [{
           type: 'pie', radius: ['48%', '72%'], center: ['50%', '44%'],
           label: { formatter: '{b}\n¥{c}' },
@@ -135,7 +135,7 @@ window.AppPages.Dashboard = {
         grid: { left: 40, right: 20, top: 20, bottom: 20 },
         xAxis: { type: 'category', data: this.membersData.trend.map(x => x.label), boundaryGap: false },
         yAxis: { type: 'value', minInterval: 1 },
-        series: [{ type: 'line', smooth: true, data: this.membersData.trend.map(x => x.value), itemStyle: { color: '#0d5e56' }, areaStyle: { opacity: 0.1 } }]
+        series: [{ type: 'line', smooth: true, data: this.membersData.trend.map(x => x.value), itemStyle: { color: themeColor('--brand') }, areaStyle: { opacity: 0.1 } }]
       };
     },
     financeTrendOption() {
@@ -321,9 +321,9 @@ window.AppPages.Dashboard = {
       </div>
       <template v-if="financeData">
         <div class="metric-grid">
-          <div class="metric-card"><div class="m-label">月度营收</div><div class="m-value" style="color:#c98a2d">¥{{ Fmt.num(financeData.summary.revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.revenue_pct)">较上月 {{ pctText(financeData.summary.revenue_pct) }}</div></div>
-          <div class="metric-card"><div class="m-label">复购营收</div><div class="m-value" style="color:#c98a2d">¥{{ Fmt.num(financeData.summary.repeat_revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.repeat_pct)">较上月 {{ pctText(financeData.summary.repeat_pct) }}</div></div>
-          <div class="metric-card"><div class="m-label">新用户营收</div><div class="m-value" style="color:#c98a2d">¥{{ Fmt.num(financeData.summary.new_user_revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.new_user_pct)">较上月 {{ pctText(financeData.summary.new_user_pct) }}</div></div>
+          <div class="metric-card"><div class="m-label">月度营收</div><div class="m-value" style="color:var(--money)">¥{{ Fmt.num(financeData.summary.revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.revenue_pct)">较上月 {{ pctText(financeData.summary.revenue_pct) }}</div></div>
+          <div class="metric-card"><div class="m-label">复购营收</div><div class="m-value" style="color:var(--money)">¥{{ Fmt.num(financeData.summary.repeat_revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.repeat_pct)">较上月 {{ pctText(financeData.summary.repeat_pct) }}</div></div>
+          <div class="metric-card"><div class="m-label">新用户营收</div><div class="m-value" style="color:var(--money)">¥{{ Fmt.num(financeData.summary.new_user_revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.new_user_pct)">较上月 {{ pctText(financeData.summary.new_user_pct) }}</div></div>
         </div>
         
         <div class="card-box">
@@ -374,7 +374,7 @@ window.AppPages.Dashboard = {
         <el-table-column prop="sub" label="说明" min-width="120" show-overflow-tooltip />
         <el-table-column label="金额/数量" width="100" align="right">
            <template #default="{row}">
-             <span v-if="row.money != null && preview.src === 'finance'" style="color:#c98a2d;font-weight:bold">¥{{ Fmt.num(row.money) }}</span>
+             <span v-if="row.money != null && preview.src === 'finance'" style="color:var(--money);font-weight:bold">¥{{ Fmt.num(row.money) }}</span>
              <span v-else-if="row.money != null">{{ row.money }}</span>
            </template>
         </el-table-column>

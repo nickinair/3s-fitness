@@ -15,7 +15,7 @@ window.AppPages.CheckinReport = {
         grid: { left: 46, right: 20, top: 30, bottom: 40 },
         xAxis: { type: 'category', data: this.d.byDay.map(x => dayjs(x.d).format('MM-DD')) },
         yAxis: { type: 'value', minInterval: 1 },
-        series: [{ name: '入场人次', type: 'line', smooth: true, areaStyle: { opacity: .15 }, color: '#0d5e56',
+        series: [{ name: '入场人次', type: 'line', smooth: true, areaStyle: { opacity: .15 }, color: themeColor('--brand'),
           data: this.d.byDay.map(x => x.cnt) }],
       };
     },

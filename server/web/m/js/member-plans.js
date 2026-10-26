@@ -31,11 +31,11 @@
     const F = (s, w) => (w || '') + ' ' + s + 'px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif';
 
     // 背景
-    ctx.fillStyle = '#f2f4f6'; ctx.fillRect(0, 0, W, HT);
+    ctx.fillStyle = H.color('--c-bg-2'); ctx.fillRect(0, 0, W, HT);
 
     // 顶部品牌渐变
     const g = ctx.createLinearGradient(0, 0, W, headH);
-    g.addColorStop(0, '#0d5e56'); g.addColorStop(1, '#1fa08f');
+    g.addColorStop(0, H.color('--brand')); g.addColorStop(1, H.color('--brand-light'));
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, headH);
     // 装饰圆
     ctx.fillStyle = 'rgba(255,255,255,.10)';
@@ -44,7 +44,7 @@
 
     // logo 色块
     ctx.fillStyle = '#fff'; rr(PAD, 40, 64, 64, 14); ctx.fill();
-    ctx.fillStyle = '#0d5e56'; ctx.font = F(30, '800'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = H.color('--brand'); ctx.font = F(30, '800'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('3S', PAD + 32, 74);
     ctx.textAlign = 'left';
     ctx.fillStyle = '#fff'; ctx.font = F(30, '700');
@@ -66,23 +66,23 @@
       const h = itemHeights[i];
       ctx.fillStyle = '#fff'; rr(24, y, W - 48, h, 16); ctx.fill();
       // 序号圆
-      ctx.fillStyle = '#e9f3f2';
+      ctx.fillStyle = H.color('--brand-soft');
       ctx.beginPath(); ctx.arc(24 + 46, y + 48, 24, 0, 7); ctx.fill();
-      ctx.fillStyle = '#0d5e56'; ctx.font = F(24, '700'); ctx.textAlign = 'center';
+      ctx.fillStyle = H.color('--brand'); ctx.font = F(24, '700'); ctx.textAlign = 'center';
       ctx.fillText(String(i + 1), 24 + 46, y + 57);
       ctx.textAlign = 'left';
       // 动作名
-      ctx.fillStyle = '#1f2329'; ctx.font = F(28, '700');
+      ctx.fillStyle = H.color('--c-title'); ctx.font = F(28, '700');
       ctx.fillText(it.action_name || '动作', 24 + 88, y + 44);
       // 规格
       const spec = [];
       spec.push((it.sets || 1) + ' 组 × ' + (it.reps || 0) + ' ' + (it.unit || '次'));
       if (it.weight) spec.push('重量 ' + it.weight);
       if (it.rest) spec.push('组间歇 ' + it.rest);
-      ctx.fillStyle = '#646566'; ctx.font = F(22);
+      ctx.fillStyle = H.color('--c-text-2'); ctx.font = F(22);
       ctx.fillText(spec.join('   ·   '), 24 + 88, y + 80);
       if (it.remark) {
-        ctx.fillStyle = '#969799'; ctx.font = F(20);
+        ctx.fillStyle = H.color('--c-text-3'); ctx.font = F(20);
         ctx.fillText('备注：' + it.remark, 24 + 88, y + 110);
       }
       y += h + 16;
@@ -90,14 +90,14 @@
 
     // 教练叮嘱
     if (opt.note) {
-      ctx.fillStyle = '#fff7e8'; rr(24, y, W - 48, 70, 14); ctx.fill();
+      ctx.fillStyle = H.color('--warn-soft'); rr(24, y, W - 48, 70, 14); ctx.fill();
       ctx.fillStyle = '#b35c00'; ctx.font = F(22);
       ctx.fillText('📣 教练叮嘱：' + opt.note, 48, y + 43);
       y += noteH;
     }
 
     // 底部 slogan
-    ctx.fillStyle = '#969799'; ctx.font = F(22); ctx.textAlign = 'center';
+    ctx.fillStyle = H.color('--c-text-3'); ctx.font = F(22); ctx.textAlign = 'center';
     ctx.fillText('—— 3S健身 · 与更好的自己相遇 ——', W / 2, HT - 40);
 
     return cv.toDataURL('image/png');
@@ -206,7 +206,7 @@
       '  </template>',
       // 情况3: 暂无计划但教练可编辑新建
       '  <template v-else-if="canEdit">',
-      '    <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f9fbfb;border-radius:6px;border:1px dashed #d8ece8;">',
+      '    <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f9fbfb;border-radius:6px;border:1px dashed var(--brand-soft-2);">',
       '      <span class="muted" style="font-size:12px">暂未填写训练计划</span>',
       '      <van-button size="mini" round plain type="primary" @click.stop="onEdit">+ 制定计划</van-button>',
       '    </div>',
@@ -492,12 +492,12 @@
       },
     },
     template: [
-      '<van-popup :show="modelValue" @update:show="$emit(\'update:modelValue\', $event)" position="bottom" round safe-area-inset-bottom style="height:90%;max-height:92vh;display:flex;flex-direction:column;background:#f6f7f9">',
-      '  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#fff;border-bottom:1px solid #ebedf0;flex-shrink:0">',
-      '    <div style="font-size:16px;font-weight:700;color:#0d5e56;display:flex;align-items:center;gap:6px">',
+      '<van-popup :show="modelValue" @update:show="$emit(\'update:modelValue\', $event)" position="bottom" round safe-area-inset-bottom style="height:90%;max-height:92vh;display:flex;flex-direction:column;background:var(--c-bg)">',
+      '  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#fff;border-bottom:1px solid var(--c-line);flex-shrink:0">',
+      '    <div style="font-size:16px;font-weight:700;color:var(--brand);display:flex;align-items:center;gap:6px">',
       '      <van-icon name="edit"/> 制定本节课训练计划',
       '    </div>',
-      '    <van-icon name="cross" size="20" color="#969799" @click="close" style="cursor:pointer;padding:4px"/>',
+      '    <van-icon name="cross" size="20" color="var(--c-text-3)" @click="close" style="cursor:pointer;padding:4px"/>',
       '  </div>',
       '  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 20px">',
       /* AI 一句话生成 (图二顶部卡片) */
@@ -527,7 +527,7 @@
       '      <van-field v-model="form.title" label="计划标题" placeholder="如：胸背超级组 / 核心强化" />',
       '      <van-field :model-value="(booking && booking.realname) || \'学员\'" label="学员" readonly />',
       '      <van-field label="上课日期">',
-      '        <template #input><input type="date" v-model="form.plan_date" style="border:none;outline:none;background:transparent;font-size:14px;color:#323233"/></template>',
+      '        <template #input><input type="date" v-model="form.plan_date" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--c-text)"/></template>',
       '      </van-field>',
       '      <van-field v-model="form.note" label="教练叮嘱" placeholder="随计划生成海报，展示给学员" :border="false"/>',
       '    </div>',
@@ -543,7 +543,7 @@
       '            <div v-for="s in sugs" :key="s.id" class="sug-item" @mousedown.prevent="pickSug(i,s)">{{ s.name }}<span class="muted" style="margin-left:6px">{{ s.part }}</span></div>',
       '          </div>',
       '        </div>',
-      '        <van-icon name="cross" color="#c8c9cc" size="18" @click="items.splice(i,1)"/>',
+      '        <van-icon name="cross" color="var(--c-text-4)" size="18" @click="items.splice(i,1)"/>',
       '      </div>',
       '      <div class="flex mt8" style="gap:10px;flex-wrap:wrap">',
       '        <div class="flex"><span class="muted" style="margin-right:4px">组数</span><van-stepper v-model="it.sets" min="1" max="20" integer button-size="22"/></div>',
@@ -557,7 +557,7 @@
       '    </div>',
       '  </div>',
       /* 底部保存按钮 */
-      '  <div style="flex-shrink:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#fff;box-shadow:0 -2px 10px rgba(0,0,0,.05);border-top:1px solid #ebedf0">',
+      '  <div style="flex-shrink:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#fff;box-shadow:0 -2px 10px rgba(0,0,0,.05);border-top:1px solid var(--c-line)">',
       '    <van-button type="primary" block round :loading="saving" loading-text="正在生成海报图片..." @click="save">生成计划海报并保存</van-button>',
       '  </div>',
       '</van-popup>',
@@ -569,16 +569,16 @@
     template: [
       '<div class="page">',
       '  <m-nav title="训练计划"></m-nav>',
-      '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else>',
       '    <van-empty v-if="!list.length" description="教练推送训练计划后将展示在这里"/>',
       '    <div v-for="p in list" :key="p.id" class="rec-item flex" @click="$router.push(\'/plan/\'+p.id)">',
-      '      <van-icon name="notes-o" size="26" color="#0d5e56"/>',
+      '      <van-icon name="notes-o" size="26" color="var(--brand)"/>',
       '      <div class="flex1" style="margin-left:12px">',
       '        <div class="name">{{ p.title }}</div>',
       '        <div class="muted mt4">{{ p.coach_name }} 教练 · {{ H.day(p.plan_date) }}（{{ H.week(p.plan_date) }}）<template v-if="p._count!=null"> · {{ p._count }} 个动作</template></div>',
       '      </div>',
-      '      <van-icon name="arrow" color="#c8c9cc"/>',
+      '      <van-icon name="arrow" color="var(--c-text-4)"/>',
       '    </div>',
       '  </template>',
       '</div>',
@@ -603,7 +603,7 @@
     template: [
       '<div class="page" style="padding-bottom:90px">',
       '  <m-nav title="计划详情"></m-nav>',
-      '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else-if="p">',
       '    <div class="home-hero" style="padding-bottom:20px">',
       '      <div style="font-size:20px;font-weight:800">{{ p.title }}</div>',
@@ -615,7 +615,7 @@
       '      <div class="plan-idx">{{ i+1 }}</div>',
       '      <div class="flex1" style="margin-left:12px">',
       '        <div class="name">{{ it.action_name }} <van-tag v-if="it.part" plain type="primary" style="margin-left:4px">{{ it.part }}</van-tag></div>',
-      '        <div class="mt4" style="font-size:13px;color:#323233"><b class="brand-text">{{ it.sets||1 }}</b> 组 × <b class="brand-text">{{ it.reps||0 }}</b> {{ it.unit||\'次\' }}',
+      '        <div class="mt4" style="font-size:13px;color:var(--c-text)"><b class="brand-text">{{ it.sets||1 }}</b> 组 × <b class="brand-text">{{ it.reps||0 }}</b> {{ it.unit||\'次\' }}',
       '          <template v-if="it.weight"> · 重量 {{ it.weight }}</template>',
       '          <template v-if="it.rest"> · 组间歇 {{ it.rest }}</template>',
       '        </div>',
