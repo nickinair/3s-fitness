@@ -1,6 +1,6 @@
 /* 数据看板 - 更新包含小程序报表功能 */
 
-const RatioList = {
+const DashRatioList = {   // 不能叫 RatioList: report.js 也在全局声明了同名常量, 重名会让后加载的 report.js 整个文件报错
   props: { list: { type: Array, default: () => [] }, unit: String, money: Boolean },
   data() { return { palette: ['#4f6bed', '#3aa5d8', '#3cb371', '#8bc34a', '#e0b93c', '#e08a3c', '#e05a5a'] }; },
   methods: {
@@ -30,7 +30,7 @@ const RatioList = {
 
 window.AppPages.Dashboard = {
   name: 'DashboardPage',
-  components: { RatioList },
+  components: { RatioList: DashRatioList },
 
   data() {
     return {
