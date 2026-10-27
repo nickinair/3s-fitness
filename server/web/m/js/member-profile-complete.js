@@ -65,7 +65,7 @@
       async loadData() {
         this.loading = true;
         try {
-          const res = await API.get('/complete-profile-data');
+          const res = await API.get('/member/complete-profile-data');
           if (res) {
             this.vip = res.vip || {};
             this.items = res.items || [];
@@ -146,7 +146,7 @@
             initial_weight: this.form.initial_weight !== '' ? Number(this.form.initial_weight) : null,
             target_weight: this.form.target_weight !== '' ? Number(this.form.target_weight) : null,
           };
-          const res = await API.post('/complete-profile-submit', payload);
+          const res = await API.post('/member/complete-profile-submit', payload);
           if (res) {
             this.rewardResult = {
               pointsGained: res.points_gained || 0,
@@ -167,16 +167,15 @@
       },
     },
     template: `
-    <div class="complete-profile-page" style="min-height:100vh;background:#f5f7f9;padding-bottom:80px">
+    <div class="complete-profile-page" style="min-height:100vh;background:var(--c-bg);padding-bottom:80px">
       <!-- 顶部沉浸式导航栏 -->
       <van-nav-bar
         title="完善档案 · 领专属积分"
         left-arrow
         @click-left="$router.back()"
-        style="--van-nav-bar-background:var(--brand);--van-nav-bar-title-text-color:#fff;--van-nav-bar-icon-color:#fff"
       >
         <template #right>
-          <span style="color:#a7f3d0;font-size:13px" @click="goToHome">前往首页</span>
+          <span style="color:var(--c-title);font-size:13px" @click="goToHome">前往首页</span>
         </template>
       </van-nav-bar>
 
@@ -184,7 +183,7 @@
 
       <div v-else style="padding:14px">
         <!-- 礼遇积分激励卡片 (极具质感的设计) -->
-        <div style="background:linear-gradient(135deg, var(--brand) 0%, #15803d 100%);color:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 6px 16px rgba(var(--brand-rgb),0.22);margin-bottom:14px">
+        <div style="background:var(--brand);color:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 6px 16px rgba(var(--brand-rgb),0.22);margin-bottom:14px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div>
               <div style="font-size:13px;opacity:0.85">尊贵会员</div>
@@ -195,20 +194,20 @@
             </div>
             <div style="text-align:right">
               <div style="font-size:12px;opacity:0.85">可用积分</div>
-              <div style="font-size:22px;font-weight:800;color:#fde047">{{ vip.points || 0 }}</div>
+              <div style="font-size:22px;font-weight:800;color:#fff">{{ vip.points || 0 }}</div>
             </div>
           </div>
 
           <div style="margin-top:14px;background:rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px">
             <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
               <span>🎁 完善档案专属奖励 (最高70分)</span>
-              <span style="font-weight:700;color:#fde047">{{ earnedPoints }} / {{ maxPoints }} 分</span>
+              <span style="font-weight:700;color:#fff">{{ earnedPoints }} / {{ maxPoints }} 分</span>
             </div>
-            <van-progress :percentage="progressPercent" stroke-width="8" color="#fde047" track-color="rgba(255,255,255,0.2)" :show-pivot="false" />
+            <van-progress :percentage="progressPercent" stroke-width="8" color="#fff" track-color="rgba(255,255,255,0.2)" :show-pivot="false" />
             <div style="font-size:11px;opacity:0.85;margin-top:6px;display:flex;justify-content:space-between">
               <span>每填写一项奖 10 积分，已完成 {{ completedCount }} / {{ totalCount }} 项</span>
               <span v-if="earnedPoints < 70">还可再拿 {{ 70 - earnedPoints }} 积分</span>
-              <span v-else style="color:#86efac;font-weight:700">✓ 全部奖励已领取</span>
+              <span v-else style="color:#fff;font-weight:700">✓ 全部奖励已领取</span>
             </div>
           </div>
         </div>
@@ -277,7 +276,7 @@
               <van-tag v-for="c in ['白羊','金牛','双子','巨蟹','狮子','处女','天秤','天蝎','射手','摩羯','水瓶','双鱼']" :key="c" plain size="small" type="primary" style="cursor:pointer" @click="appendTag('constellation_mbti', c + '座')">{{ c }}</van-tag>
             </div>
             <div style="display:flex;gap:5px;flex-wrap:wrap">
-              <van-tag v-for="m in ['INTJ','INFP','ENTP','ENFJ','ISTJ','ESFP','INFJ','ENTJ']" :key="m" plain size="small" style="cursor:pointer;color:var(--brand);border-color:#a7f3d0" @click="appendTag('constellation_mbti', m)">{{ m }}</van-tag>
+              <van-tag v-for="m in ['INTJ','INFP','ENTP','ENFJ','ISTJ','ESFP','INFJ','ENTJ']" :key="m" plain size="small" style="cursor:pointer;color:var(--brand);border-color:var(--c-line)" @click="appendTag('constellation_mbti', m)">{{ m }}</van-tag>
             </div>
           </div>
 
@@ -351,14 +350,14 @@
               本次获得 +{{ rewardResult.pointsGained }} 积分
             </div>
             <div style="font-size:14px;color:var(--c-text-2)">
-              当前会员积分总额：<span style="color:#d97706;font-weight:700">{{ rewardResult.totalPoints }}</span> 分
+              当前会员积分总额：<span style="color:var(--c-title);font-weight:700">{{ rewardResult.totalPoints }}</span> 分
             </div>
             <div style="margin-top:12px;font-size:12px;color:var(--c-text-3)">
               积分已即时计入您的会员账户，可随时在【我的】页面查看与消费抵扣。
             </div>
           </div>
           <div v-else>
-            <div style="font-size:14px;color:#4b5563">您的档案资料已成功更新保存！</div>
+            <div style="font-size:14px;color:var(--c-text-2)">您的档案资料已成功更新保存！</div>
             <div style="margin-top:8px;font-size:12px;color:var(--c-text-3)">当前可用积分：{{ rewardResult.totalPoints }} 分</div>
           </div>
         </div>
