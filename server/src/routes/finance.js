@@ -15,10 +15,10 @@ async function clubNameMap() {
 // 报表门店口径(纪要第九章: 两店独立统计, 按卡归属门店):
 // admin 可选 club_id=all|N (默认全部); 店长等角色固定本店
 function clubScope(req) {
-  if (req.user.role === 'admin' || req.user.role === 'platform') {
-    const q = req.query.club_id;
-    if (q === 'all') return null;
-    if (q) return Number(q);
+  const q = req.query.club_id;
+  if (q === 'all' || q === '0') return null;
+  if (q) return Number(q);
+  if (['admin', 'platform'].includes(req.user.role)) {
     return req.clubScope; // 未传则跟随顶栏门店选择
   }
   return req.clubId;

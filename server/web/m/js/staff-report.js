@@ -134,7 +134,7 @@
       };
     },
     computed: {
-      isAdmin() { return (Store.user || {}).role === 'admin'; },
+      canSwitchClub() { return ['admin', 'platform', 'manager'].includes(((window.Store || {}).user || {}).role); },
       dateColsType() { return this.period === 'month' ? ['year', 'month'] : ['year', 'month', 'day']; },
       clubCols() { return this.clubs.map(function (c) { return { text: c.name, value: c.id }; }); },
       clubName() {
@@ -161,7 +161,7 @@
       '    </van-tabs>',
       '    <div class="rpt-date-btn" @click="openDate">{{ d ? d.label : \'\' }}<van-icon name="arrow-down" size="12"/></div>',
       '  </div>',
-      '  <div v-if="isAdmin" class="rpt-club-btn" @click="clubPop=true"><van-icon name="shop-o" size="13"/><span class="flex1" style="margin-left:6px">{{ clubName }}</span><van-icon name="arrow-down" size="12"/></div>',
+      '  <div v-if="canSwitchClub" class="rpt-club-btn" @click="clubPop=true"><van-icon name="shop-o" size="13"/><span class="flex1" style="margin-left:6px">{{ clubName }}</span><van-icon name="arrow-down" size="12"/></div>',
       '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <template v-else-if="d">',
       '    <div class="rpt-metric-grid">',
@@ -176,7 +176,7 @@
       '  <van-popup v-model:show="datePop" position="bottom" round>',
       '    <van-date-picker v-model="dateVal" :columns-type="dateColsType" title="选择日期" :min-date="minDate" :max-date="maxDate" @confirm="onDateConfirm" @cancel="datePop=false"/>',
       '  </van-popup>',
-      '  <van-popup v-model:show="clubPop" position="bottom" round v-if="isAdmin">',
+      '  <van-popup v-model:show="clubPop" position="bottom" round v-if="canSwitchClub">',
       '    <van-picker title="选择门店" :columns="clubCols" @confirm="onClubConfirm" @cancel="clubPop=false"/>',
       '  </van-popup>',
       '</div>',
@@ -203,25 +203,31 @@
       async loadClubs() {
         try {
           var rows = await API.get('/clubs', { silent: true });
-          this.clubs = [{ id: 'all', name: '全部门店' }].concat((rows || []).map(function (c) { return { id: c.id, name: c.name }; }));
+          var list = (rows || []).map(function (c) { return { id: c.id, name: c.name }; });
+          list.sort(function (a, b) {
+            if (a.name.indexOf('南坪') > -1) return -1;
+            if (b.name.indexOf('南坪') > -1) return 1;
+            return 0;
+          });
+          this.clubs = [{ id: 'all', name: '全部门店' }].concat(list);
         } catch (e) { /* ignore */ }
       },
       async load() {
         this.loading = true;
         try {
           var url = '/report/overview?period=' + this.period + '&date=' + this.date;
-          if (this.isAdmin) url += '&club_id=' + this.club_id;
+          if (this.canSwitchClub) url += '&club_id=' + this.club_id;
           this.d = await API.get(url);
         } finally { this.loading = false; }
       },
       exportCsv() {
         var url = '/api/report/overview?period=' + this.period + '&date=' + this.date + '&export=csv';
-        if (this.isAdmin) url += '&club_id=' + this.club_id;
+        if (this.canSwitchClub) url += '&club_id=' + this.club_id;
         window.open(url + '&token=' + encodeURIComponent(Store.token));
       },
     },
     async mounted() {
-      if (this.isAdmin) await this.loadClubs();
+      if (this.canSwitchClub) await this.loadClubs();
       this.load();
     },
   };
@@ -231,6 +237,11 @@
     data() {
       return {
         tab: 'members',
+        club_id: 'all',
+        clubList: [
+          { id: '2', name: '3S健身·南坪店', shortName: '南坪' },
+          { id: '1', name: '3S健身·巴南店', shortName: '巴南' },
+        ],
         month: dayjs().format('YYYY-MM'),
         monthPop: false, monthVal: [],
         minDate: new Date(2020, 0, 1), maxDate: new Date(),
@@ -246,6 +257,12 @@
     template: [
       '<div class="page">',
       '  <m-nav title="报表"></m-nav>',
+      '  <div class="rpt-club-bar">',
+      '    <div class="rpt-club-segmented">',
+      '      <div class="rpt-club-item" :class="{ active: club_id === \'all\' }" @click="onClubChange(\'all\')">全部</div>',
+      '      <div v-for="c in clubList" :key="c.id" class="rpt-club-item" :class="{ active: club_id === c.id }" @click="onClubChange(c.id)">{{ c.shortName }}</div>',
+      '    </div>',
+      '  </div>',
       '  <div style="padding:10px 16px 0">',
       '    <van-tabs v-model:active="tab" type="card" color="var(--brand)" @change="onTab">',
       '      <van-tab title="用户数据" name="members"></van-tab>',
@@ -313,8 +330,12 @@
       pctText(v) { v = Number(v) || 0; var a = v > 0 ? '▲' : (v < 0 ? '▼' : ''); return a + H.num(Math.abs(v)) + '%'; },
       mapList(list, key) { return (list || []).map(function (x) { return { name: x.name, value: x[key], pct: x.pct }; }); },
       // 先进明细预览页, 下载按钮在那个页面顶部
-      exportMembers(section) { this.$router.push('/staff/report-detail?src=members&section=' + section + '&month=' + this.month); },
-      exportFinance(section) { this.$router.push('/staff/report-detail?src=finance&section=' + section + '&month=' + this.month); },
+      exportMembers(section) {
+        this.$router.push('/staff/report-detail?src=members&section=' + section + '&month=' + this.month + '&club_id=' + this.club_id);
+      },
+      exportFinance(section) {
+        this.$router.push('/staff/report-detail?src=finance&section=' + section + '&month=' + this.month + '&club_id=' + this.club_id);
+      },
       openMonth() {
         var dd = dayjs(this.month + '-01');
         this.monthVal = [String(dd.year()), String(dd.month() + 1).padStart(2, '0')];
@@ -327,8 +348,42 @@
         this.membersData = null; this.financeData = null;
         this.ensureTab();
       },
+      onClubChange(id) {
+        if (this.club_id === id) return;
+        this.club_id = id;
+        this.membersData = null;
+        this.financeData = null;
+        try {
+          this.$router.replace({
+            path: this.$route.path,
+            query: Object.assign({}, this.$route.query, { tab: this.tab, club_id: this.club_id }),
+          });
+        } catch (e) { /* ignore */ }
+        this.ensureTab();
+      },
+      async loadClubs() {
+        try {
+          var rows = await API.get('/clubs', { silent: true });
+          if (!rows || !rows.length) return;
+          var list = rows.map(function (c) {
+            var shortName = c.name.replace(/^3S健身[·\s]*/, '').replace(/店$/, '');
+            return { id: String(c.id), name: c.name, shortName: shortName || c.name };
+          });
+          list.sort(function (a, b) {
+            if (a.name.indexOf('南坪') > -1) return -1;
+            if (b.name.indexOf('南坪') > -1) return 1;
+            return 0;
+          });
+          this.clubList = list;
+        } catch (e) { /* ignore */ }
+      },
       onTab() {
-        try { this.$router.replace({ path: this.$route.path, query: { tab: this.tab } }); } catch (e) { /* ignore */ }
+        try {
+          this.$router.replace({
+            path: this.$route.path,
+            query: Object.assign({}, this.$route.query, { tab: this.tab, club_id: this.club_id }),
+          });
+        } catch (e) { /* ignore */ }
         this.ensureTab();
       },
       ensureTab() {
@@ -337,19 +392,29 @@
       async ensureMembers() {
         if (this.membersData) return;
         this.loadingMembers = true;
-        try { this.membersData = await API.get('/report/members?month=' + this.month); }
+        try {
+          var url = '/report/members?month=' + this.month;
+          if (this.club_id) url += '&club_id=' + this.club_id;
+          this.membersData = await API.get(url);
+        }
         finally { this.loadingMembers = false; }
       },
       async ensureFinance() {
         if (this.financeData) return;
         this.loadingFinance = true;
-        try { this.financeData = await API.get('/report/finance?month=' + this.month); }
+        try {
+          var url = '/report/finance?month=' + this.month;
+          if (this.club_id) url += '&club_id=' + this.club_id;
+          this.financeData = await API.get(url);
+        }
         finally { this.loadingFinance = false; }
       },
     },
     mounted() {
       var q = (this.$route && this.$route.query) || {};
       if (q.tab === 'finance') this.tab = 'finance';
+      if (q.club_id) this.club_id = String(q.club_id);
+      this.loadClubs();
       this.ensureTab();
     },
   };
@@ -500,6 +565,7 @@ window.Pages.StaffReportDetail = {
     src() { return this.$route.query.src === 'finance' ? 'finance' : 'members'; },
     section() { return this.$route.query.section || ''; },
     month() { return this.$route.query.month || dayjs().format('YYYY-MM'); },
+    club_id() { return this.$route.query.club_id || 'all'; },
   },
   template: [
     '<div class="page">',
@@ -532,12 +598,13 @@ window.Pages.StaffReportDetail = {
   methods: {
     download() {
       window.open('/api/report/' + this.src + '?month=' + this.month + '&export=csv&section='
-        + this.section + '&token=' + encodeURIComponent(Store.token));
+        + this.section + '&club_id=' + this.club_id + '&token=' + encodeURIComponent(Store.token));
     },
     async load() {
       this.loading = true;
       try {
-        this.d = await API.get('/report/' + this.src + '?month=' + this.month + '&detail=' + this.section);
+        var url = '/report/' + this.src + '?month=' + this.month + '&detail=' + this.section + '&club_id=' + this.club_id;
+        this.d = await API.get(url);
       } finally { this.loading = false; }
     },
   },

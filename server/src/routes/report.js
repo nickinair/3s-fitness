@@ -32,10 +32,10 @@ async function safeDbQueryOne(query, params = []) {
 }
 
 function clubScope(req) {
-  if (req.user.role === 'admin' || req.user.role === 'platform') {
-    const q = req.query.club_id;
-    if (q === 'all') return null;
-    if (q) return Number(q);
+  const q = req.query.club_id;
+  if (q === 'all' || q === '0') return null;
+  if (q) return Number(q);
+  if (['admin', 'platform'].includes(req.user.role)) {
     return req.clubScope;
   }
   return req.clubId;
