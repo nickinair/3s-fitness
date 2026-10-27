@@ -503,23 +503,27 @@ async function finishPtBooking(bookingId, { receptionId, receptionRemark }) {
   if (deduct > 0 && card.left_counts < deduct) throw new BizError('卡剩余课时不足');
   const spendMoney = +(deduct * Number(card.unit_price)).toFixed(2);
   // 流水归属跟随卡: 消耗计入开卡门店 (2026-09-07需求会: 跨店上课不改变归属)
+  // 上课时间: 以排课日期与下课/上课时间为准, 确保统计与业绩结算归属实际上课月份
+  const dateStr = bk.date ? dayjs(bk.date).format('YYYY-MM-DD') : '';
+  const timeStr = bk.to_time ? `${bk.to_time}:00` : (bk.from_time ? `${bk.from_time}:00` : '12:00:00');
+  const lessonTime = dateStr ? `${dateStr} ${timeStr}` : dayjs().format('YYYY-MM-DD HH:mm:ss');
   await db.tx(async (t) => {
     if (deduct > 0) {
       await t.exec('UPDATE biz_member_card SET left_counts=left_counts-? WHERE id=? AND left_counts>=?', [deduct, card.id, deduct]);
     }
     const recId = await t.insert(
       `INSERT INTO biz_ptrain_record (merchant_id,club_id,vip_id,realname,coach_id,coach_name,once_card_id,costs,unit_price,spend_money,
-        type,bespeak_id,is_syllabus_sub,reception_id,reception_remark)
-       VALUES (?,?,?,?,?,?,?,?,?,?,1,?,1,?,?)`,
+        type,bespeak_id,is_syllabus_sub,reception_id,reception_remark,insert_time)
+       VALUES (?,?,?,?,?,?,?,?,?,?,1,?,1,?,?,?)`,
       [bk.merchant_id, card.club_id, bk.vip_id, bk.realname, bk.coach_id, bk.coach_name, card.id, 1,
-        card.unit_price, spendMoney, bk.id, receptionId || 0, receptionRemark || '学员确认']);
+        card.unit_price, spendMoney, bk.id, receptionId || 0, receptionRemark || '学员确认', lessonTime]);
     if (deduct > 0) {
       await t.insert(
         `INSERT INTO biz_card_spend (merchant_id,club_id,card_id,vip_id,card_kind,card_type_name,scene,costs,unit_price,spend_money,
-          ptrain_record_id,coach_id,coach_name,membership_id,realname,phone)
-         VALUES (?,?,?,?,?,?,2,?,?,?,?,?,?,?,?,?)`,
+          ptrain_record_id,coach_id,coach_name,membership_id,realname,phone,insert_time)
+         VALUES (?,?,?,?,?,?,2,?,?,?,?,?,?,?,?,?,?)`,
         [bk.merchant_id, card.club_id, card.id, bk.vip_id, card.card_kind, card.card_type_name, deduct, card.unit_price, spendMoney,
-          recId, bk.coach_id, bk.coach_name, bk.membership_id, bk.realname, bk.phone]);
+          recId, bk.coach_id, bk.coach_name, bk.membership_id, bk.realname, bk.phone, lessonTime]);
     }
     await t.exec('UPDATE biz_ptrain_bespeak_record SET status=3, confirm_status=2 WHERE id=?', [bk.id]);
   });
@@ -559,7 +563,7 @@ r.post('/ptrain-bookings/:id/finish', staffAuth('admin', 'manager', 'reception',
 // 补消课（无预约直接扣, 店长权限）
 r.post('/ptrain-records/manual', staffAuth('admin', 'manager'), async (req, res, next) => {
   try {
-    const { vip_id, coach_id, card_id, costs = 1, remark } = req.body;
+    const { vip_id, coach_id, card_id, costs = 1, remark, date } = req.body;
     const vip = await db.queryOne('SELECT * FROM biz_vip_user WHERE id=? AND merchant_id=?', [vip_id, req.user.mid]);
     const coach = await db.queryOne('SELECT * FROM biz_club_coach WHERE id=?', [coach_id]);
     let card = await db.queryOne('SELECT * FROM biz_member_card WHERE id=? AND vip_id=?', [card_id, vip_id]);
@@ -567,18 +571,19 @@ r.post('/ptrain-records/manual', staffAuth('admin', 'manager'), async (req, res,
     if (card.status === 0) card = await activateCard(card.id);
     if (card.left_counts < costs) throw new BizError('卡剩余课时不足');
     const spendMoney = +(costs * Number(card.unit_price)).toFixed(2);
+    const manualTime = date ? `${dayjs(date).format('YYYY-MM-DD')} 12:00:00` : dayjs().format('YYYY-MM-DD HH:mm:ss');
     await db.tx(async (t) => {
       await t.exec('UPDATE biz_member_card SET left_counts=left_counts-? WHERE id=?', [costs, card.id]);
       const recId = await t.insert(
         `INSERT INTO biz_ptrain_record (merchant_id,club_id,vip_id,realname,coach_id,coach_name,once_card_id,costs,unit_price,spend_money,
-          type,bespeak_id,is_syllabus_sub,reception_id,reception_remark) VALUES (?,?,?,?,?,?,?,?,?,?,1,0,0,?,?)`,
+          type,bespeak_id,is_syllabus_sub,reception_id,reception_remark,insert_time) VALUES (?,?,?,?,?,?,?,?,?,?,1,0,0,?,?,?)`,
         [req.user.mid, card.club_id, vip.id, vip.realname, coach.id, coach.realname, card.id, costs, card.unit_price, spendMoney,
-          req.user.uid, `补消课 ${remark || ''}`]);
+          req.user.uid, `补消课 ${remark || ''}`, manualTime]);
       await t.insert(
         `INSERT INTO biz_card_spend (merchant_id,club_id,card_id,vip_id,card_kind,card_type_name,scene,costs,unit_price,spend_money,
-          ptrain_record_id,coach_id,coach_name,realname,phone,remark) VALUES (?,?,?,?,4,?,2,?,?,?,?,?,?,?,?,?)`,
+          ptrain_record_id,coach_id,coach_name,realname,phone,remark,insert_time) VALUES (?,?,?,?,4,?,2,?,?,?,?,?,?,?,?,?,?)`,
         [req.user.mid, card.club_id, card.id, vip.id, card.card_type_name, costs, card.unit_price, spendMoney,
-          recId, coach.id, coach.realname, vip.realname, vip.phone, `补消课 ${remark || ''}`]);
+          recId, coach.id, coach.realname, vip.realname, vip.phone, `补消课 ${remark || ''}`, manualTime]);
     });
     await require('./growth').checkLessonMilestone(vip.id, card.id).catch(() => {});
     await logAction(req, '补消课', `${vip.realname} ${coach.realname} ${costs}课时`);

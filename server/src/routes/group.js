@@ -346,13 +346,14 @@ r.post('/syllabus-bookings/:id/checkin', staffAuth(), async (req, res, next) => 
         if (card.left_counts < bk.card_deduct_num) throw new BizError('卡剩余次数不足，无法核销');
         await t.exec('UPDATE biz_member_card SET left_counts=left_counts-? WHERE id=?', [bk.card_deduct_num, card.id]);
         // 流水归属跟随卡(开卡门店)
+        const spendTime = (s && s.start_time) ? dayjs(s.start_time).format('YYYY-MM-DD HH:mm:ss') : dayjs().format('YYYY-MM-DD HH:mm:ss');
         await t.insert(
           `INSERT INTO biz_card_spend (merchant_id,club_id,card_id,vip_id,card_kind,card_type_name,scene,costs,unit_price,spend_money,
-            syllabus_id,coach_id,coach_name,ope_user_id,ope_username,realname,phone)
-           VALUES (?,?,?,?,?,?,3,?,?,?,?,?,?,?,?,?,?)`,
+            syllabus_id,coach_id,coach_name,ope_user_id,ope_username,realname,phone,insert_time)
+           VALUES (?,?,?,?,?,?,3,?,?,?,?,?,?,?,?,?,?,?)`,
           [bk.merchant_id, card.club_id, card.id, bk.vip_id, card.card_kind, card.card_type_name, bk.card_deduct_num,
             card.unit_price, +(bk.card_deduct_num * Number(card.unit_price)).toFixed(2), bk.syllabus_id,
-            s ? s.coach_id : 0, s ? s.coach_name : '', req.user.uid, req.user.name, bk.realname, bk.phone]);
+            s ? s.coach_id : 0, s ? s.coach_name : '', req.user.uid, req.user.name, bk.realname, bk.phone, spendTime]);
       }
       await t.exec('UPDATE biz_syllabus_subscribe_record SET status=2 WHERE id=?', [bk.id]);
     });
