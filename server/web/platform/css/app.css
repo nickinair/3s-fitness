@@ -23,13 +23,17 @@
   --el-text-color-secondary: var(--c-text-3);
   --el-border-color-lighter: var(--c-line);
 }
+.el-table { --el-table-header-bg-color: var(--c-panel); }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--c-bg); }
 #app { min-height: 100vh; }
 
 /* 登录页: 白底 + 居中黑色 Logo */
 .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--c-card); }
-.login-card { width: 400px; background: var(--c-card); padding: 20px 36px 40px; }
+.login-card { width: 420px; background: var(--c-panel); padding: 30px 36px 40px; border-radius: 20px; }
+.login-card .el-input__wrapper { background: var(--c-card); box-shadow: none; border-radius: 10px; }
+.login-card .el-input__wrapper.is-focus { box-shadow: 0 0 0 1px var(--brand) inset; }
+.login-card .el-button { border-radius: 10px; }
 .login-card .logo { text-align: center; margin-bottom: 6px; }
 .login-card .logo img { width: 210px; display: inline-block; }
 .login-card h1 { font-size: 18px; font-weight: 600; color: var(--c-title); margin-top: 12px; }
@@ -38,12 +42,12 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
 /* 布局: 白色侧边栏, 选中项浅灰底 + 左侧黑色竖条 */
 .layout { display: flex; min-height: 100vh; }
-.sidebar { width: 210px; background: var(--c-card); color: var(--c-text-2); flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--c-line); }
+.sidebar { width: 210px; background: var(--c-panel); color: var(--c-text-2); flex-shrink: 0; display: flex; flex-direction: column; }
 .sidebar .brand { display: flex; align-items: center; gap: 10px; padding: 18px 20px; color: var(--c-title); font-weight: 700; font-size: 15px; }
 .sidebar .brand .badge { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; }
 .sidebar .menu-item { display: flex; align-items: center; gap: 10px; padding: 13px 22px; cursor: pointer; font-size: 14px; transition: all .15s; }
-.sidebar .menu-item:hover { background: var(--c-bg-2); color: var(--c-title); }
-.sidebar .menu-item.active { background: var(--c-bg-2); color: var(--c-title); font-weight: 600; box-shadow: inset 3px 0 0 var(--brand); }
+.sidebar .menu-item:hover { background: var(--c-panel-2); color: var(--c-title); }
+.sidebar .menu-item.active { background: var(--c-card); color: var(--c-title); font-weight: 600; box-shadow: inset 3px 0 0 var(--brand); }
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .topbar { height: 56px; background: var(--c-card); border-bottom: 1px solid var(--c-line); display: flex; align-items: center;
   justify-content: space-between; padding: 0 24px; }

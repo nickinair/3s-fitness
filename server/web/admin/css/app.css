@@ -56,13 +56,15 @@
   --el-fill-color-lighter: #fafafa;
   --el-bg-color-page: var(--c-bg);
   /* 后台语义变量 */
-  --sidebar-bg: var(--c-card);
-  --sidebar-sub: var(--c-card);
+  /* 侧边栏: 浅灰整列, 选中项白色 + 左侧竖条(参考图左侧分类) */
+  --sidebar-bg: var(--c-panel);
+  --sidebar-sub: var(--c-panel);
   --sidebar-text: var(--c-text-2);
-  --sidebar-active-bg: var(--c-bg-2);
+  --sidebar-active-bg: var(--c-card);
+  --sidebar-hover-bg: var(--c-panel-2);
   --bg-page: var(--c-bg);
   --bg-card: var(--c-card);
-  --bg-sunken: #fafafa;
+  --bg-sunken: var(--c-panel);           /* 卡片里的灰色承托块: 表头、提醒面板、统计格 */
   --text-main: var(--c-title);
   --text-sub: var(--c-text-2);
   --text-muted: var(--c-text-3);
@@ -156,6 +158,9 @@ html.dark {
   --sidebar-bg: #000000;
   --sidebar-sub: #000000;
   --sidebar-active-bg: #1f1f1f;
+  --sidebar-hover-bg: #141414;
+  --c-panel: #1a1a1a;
+  --c-panel-2: #242424;
   --bg-sunken: #0d0d0d;
   --hover-bg: #1f1f1f;
   color-scheme: dark;
@@ -177,6 +182,8 @@ html.dark .el-table {
 html.dark .el-table__body tr.el-table__row--striped > td.el-table__cell { background: var(--bg-sunken); }
 html.dark .el-table__fixed-right-patch, html.dark .el-table__empty-block { background: var(--bg-card); }
 /* 分页、筛选区等容器同样跟随卡片色 */
+/* 浅色表头用面板灰, 和白色表体分层 */
+.el-table { --el-table-header-bg-color: var(--bg-sunken); }
 html.dark .el-pagination { --el-bg-color: var(--bg-card); --el-text-color-regular: var(--text-sub); }
 
 /* ============ 状态标签四种形态(与移动端一致) ============
@@ -193,7 +200,10 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-page); fo
 
 /* ============ 登录页: 白底 + 居中黑色 Logo(深色模式换白色 Logo) ============ */
 .login-wrap { height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-card); }
-.login-card { width: 400px; background: var(--bg-card); padding: 20px 36px 34px; }
+.login-card { width: 420px; background: var(--c-panel); padding: 30px 36px 34px; border-radius: 20px; }
+.login-card .el-input__wrapper { background: var(--bg-card); box-shadow: none; border-radius: 10px; }
+.login-card .el-input__wrapper.is-focus { box-shadow: 0 0 0 1px var(--brand) inset; }
+.login-card .el-button { border-radius: 10px; }
 .login-logo { text-align: center; margin-bottom: 10px; }
 .login-logo img { width: 210px; display: inline-block; }
 .login-logo .logo-dark { display: none; }
@@ -205,19 +215,19 @@ html.dark .login-logo .logo-dark { display: inline-block; }
 
 /* ============ 布局 ============ */
 .layout { display: flex; height: 100vh; }
-.sidebar { width: 220px; flex-shrink: 0; background: var(--sidebar-bg); display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--border); }
+.sidebar { width: 220px; flex-shrink: 0; background: var(--sidebar-bg); display: flex; flex-direction: column; overflow: hidden; }
 .sidebar .brand { height: 60px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--sidebar-sub); flex-shrink: 0; }
 .sidebar .brand .badge { width: 32px; height: 32px; border-radius: 8px; background: var(--brand); color: var(--bg-card); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
 .sidebar .brand span { color: var(--text-main); font-weight: 600; font-size: 16px; letter-spacing: .5px; white-space: nowrap; }
 /* 「管理后台」做成小标签, 避免标题折行 */
 .sidebar .brand .brand-tag { font-style: normal; font-size: 11px; color: var(--text-sub);
-  background: var(--hover-bg); border-radius: 4px; padding: 2px 6px; white-space: nowrap; flex-shrink: 0; }
+  background: var(--c-card); border-radius: 4px; padding: 2px 6px; white-space: nowrap; flex-shrink: 0; }
 .sidebar .menu-scroll { flex: 1; overflow-y: auto; }
 .sidebar .menu-scroll::-webkit-scrollbar { width: 0; }
 .sidebar .el-menu { border-right: none; background: transparent; }
 .sidebar .el-sub-menu__title, .sidebar .el-menu-item { color: var(--sidebar-text); }
 .sidebar .el-sub-menu__title { color: var(--text-main); font-weight: 600; }
-.sidebar .el-sub-menu__title:hover, .sidebar .el-menu-item:hover { background: var(--hover-bg); color: var(--text-main); }
+.sidebar .el-sub-menu__title:hover, .sidebar .el-menu-item:hover { background: var(--sidebar-hover-bg); color: var(--text-main); }
 .sidebar .el-menu--inline { background: var(--sidebar-sub) !important; }
 .sidebar .el-menu-item.is-active { background: var(--sidebar-active-bg); color: var(--text-main); font-weight: 600; box-shadow: inset 3px 0 0 var(--brand); }
 
