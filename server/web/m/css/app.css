@@ -30,16 +30,16 @@ html, body { margin: 0; padding: 0; }
 body { background: var(--c-outer); font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
 #app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: var(--c-bg); box-shadow: 0 0 28px rgba(0,0,0,.12); position: relative; }
 .page { min-height: 100vh; padding-bottom: 24px; }
-.page.has-tabbar { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+.page.has-tabbar { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px) * 0.5); }
 
 /* 顶部导航 */
 .m-nav { position: sticky; top: 0; z-index: 100; padding-top: var(--safe-top); background: #fff; }
 .m-nav .van-nav-bar__title { font-weight: 600; }
 
-/* 底部导航: 悬浮白色圆角胶囊(参考图), 安全区留在胶囊外面 */
-.tabbar-wrap { position: fixed; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
-  width: calc(100% - 24px); max-width: 456px; z-index: 120; border-radius: 28px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,.08); }
-.tabbar-wrap .van-tabbar { height: 60px; }
+/* 底部导航: 悬浮白色圆角胶囊(对标 M Stand 小程序), 贴底沉降更自然 */
+.tabbar-wrap { position: fixed; bottom: calc(8px + env(safe-area-inset-bottom, 0px) * 0.18); left: 50%; transform: translateX(-50%);
+  width: calc(100% - 32px); max-width: 448px; z-index: 120; border-radius: 999px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.07); }
+.tabbar-wrap .van-tabbar { height: 56px; border-radius: 999px; background: #ffffff; }
 .tabbar-wrap .van-safe-area-bottom { padding-bottom: 0 !important; }
 .tabbar-wrap .van-hairline--top-bottom::after { display: none; }
 
