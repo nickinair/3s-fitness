@@ -4,7 +4,16 @@ window.AppPages.PtBookings = {
   data() {
     return {
       clubs: [],
-      query: { date: '', status: '', coach_id: '', keyword: '', page: 1, size: 20 },
+      dateRange: [dayjs().subtract(1, 'year').format('YYYY-MM-DD'), dayjs().add(1, 'month').format('YYYY-MM-DD')],
+      query: { date_from: dayjs().subtract(1, 'year').format('YYYY-MM-DD'), date_to: dayjs().add(1, 'month').format('YYYY-MM-DD'), status: '', coach_id: '', keyword: '', page: 1, size: 20 },
+      dateShortcuts: [
+        { text: '近1年', value: () => [dayjs().subtract(1, 'year').format('YYYY-MM-DD'), dayjs().add(1, 'month').format('YYYY-MM-DD')] },
+        { text: '今天', value: () => [dayjs().format('YYYY-MM-DD'), dayjs().format('YYYY-MM-DD')] },
+        { text: '近7天', value: () => [dayjs().subtract(6, 'day').format('YYYY-MM-DD'), dayjs().format('YYYY-MM-DD')] },
+        { text: '近30天', value: () => [dayjs().subtract(29, 'day').format('YYYY-MM-DD'), dayjs().format('YYYY-MM-DD')] },
+        { text: '近3个月', value: () => [dayjs().subtract(3, 'month').format('YYYY-MM-DD'), dayjs().format('YYYY-MM-DD')] },
+        { text: '全部', value: () => ['', ''] },
+      ],
       list: [], total: 0, loading: false,
       coaches: [], courses: [],
       // 代约
@@ -25,7 +34,8 @@ window.AppPages.PtBookings = {
   <div>
     <div class="card-box">
       <div class="search-bar">
-        <el-date-picker v-model="query.date" type="date" value-format="YYYY-MM-DD" placeholder="预约日期" style="width:140px" />
+        <el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至"
+          start-placeholder="开始日期" end-placeholder="结束日期" :shortcuts="dateShortcuts" style="width:260px" @change="onDateRangeChange" />
         <el-select v-model="query.status" placeholder="状态" clearable style="width:110px">
           <el-option v-for="(v,k) in DICT.ptStatus" :key="k" :value="k" :label="v" />
         </el-select>
@@ -166,8 +176,22 @@ window.AppPages.PtBookings = {
         }
       }
     },
+    onDateRangeChange(val) {
+      if (val && val[0] && val[1]) {
+        this.query.date_from = val[0];
+        this.query.date_to = val[1];
+      } else {
+        this.query.date_from = '';
+        this.query.date_to = '';
+      }
+      this.search();
+    },
     search() { this.query.page = 1; this.load(); },
-    reset() { this.query = { date: '', status: '', coach_id: '', keyword: '', page: 1, size: 20 }; this.load(); },
+    reset() {
+      this.dateRange = [dayjs().subtract(1, 'year').format('YYYY-MM-DD'), dayjs().add(1, 'month').format('YYYY-MM-DD')];
+      this.query = { date_from: this.dateRange[0], date_to: this.dateRange[1], status: '', coach_id: '', keyword: '', page: 1, size: 20 };
+      this.load();
+    },
     async loadDicts() {
       const [coaches, courses] = await Promise.all([api.get('/coaches', { status: 1 }), api.get('/ptrain-courses')]);
       this.coaches = coaches; this.courses = courses;

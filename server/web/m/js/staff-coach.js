@@ -618,45 +618,134 @@
   };
 
   window.Pages.CoachBookings = {
-    data() { return { days: H.monthDays(), date: H.today(), list: [], loading: true, doing: 0, planEditor: { show: false, booking: null } }; },
+    data() {
+      const minDate = dayjs().subtract(1, 'year').toDate();
+      const maxDate = dayjs().add(3, 'month').toDate();
+      return {
+        viewMode: 'day', // 'day' 按日视图 | 'all' 近1年列表
+        days: H.days(365 + 30, -365), // 过去1年到未来30天
+        date: H.today(),
+        list: [],
+        loading: true,
+        doing: 0,
+        calShow: false,
+        minDate,
+        maxDate,
+        // 列表模式 (近1年)
+        allKeyword: '',
+        allStatus: '',
+        allList: [],
+        allTotal: 0,
+        allPage: 1,
+        allLoading: false,
+        allFinished: false,
+        planEditor: { show: false, booking: null },
+        H: window.H,
+        DICT: window.DICT,
+      };
+    },
     template: [
       '<div class="page">',
       '  <m-nav title="预约管理"></m-nav>',
-      '  <div class="day-strip" ref="strip">',
-      '    <div v-for="dd in days" :key="dd.date" class="day-item" :class="{on:dd.date===date, past:dd.past}" @click="pick(dd.date)">',
-      '      <div class="w">{{ dd.w }}</div><div class="d">{{ dd.d }}</div>',
+      '  <div style="background:var(--c-card);border-bottom:1px solid var(--c-border)">',
+      '    <div class="flex" style="justify-content:space-between;align-items:center;padding:8px 12px">',
+      '      <div style="display:flex;gap:6px">',
+      '        <van-button size="small" round :type="viewMode===\'day\'?\'primary\':\'default\'" @click="switchMode(\'day\')">按日视图</van-button>',
+      '        <van-button size="small" round :type="viewMode===\'all\'?\'primary\':\'default\'" @click="switchMode(\'all\')">近1年列表</van-button>',
+      '      </div>',
+      '      <div v-if="viewMode===\'day\'" style="display:flex;align-items:center;gap:6px">',
+      '        <van-button v-if="date!==H.today()" size="small" round plain @click="goToday">今天</van-button>',
+      '        <van-button size="small" round icon="calendar-o" @click="calShow=true">{{ date ? H.day(date) : \'选日期\' }}</van-button>',
+      '      </div>',
+      '      <div v-else class="muted" style="font-size:12px">共 {{ allTotal }} 条预约</div>',
       '    </div>',
+      '    <div v-if="viewMode===\'day\'" class="day-strip" ref="strip">',
+      '      <div v-for="dd in days" :key="dd.date" class="day-item" :class="{on:dd.date===date, past:dd.past}" @click="pick(dd.date)">',
+      '        <div class="w">{{ dd.w }}</div><div class="d">{{ dd.d }}</div>',
+      '      </div>',
+      '    </div>',
+      '    <template v-else>',
+      '      <van-search v-model="allKeyword" placeholder="搜会员姓名/手机号" show-action @search="searchAll" @clear="searchAll">',
+      '        <template #action><div @click="searchAll" style="color:var(--brand)">搜索</div></template>',
+      '      </van-search>',
+      '      <van-tabs v-model:active="allStatus" @change="searchAll" color="var(--brand)" shrink :line-width="20">',
+      '        <van-tab title="全部" name="" />',
+      '        <van-tab title="待确认" name="0" />',
+      '        <van-tab title="已确认" name="1" />',
+      '        <van-tab title="已消课" name="3" />',
+      '        <van-tab title="已取消" name="2" />',
+      '      </van-tabs>',
+      '    </template>',
       '  </div>',
-      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
-      '  <template v-else>',
-      '    <van-empty v-if="!list.length" :description="H.day(date) + \'暂无预约\'"/>',
-      '    <div v-for="b in list" :key="b.id" class="rec-item">',
-      '      <div class="head">',
-      '        <span class="name">{{ b.realname }} <span class="muted" style="font-weight:400;font-size:12px">{{ b.course_title }}</span></span>',
-      '        <span><d-tag dict="ptStatus" :v="b.status"></d-tag>',
-      '          <van-tag v-if="b.status===1 && b.confirm_status===1" type="warning" round style="margin-left:4px">待学员确认</van-tag></span>',
-      '      </div>',
-      '      <div class="bk-time mt8"><van-icon name="clock-o" size="13"/> <b>{{ b.from_time }}-{{ b.to_time }}</b>',
-      '        <span class="bk-day">{{ H.day(b.date) }}（{{ H.week(b.date) }}）</span></div>',
-      '      <div class="muted mt4">上课教练：{{ b.coach_name || \'未指定\' }}</div>',
-      '      <div class="muted mt4">{{ b.card_type_name }} · 扣{{ b.card_deduct_num }}课时<template v-if="b.remark"> · 备注：{{ b.remark }}</template></div>',
-      '      <lesson-plan-card :plan="b.lesson_plan" :booking="b" :can-edit="b.status===0 || b.status===1" @edit="openPlanEditor(b)"/>',
-      '      <div class="foot" v-if="b.status===0 || b.status===1">',
-      '        <template v-if="b.status===0">',
-      '          <van-button size="small" round plain @click="cancel(b)">拒绝</van-button>',
-      '          <van-button size="small" round type="primary" :loading="doing===b.id" @click="confirm(b)">确认预约</van-button>',
-      '        </template>',
-      '        <template v-else>',
-      '          <template v-if="b.confirm_status!==1">',
-      '            <van-button v-if="isPast(b)" size="small" round plain type="danger" @click="noshow(b)">标记爽约</van-button>',
-      '            <van-button v-if="isPast(b)" size="small" round plain type="warning" @click="startFinish(b)">发起学员确认</van-button>',
-      '            <van-button v-if="isPast(b)" size="small" round type="primary" :loading="doing===b.id" @click="finishNow(b)">确认销课</van-button>',
+      '  <van-calendar v-model:show="calShow" :min-date="minDate" :max-date="maxDate" :default-date="new Date(date)" @confirm="onDateConfirm"/>',
+      '',
+      '  <!-- 按日视图 -->',
+      '  <template v-if="viewMode===\'day\'">',
+      '    <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
+      '    <template v-else>',
+      '      <van-empty v-if="!list.length" :description="H.day(date) + \' 暂无预约\'"/>',
+      '      <div v-for="b in list" :key="b.id" class="rec-item">',
+      '        <div class="head">',
+      '          <span class="name">{{ b.realname }} <span class="muted" style="font-weight:400;font-size:12px">{{ b.course_title }}</span></span>',
+      '          <span><d-tag dict="ptStatus" :v="b.status"></d-tag>',
+      '            <van-tag v-if="b.status===1 && b.confirm_status===1" type="warning" round style="margin-left:4px">待学员确认</van-tag></span>',
+      '        </div>',
+      '        <div class="bk-time mt8"><van-icon name="clock-o" size="13"/> <b>{{ b.from_time }}-{{ b.to_time }}</b>',
+      '          <span class="bk-day">{{ H.day(b.date) }}（{{ H.week(b.date) }}）</span></div>',
+      '        <div class="muted mt4">上课教练：{{ b.coach_name || \'未指定\' }}</div>',
+      '        <div class="muted mt4">{{ b.card_type_name }} · 扣{{ b.card_deduct_num }}课时<template v-if="b.remark"> · 备注：{{ b.remark }}</template></div>',
+      '        <lesson-plan-card :plan="b.lesson_plan" :booking="b" :can-edit="b.status===0 || b.status===1" @edit="openPlanEditor(b)"/>',
+      '        <div class="foot" v-if="b.status===0 || b.status===1">',
+      '          <template v-if="b.status===0">',
+      '            <van-button size="small" round plain @click="cancel(b)">拒绝</van-button>',
+      '            <van-button size="small" round type="primary" :loading="doing===b.id" @click="confirm(b)">确认预约</van-button>',
       '          </template>',
-      '          <van-button size="small" round plain @click="cancel(b)">取消预约</van-button>',
-      '        </template>',
+      '          <template v-else>',
+      '            <template v-if="b.confirm_status!==1">',
+      '              <van-button v-if="isPast(b)" size="small" round plain type="danger" @click="noshow(b)">标记爽约</van-button>',
+      '              <van-button v-if="isPast(b)" size="small" round plain type="warning" @click="startFinish(b)">发起学员确认</van-button>',
+      '              <van-button v-if="isPast(b)" size="small" round type="primary" :loading="doing===b.id" @click="finishNow(b)">确认销课</van-button>',
+      '            </template>',
+      '            <van-button size="small" round plain @click="cancel(b)">取消预约</van-button>',
+      '          </template>',
+      '        </div>',
       '      </div>',
-      '    </div>',
+      '    </template>',
       '  </template>',
+      '',
+      '  <!-- 近1年列表 -->',
+      '  <template v-else>',
+      '    <van-empty v-if="!allLoading && !allList.length" description="近1年内暂无相关预约"/>',
+      '    <van-list v-model:loading="allLoading" :finished="allFinished" finished-text="已加载近1年全部预约" @load="loadAllPage">',
+      '      <div v-for="b in allList" :key="b.id" class="rec-item">',
+      '        <div class="head">',
+      '          <span class="name">{{ b.realname }} <span class="muted" style="font-weight:400;font-size:12px">{{ b.course_title }}</span></span>',
+      '          <span><d-tag dict="ptStatus" :v="b.status"></d-tag>',
+      '            <van-tag v-if="b.status===1 && b.confirm_status===1" type="warning" round style="margin-left:4px">待学员确认</van-tag></span>',
+      '        </div>',
+      '        <div class="bk-time mt8"><van-icon name="clock-o" size="13"/> <b>{{ b.from_time }}-{{ b.to_time }}</b>',
+      '          <span class="bk-day">{{ H.day(b.date) }}（{{ H.week(b.date) }}）</span></div>',
+      '        <div class="muted mt4">上课教练：{{ b.coach_name || \'未指定\' }}</div>',
+      '        <div class="muted mt4">{{ b.card_type_name }} · 扣{{ b.card_deduct_num }}课时<template v-if="b.remark"> · 备注：{{ b.remark }}</template></div>',
+      '        <lesson-plan-card :plan="b.lesson_plan" :booking="b" :can-edit="b.status===0 || b.status===1" @edit="openPlanEditor(b)"/>',
+      '        <div class="foot" v-if="b.status===0 || b.status===1">',
+      '          <template v-if="b.status===0">',
+      '            <van-button size="small" round plain @click="cancel(b)">拒绝</van-button>',
+      '            <van-button size="small" round type="primary" :loading="doing===b.id" @click="confirm(b)">确认预约</van-button>',
+      '          </template>',
+      '          <template v-else>',
+      '            <template v-if="b.confirm_status!==1">',
+      '              <van-button v-if="isPast(b)" size="small" round plain type="danger" @click="noshow(b)">标记爽约</van-button>',
+      '              <van-button v-if="isPast(b)" size="small" round plain type="warning" @click="startFinish(b)">发起学员确认</van-button>',
+      '              <van-button v-if="isPast(b)" size="small" round type="primary" :loading="doing===b.id" @click="finishNow(b)">确认销课</van-button>',
+      '            </template>',
+      '            <van-button size="small" round plain @click="cancel(b)">取消预约</van-button>',
+      '          </template>',
+      '        </div>',
+      '      </div>',
+      '    </van-list>',
+      '  </template>',
+      '',
       '  <plan-editor-popup v-model="planEditor.show" :booking="planEditor.booking" @saved="onPlanSaved"/>',
       '</div>',
     ].join('\n'),
@@ -664,6 +753,22 @@
       isPast(b) { return H.isPast(H.dateOf(b.date) + ' ' + b.to_time); },
       qs() { return 'date=' + this.date + '&order=asc'; },   // 单日视图, 按上课时间从早到晚
       pick(d) { this.date = d; this.load(); this.scrollDay(); },
+      goToday() { this.pick(H.today()); },
+      onDateConfirm(d) {
+        this.calShow = false;
+        this.date = dayjs(d).format('YYYY-MM-DD');
+        this.load();
+        this.scrollDay();
+      },
+      switchMode(m) {
+        this.viewMode = m;
+        if (m === 'day') {
+          this.load();
+          this.scrollDay();
+        } else {
+          this.searchAll();
+        }
+      },
       scrollDay() {
         this.$nextTick(() => {
           const strip = this.$refs.strip; if (!strip) return;
@@ -686,12 +791,44 @@
           }
         }
       },
+      searchAll() {
+        this.allPage = 1;
+        this.allList = [];
+        this.allFinished = false;
+        this.loadAllPage();
+      },
+      async loadAllPage() {
+        if (this.allLoading || this.allFinished) return;
+        this.allLoading = true;
+        try {
+          const from = dayjs().subtract(1, 'year').format('YYYY-MM-DD');
+          const to = dayjs().add(3, 'month').format('YYYY-MM-DD');
+          let url = '/ptrain-bookings?page=' + this.allPage + '&size=20&date_from=' + from + '&date_to=' + to;
+          if (this.allStatus !== '') url += '&status=' + this.allStatus;
+          if (this.allKeyword) url += '&keyword=' + encodeURIComponent(this.allKeyword);
+          const d = await API.get(url);
+          const rows = d.list || [];
+          this.allTotal = d.total || 0;
+          this.allList = this.allPage === 1 ? rows : this.allList.concat(rows);
+          if (this.allList.length >= this.allTotal || rows.length < 20) {
+            this.allFinished = true;
+          } else {
+            this.allPage++;
+          }
+        } finally {
+          this.allLoading = false;
+        }
+      },
+      refreshCurrent() {
+        if (this.viewMode === 'day') this.load(true);
+        else this.searchAll();
+      },
       async confirm(b) {
         this.doing = b.id;
         try {
           await API.post('/ptrain-bookings/' + b.id + '/confirm');
           vant.showToast({ message: '已确认预约', icon: 'success' });
-          this.load(true);
+          this.refreshCurrent();
         } finally { this.doing = 0; }
       },
       async cancel(b) {
@@ -706,7 +843,7 @@
         } catch (e) { return; }
         await API.post('/ptrain-bookings/' + b.id + '/cancel', reason ? { reason } : {});
         vant.showToast('已取消');
-        this.load(true);
+        this.refreshCurrent();
       },
       // 教练直接销课(纪要4.1现状: 教练手动点销课、课时随之扣减); 学员确认为可选双保险
       async finishNow(b) {
@@ -715,14 +852,14 @@
         try {
           await API.post('/ptrain-bookings/' + b.id + '/finish', {});
           vant.showToast({ message: '已销课', icon: 'success' });
-          this.load(true);
+          this.refreshCurrent();
         } finally { this.doing = 0; }
       },
       async noshow(b) {
         try { await vant.showConfirmDialog({ title: '标记爽约', message: '确定将 ' + b.realname + ' 本节课标记为爽约吗？', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
         await API.post('/ptrain-bookings/' + b.id + '/noshow');
         vant.showToast('已标记爽约');
-        this.load(true);
+        this.refreshCurrent();
       },
       async startFinish(b) {
         try { await vant.showConfirmDialog({ title: '发起消课', message: '向 ' + b.realname + ' 发起本节课消课确认？学员确认后自动扣课时。', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
@@ -730,14 +867,14 @@
         try {
           const r = await API.post('/ptrain-bookings/' + b.id + '/start-finish');
           vant.showDialog({ title: '已发起消课', message: (r && r.msg) || '请学员在小程序「待确认消课」中确认', confirmButtonColor: 'var(--brand)' });
-          this.load(true);
+          this.refreshCurrent();
         } finally { this.doing = 0; }
       },
       openPlanEditor(b) {
         this.planEditor = { show: true, booking: b };
       },
       onPlanSaved(e) {
-        const b = this.list.find(x => x.id === e.booking.id);
+        const b = (this.viewMode === 'day' ? this.list : this.allList).find(x => x.id === e.booking.id);
         if (b) b.lesson_plan = e.raw;
       },
     },
