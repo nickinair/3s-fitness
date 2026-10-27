@@ -1,0 +1,45 @@
+/*
+ * 改版前的墨绿配色 (过渡用)
+ * 管理后台、平台后台、门户页还没切到黑白风格, 在 theme.css 之后引入本文件, 保持原样。
+ * 第 3/4 阶段改完对应端后删掉对它的引用, 全部改完后删除本文件。
+ */
+:root {
+  /* ---- 品牌主色 ---- */
+  --brand: #0d5e56;
+  --brand-rgb: 13, 94, 86;                 /* 用于 rgba(var(--brand-rgb), .1) 半透明 */
+  --brand-light: #17877b;
+  --brand-dark: #0a4b45;
+  --brand-grad: linear-gradient(135deg, #0d5e56 0%, #1fa08f 100%);
+  --brand-grad-deep: linear-gradient(135deg, #062724 0%, #0d5e56 55%, #1b7d6f 100%);   /* 登录页/门户大背景 */
+  --brand-soft: #eef6f5;                   /* 选中项/高亮的浅底 */
+  --brand-soft-2: #d9ebe9;                 /* 稍深的浅底: 进度条底、圆环描边 */
+  --brand-line: #cfe4e1;                   /* 品牌色浅描边 */
+
+  /* ---- 功能色 ---- */
+  --danger: #ee0a24;                       /* 爽约/欠款/退卡/删除 */
+  --danger-rgb: 238, 10, 36;
+  --danger-soft: #fff1f0;
+  --danger-line: #ffccc7;
+  --warn: #ed6a0c;                         /* 待处理提醒 */
+  --warn-2: #f2762d;
+  --warn-dark: #d4550a;
+  --warn-soft: #fff4e8;
+  --up: #d4380d;                           /* 上涨/价格 */
+  --down: #2a9d4a;                         /* 下降 */
+  --money: #c98a2d;                        /* 金额数字 */
+  --gold: #e0a800;                         /* 里程碑/奖章 */
+  --star: #f6a623;                         /* 评分星星 */
+
+  /* ---- 中性色 ---- */
+  --c-title: #1f2329;                      /* 标题、强调数字 */
+  --c-text: #323233;                       /* 正文 */
+  --c-text-2: #646566;                     /* 次要文字 */
+  --c-text-3: #969799;                     /* 说明/辅助文字 */
+  --c-text-4: #c8c9cc;                     /* 占位/禁用 */
+  --c-line: #ebedf0;                       /* 描边、分隔线 */
+  --c-line-2: #f2f3f5;                     /* 更浅的分隔线 */
+  --c-bg: #f6f7f9;                         /* 页面底色 */
+  --c-bg-2: #f5f6f8;                       /* 输入框/未选中块/浅灰底 */
+  --c-card: #ffffff;                       /* 卡片 */
+  --c-outer: #e6e8ec;                      /* 移动端在电脑上打开时手机壳外的底色 */
+}

@@ -91,7 +91,7 @@
     // 教练叮嘱
     if (opt.note) {
       ctx.fillStyle = H.color('--warn-soft'); rr(24, y, W - 48, 70, 14); ctx.fill();
-      ctx.fillStyle = '#b35c00'; ctx.font = F(22);
+      ctx.fillStyle = H.color('--c-text-2'); ctx.font = F(22);
       ctx.fillText('📣 教练叮嘱：' + opt.note, 48, y + 43);
       y += noteH;
     }
@@ -206,7 +206,7 @@
       '  </template>',
       // 情况3: 暂无计划但教练可编辑新建
       '  <template v-else-if="canEdit">',
-      '    <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f9fbfb;border-radius:6px;border:1px dashed var(--brand-soft-2);">',
+      '    <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--c-bg-2);border-radius:6px;border:1px dashed var(--brand-soft-2);">',
       '      <span class="muted" style="font-size:12px">暂未填写训练计划</span>',
       '      <van-button size="mini" round plain type="primary" @click.stop="onEdit">+ 制定计划</van-button>',
       '    </div>',
@@ -502,7 +502,7 @@
       '  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 20px">',
       /* AI 一句话生成 (图二顶部卡片) */
       '    <div class="ai-box" style="margin:0 0 12px">',
-      '      <div class="flex"><van-icon name="bulb-o" color="#6a5af9"/><b style="margin-left:6px;font-size:14px">AI 一句话生成</b><span class="muted flex1" style="margin-left:8px">说出或输入整套安排</span></div>',
+      '      <div class="flex"><van-icon name="bulb-o" color="var(--c-title)"/><b style="margin-left:6px;font-size:14px">AI 一句话生成</b><span class="muted flex1" style="margin-left:8px">说出或输入整套安排</span></div>',
       '      <textarea v-model="aiText" rows="2" class="ai-ta" placeholder="例：练背：引体向上4组8次，杠铃划船4组10次60kg，最后划船机15分钟"></textarea>',
       '      <div class="flex" style="gap:8px;margin-top:8px">',
       '        <button v-if="!listening" type="button" class="vc-btn" @click="voice">',

@@ -260,7 +260,7 @@ window.Pages.StaffCheckinReport = {
     '    <div class="sec-title"><span>每日入场人次</span><span class="more"><span v-if="dayChart">共 {{ dayChart.total }} 人次 · </span><span class="brand-text" @click="exportCsv(\'by_day\')">导出明细 <van-icon name="arrow" size="10"/></span></span></div>',
     '    <div class="card-box" v-if="dayChart">',
     '      <svg :viewBox="\'0 0 \'+dayChart.W+\' \'+dayChart.HT" style="width:100%;display:block">',
-    '        <path :d="dayChart.area" fill="rgba(13,94,86,.12)" stroke="none"></path>',
+    '        <path :d="dayChart.area" stroke="none" style="fill:rgba(var(--brand-rgb),.12)"></path>',
     '        <polyline :points="dayChart.path" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)"></polyline>',
     '        <circle v-for="(p,i) in dayChart.pts" :key="i" :cx="p.x" :cy="p.y" r="2.4" style="fill:var(--brand)"></circle>',
     '        <text v-for="(l,i) in dayChart.labels" :key="\'l\'+i" :x="l.x" :y="dayChart.HT-8" text-anchor="middle" font-size="9" style="fill:var(--c-text-3)">{{ l.t }}</text>',

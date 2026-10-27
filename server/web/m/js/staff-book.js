@@ -50,7 +50,7 @@ window.Pages.StaffBook = {
     '        <div v-for="m in results" :key="m.id" class="cat-pick flex" @click="pickVip(m)">',
     '          <div class="flex1"><b>{{ m.realname || \'未命名\' }}</b> <span class="muted">{{ m.phone }}</span>',
     '            <van-tag v-if="m.is_black" type="danger" style="margin-left:4px">黑名单</van-tag></div>',
-    '          <van-icon name="arrow" color="#bbb" size="14"/>',
+    '          <van-icon name="arrow" color="var(--c-text-4)" size="14"/>',
     '        </div>',
     '        <div v-if="searching" style="text-align:center;padding:8px"><van-loading size="20" color="var(--brand)"/></div>',
     '        <van-empty v-else-if="!results.length" description="没有匹配的会员" image-size="60"/>',

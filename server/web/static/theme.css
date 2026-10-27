@@ -1,49 +1,59 @@
 /*
  * 3S 全站配色 Token —— 所有颜色的唯一来源
- * 移动端 / 商户后台 / 门户页都先引入本文件, 再引入各自的 app.css。
  * 页面和组件里只写 var(--xxx), 不要再写死色值; 需要在 JS 里拿到实际色值(ECharts/canvas/二维码)时,
- * 用移动端 H.color('--brand') / 后台 Theme.color('--brand') 读取。
+ * 用移动端 H.color('--brand') / 后台 themeColor('--brand') 读取。
  *
- * 当前为第 1 阶段: 色值保持改版前的墨绿主题, 页面外观不变。
- * 第 2/3 阶段切换为黑白极简风格时只改这里的色值(见 docs/UI改版规划.md 第二节)。
+ * 黑白极简风格, 色值取自 参考图/ (见 docs/UI改版规划.md 第二节):
+ *   只有黑白灰, 黑色是唯一强调色; 唯一的功能彩色是偏暗红, 只用于风险状态(爽约/欠款/退卡/删除/下降)。
+ * 还没切换的端(后台/门户)在本文件之后引入 theme-legacy.css 保持旧配色。
  */
 :root {
-  /* ---- 品牌主色 ---- */
-  --brand: #0d5e56;
-  --brand-rgb: 13, 94, 86;                 /* 用于 rgba(var(--brand-rgb), .1) 半透明 */
-  --brand-light: #17877b;
-  --brand-dark: #0a4b45;
-  --brand-grad: linear-gradient(135deg, #0d5e56 0%, #1fa08f 100%);
-  --brand-grad-deep: linear-gradient(135deg, #062724 0%, #0d5e56 55%, #1b7d6f 100%);   /* 登录页/门户大背景 */
-  --brand-soft: #eef6f5;                   /* 选中项/高亮的浅底 */
-  --brand-soft-2: #d9ebe9;                 /* 稍深的浅底: 进度条底、圆环描边 */
-  --brand-line: #cfe4e1;                   /* 品牌色浅描边 */
+  /* ---- 品牌主色: 黑 ---- */
+  --brand: #000000;
+  --brand-rgb: 0, 0, 0;                    /* 用于 rgba(var(--brand-rgb), .1) 半透明 */
+  --brand-light: #333333;
+  --brand-dark: #000000;
+  --brand-grad: #000000;                   /* 不再用渐变, 保留变量名兼容旧写法 */
+  --brand-grad-deep: #000000;
+  --brand-soft: #f0f0f0;                   /* 选中项/高亮的浅底 */
+  --brand-soft-2: #e0e0e0;                 /* 稍深的浅底: 进度条底、圆环描边 */
+  --brand-line: #e0e0e0;                   /* 浅描边 */
 
-  /* ---- 功能色 ---- */
-  --danger: #ee0a24;                       /* 爽约/欠款/退卡/删除 */
-  --danger-rgb: 238, 10, 36;
-  --danger-soft: #fff1f0;
-  --danger-line: #ffccc7;
-  --warn: #ed6a0c;                         /* 待处理提醒 */
-  --warn-2: #f2762d;
-  --warn-dark: #d4550a;
-  --warn-soft: #fff4e8;
-  --up: #d4380d;                           /* 上涨/价格 */
-  --down: #2a9d4a;                         /* 下降 */
-  --money: #c98a2d;                        /* 金额数字 */
-  --gold: #e0a800;                         /* 里程碑/奖章 */
-  --star: #f6a623;                         /* 评分星星 */
+  /* ---- 功能色: 只保留偏暗红表达风险, 其余提醒用黑色 ---- */
+  --danger: #d23c3c;                       /* 爽约/欠款/退卡/删除/下降 */
+  --danger-rgb: 210, 60, 60;
+  --danger-soft: #fbeeee;
+  --danger-line: #efc9c9;
+  --warn: #111111;                         /* 待处理提醒: 黑字, 靠描边/位置区分 */
+  --warn-2: #111111;
+  --warn-dark: #111111;
+  --warn-soft: #f0f0f0;
+  --up: #111111;                           /* 上涨/价格: 黑色加粗 */
+  --down: #d23c3c;                         /* 下降: 红 */
+  --money: #111111;                        /* 金额数字 */
+  --gold: #111111;                         /* 里程碑/奖章 */
+  --star: #111111;                         /* 评分星星 */
 
   /* ---- 中性色 ---- */
-  --c-title: #1f2329;                      /* 标题、强调数字 */
-  --c-text: #323233;                       /* 正文 */
-  --c-text-2: #646566;                     /* 次要文字 */
-  --c-text-3: #969799;                     /* 说明/辅助文字 */
-  --c-text-4: #c8c9cc;                     /* 占位/禁用 */
-  --c-line: #ebedf0;                       /* 描边、分隔线 */
-  --c-line-2: #f2f3f5;                     /* 更浅的分隔线 */
-  --c-bg: #f6f7f9;                         /* 页面底色 */
-  --c-bg-2: #f5f6f8;                       /* 输入框/未选中块/浅灰底 */
+  --c-title: #111111;                      /* 标题、强调数字 */
+  --c-text: #333333;                       /* 正文 */
+  --c-text-2: #555555;                     /* 次要文字 */
+  --c-text-3: #7c7c7c;                     /* 说明/辅助文字 */
+  --c-text-4: #b4b4b4;                     /* 占位/禁用/未选中 */
+  --c-line: #ececec;                       /* 描边、分隔线 */
+  --c-line-2: #f2f2f2;                     /* 更浅的分隔线 */
+  --c-bg: #f4f4f4;                         /* 页面底色 */
+  --c-bg-2: #f0f0f0;                       /* 输入框/未选中块/浅灰底 */
   --c-card: #ffffff;                       /* 卡片 */
-  --c-outer: #e6e8ec;                      /* 移动端在电脑上打开时手机壳外的底色 */
+  --c-outer: #e8e8e8;                      /* 移动端在电脑上打开时手机壳外的底色 */
+  --c-cream: #f4f0ec;                      /* 少量暖灰点缀(AI 输入框、插画底) */
+  --c-cream-line: #e6dfd8;
+  /* 深灰档: 区分多张黑色卡面/轮播 */
+  --c-ink-1: #1a1a1a;
+  --c-ink-2: #2b2b2b;
+  --c-ink-3: #3a3a3a;
+
+  /* ---- 形状 ---- */
+  --radius-card: 14px;
+  --radius-pill: 999px;
 }

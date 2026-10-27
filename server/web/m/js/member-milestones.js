@@ -86,7 +86,7 @@ window.Pages.MemberMilestones = {
     '        <span style="color:var(--warn-2);margin-left:12px">●</span> 体脂率(%)',
     '      </div>',
     '      <svg :viewBox="\'0 0 \'+chart.W+\' \'+chart.HT" style="width:100%;display:block">',
-    '        <line v-for="i in 4" :key="i" x1="8" :x2="chart.W-8" :y1="26+(i-1)*40" :y2="26+(i-1)*40" stroke="#f0f1f3" stroke-width="1"/>',
+    '        <line v-for="i in 4" :key="i" x1="8" :x2="chart.W-8" :y1="26+(i-1)*40" :y2="26+(i-1)*40" stroke-width="1" style="stroke:var(--c-line-2)"/>',
     '        <template v-if="chart.weight">',
     '          <polyline :points="chart.weight.path" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)"/>',
     '          <g v-for="(p,i) in chart.weight.pts" :key="\'w\'+i">',

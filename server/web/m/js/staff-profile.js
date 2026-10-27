@@ -12,10 +12,10 @@ window.Pages.StaffCoachProfile = {
     '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     /* 预览: 与会员看到的教练主页一致 */
-    '    <div class="home-hero coach-hero" :class="{cover: form.cover}" :style="form.cover ? {backgroundImage:\'linear-gradient(180deg,rgba(6,20,18,.35),rgba(6,20,18,.82)),url(\'+form.cover+\')\'} : {}" style="padding-bottom:20px">',
+    '    <div class="home-hero coach-hero" :class="{cover: form.cover}" :style="form.cover ? {backgroundImage:\'linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.82)),url(\'+form.cover+\')\'} : {}" style="padding-bottom:20px">',
     '      <div class="flex">',
     '        <img v-if="form.avatar" class="coach-face" :src="form.avatar" alt=""/>',
-    '        <m-avatar v-else :name="form.realname" :size="58" style="background:rgba(255,255,255,.25)"></m-avatar>',
+    '        <m-avatar v-else :name="form.realname" :size="58"></m-avatar>',
     '        <div class="flex1" style="margin-left:14px">',
     '          <div style="font-size:19px;font-weight:700">{{ form.realname }}</div>',
     '          <div style="font-size:12px;opacity:.85;margin-top:4px">{{ form.good_at || \'填写你的擅长领域\' }}</div>',

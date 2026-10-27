@@ -57,7 +57,7 @@ window.Pages.MemberBuy = {
     '        <div class="left">{{ detail.total_counts ? detail.total_counts+\' 次\' : (detail.card_kind===3 ? \'充值 \'+H.money(detail.price) : \'不限次\') }} · 有效期 {{ detail.expire_days }} 天</div>',
     '        <div class="exp">{{ DICT.openMode[detail.open_card_mode||1] }}</div>',
     '      </div>',
-    '      <div style="font-size:13px;color:#555;line-height:1.8">{{ detail.intro || \'暂无介绍\' }}</div>',
+    '      <div style="font-size:13px;color:var(--c-text-2);line-height:1.8">{{ detail.intro || \'暂无介绍\' }}</div>',
     '      <div class="muted mt8" v-if="Number(detail.gift_money)">充值加赠 {{ H.money(detail.gift_money) }}，到账 {{ H.money(Number(detail.price)+Number(detail.gift_money)) }}</div>',
     '      <div class="muted mt8" v-if="intentedIds[detail.id]" style="color:var(--down)"><van-icon name="checked"/> 您已提交该卡购买意向，工作人员将与您联系</div>',
     '      <div class="flex mt12">',

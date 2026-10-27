@@ -148,16 +148,15 @@
       },
     },
     template: `
-    <div class="page training-photos-page" style="min-height:100vh;background:#f6f8fa;padding-bottom:50px">
+    <div class="page training-photos-page" style="min-height:100vh;background:var(--c-bg);padding-bottom:50px">
       <!-- 顶部导航 -->
       <van-nav-bar
         title="训练风采"
         left-arrow
         @click-left="$router.back()"
-        style="--van-nav-bar-background:var(--brand);--van-nav-bar-title-text-color:#fff;--van-nav-bar-icon-color:#fff"
       >
         <template #right>
-          <span style="color:#a7f3d0;font-size:14px;font-weight:600" @click="openUploadModal">
+          <span style="color:var(--c-title);font-size:14px;font-weight:600" @click="openUploadModal">
             + 上传照片
           </span>
         </template>
@@ -165,7 +164,7 @@
 
       <div style="padding:14px">
         <!-- 每月限额与成长激励卡片 -->
-        <div style="background:linear-gradient(135deg, var(--brand) 0%, #15803d 100%);color:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 6px 16px rgba(var(--brand-rgb),0.22);margin-bottom:16px">
+        <div style="background:var(--brand);color:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 6px 16px rgba(var(--brand-rgb),0.22);margin-bottom:16px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div>
               <div style="font-size:17px;font-weight:700">📸 训练风采专属相册</div>
@@ -182,9 +181,9 @@
           <div style="margin-top:14px;background:rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px">
             <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
               <span>本月额度使用 ({{ currentMonth }})</span>
-              <span style="font-weight:700;color:#fde047">{{ currentMonthCount }} / {{ monthlyLimit }} 张</span>
+              <span style="font-weight:700;color:#fff">{{ currentMonthCount }} / {{ monthlyLimit }} 张</span>
             </div>
-            <van-progress :percentage="quotaPercent" stroke-width="8" color="#fde047" track-color="rgba(255,255,255,0.2)" :show-pivot="false" />
+            <van-progress :percentage="quotaPercent" stroke-width="8" color="#fff" track-color="rgba(255,255,255,0.2)" :show-pivot="false" />
             <div style="font-size:11px;opacity:0.8;margin-top:6px;display:flex;justify-content:space-between">
               <span>累计已收录 {{ totalCount }} 张蜕变瞬间</span>
               <span>次月1日额度自动重置</span>
@@ -314,13 +313,13 @@
         @cancel="previewAll(activePhoto)"
       >
         <div v-if="activePhoto" style="padding:14px 18px">
-          <div style="border-radius:10px;overflow:hidden;margin-bottom:12px;background:#111;text-align:center" @click="previewAll(activePhoto)">
+          <div style="border-radius:10px;overflow:hidden;margin-bottom:12px;background:#000;text-align:center" @click="previewAll(activePhoto)">
             <img :src="activePhoto.photo_url" style="max-width:100%;max-height:280px;object-fit:contain;vertical-align:middle" />
           </div>
 
-          <div style="background:#f9fafb;border-radius:8px;padding:10px 12px;margin-bottom:12px">
+          <div style="background:var(--c-bg-2);border-radius:8px;padding:10px 12px;margin-bottom:12px">
             <div style="font-size:13px;font-weight:600;color:var(--c-text);margin-bottom:4px">心得随笔：</div>
-            <div style="font-size:13px;color:#4b5563;line-height:1.5">
+            <div style="font-size:13px;color:var(--c-text-2);line-height:1.5">
               {{ activePhoto.remark || '暂未填写训练心得' }}
             </div>
             <div style="font-size:11px;color:var(--c-text-3);margin-top:6px">

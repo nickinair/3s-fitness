@@ -13,7 +13,7 @@ window.Pages.Login = {
   template: [
     '<div class="page login-page">',
     '  <div class="login-hero">',
-    '    <img class="login-logo" src="/static/logo.png" alt="3S运动中心 FITNESS">',
+    '    <img class="login-logo" src="/static/logo-black.png" alt="3S运动中心 FITNESS">',
     '    <p>这是一场享受自我蜕变的快乐健身</p>',
     '  </div>',
     '  <div class="login-card">',

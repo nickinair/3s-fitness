@@ -75,11 +75,12 @@
   /* 字典: [文案, van-tag type] */
   const DICT = {
     cardKind: { 1: '次卡', 2: '时间卡', 3: '储值卡', 4: '私教卡' },
-    cardStatus: { 0: ['待开卡', 'primary'], 1: ['使用中', 'success'], 2: ['已过期', 'default'], 3: ['已暂停', 'warning'], 4: ['已停用', 'danger'], 5: ['已退卡', 'default'] },
+    // 标签类型 = 四种形态: primary/success 黑底白字, warning 黑框(待处理), default 灰底(已结束), danger 红框(风险)
+    cardStatus: { 0: ['待开卡', 'warning'], 1: ['使用中', 'success'], 2: ['已过期', 'default'], 3: ['已暂停', 'warning'], 4: ['已停用', 'danger'], 5: ['已退卡', 'danger'] },
     ptStatus: { 0: ['待确认', 'warning'], 1: ['已确认', 'primary'], 2: ['已取消', 'default'], 3: ['已完成', 'success'], 4: ['已爽约', 'danger'] },
     groupStatus: { 0: ['候补中', 'warning'], 1: ['已预约', 'primary'], 2: ['已核销', 'success'], 3: ['已取消', 'default'], 4: ['已爽约', 'danger'] },
     signStatus: { 0: ['待签署', 'warning'], 1: ['已签署', 'success'] },
-    expireStatus: { 0: ['无卡', 'default'], 1: ['在籍', 'success'], 2: ['已过期', 'danger'] },
+    expireStatus: { 0: ['无卡', 'default'], 1: ['在籍', 'success'], 2: ['已过期', 'default'] },
     syllabusStatus: { 1: ['正常', 'primary'], 2: ['已取消', 'default'], 3: ['已结课', 'success'] },
     payMethod: { wechat: '微信支付', alipay: '支付宝', cash: '现金', pos: 'POS刷卡', transfer: '转账', store: '储值抵扣', meituan: '美团/大众', other: '其他', import: '历史导入' },
     rechargeType: { 1: '开卡', 2: '续卡', 3: '充值', 4: '退卡' },

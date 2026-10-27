@@ -120,7 +120,7 @@
       '  <template v-else>',
 
       '    <div class="ai-box">',
-      '      <div class="flex"><van-icon name="bulb-o" color="#6a5af9"/><b style="margin-left:6px;font-size:14px">AI 一句话生成</b><span class="muted flex1" style="margin-left:8px">说出或输入整套安排</span></div>',
+      '      <div class="flex"><van-icon name="bulb-o" color="var(--c-title)"/><b style="margin-left:6px;font-size:14px">AI 一句话生成</b><span class="muted flex1" style="margin-left:8px">说出或输入整套安排</span></div>',
       '      <textarea v-model="aiText" rows="2" class="ai-ta" placeholder="例：练背：引体向上4组8次，杠铃划船4组10次60kg，最后划船机15分钟"></textarea>',
       // 录音时只有左侧按钮切换成声纹条, AI 解析按钮始终可见
       '      <div class="flex" style="gap:8px;margin-top:8px">',

@@ -18,7 +18,7 @@ window.SignPadMixin = {
       const ctx = cv.getContext('2d');
       ctx.scale(dpr, dpr);
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = '#111'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       this._ctx = ctx; this._cw = w; this._ch = h;
       let drawing = false;
       const pos = (e) => {

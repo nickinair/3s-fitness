@@ -441,7 +441,7 @@ window.Pages.StaffMemberOverview = {
     '  <div class="stat-row" v-if="d" style="margin-top:12px">',
     '    <div class="stat-cell"><div class="v">{{ d.counts.total||0 }}</div><div class="l">会员总数</div></div>',
     '    <div class="stat-cell"><div class="v" style="color:var(--brand)">{{ d.counts.active||0 }}</div><div class="l">在籍会员</div></div>',
-    '    <div class="stat-cell"><div class="v" style="color:var(--danger)">{{ d.counts.expired||0 }}</div><div class="l">过期召回池</div></div>',
+    '    <div class="stat-cell"><div class="v">{{ d.counts.expired||0 }}</div><div class="l">过期召回池</div></div>',
     '    <div class="stat-cell"><div class="v" style="color:var(--c-text-3)">{{ d.counts.none||0 }}</div><div class="l">无卡会员</div></div>',
     '  </div>',
     '  <div class="rpt-export-row" v-if="d" @click="exportCsv(\'counts\')">导出会员构成 <van-icon name="arrow" size="11"/></div>',

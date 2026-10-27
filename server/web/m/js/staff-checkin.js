@@ -10,7 +10,7 @@ window.Pages.StaffCheckin = {
     '  <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="var(--brand)">搜索中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="searched && !list.length" description="未找到会员，请检查关键词"/>',
-    '    <div v-if="!searched" class="muted" style="text-align:center;padding:44px 20px">输入姓名或手机号搜索会员，点击结果即可签到<br/><br/><van-icon name="aim" size="46" color="#d3dedd"/></div>',
+    '    <div v-if="!searched" class="muted" style="text-align:center;padding:44px 20px">输入姓名或手机号搜索会员，点击结果即可签到<br/><br/><van-icon name="aim" size="46" color="var(--c-text-4)"/></div>',
     '    <div v-for="m in list" :key="m.id" class="rec-item flex" :class="{black:m.is_black}" @click="doCheckin(m)">',
     '      <m-avatar :name="m.realname" :size="44" :style="m.is_black?{background:\'var(--danger)\'}:{}"></m-avatar>',
     '      <div class="flex1" style="margin-left:12px">',

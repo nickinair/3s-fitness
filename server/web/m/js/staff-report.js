@@ -65,8 +65,8 @@
     template: [
       '<div class="rpt-linechart">',
       '  <svg v-if="geo.pts.length" :viewBox="\'0 0 \'+geo.W+\' \'+geo.HT" preserveAspectRatio="none" style="width:100%;display:block">',
-      '    <line v-for="t in geo.ticks" :key="\'g\'+t.y" :x1="geo.padL" :x2="geo.W-geo.padR" :y1="t.y" :y2="t.y" stroke="#f0f1f3" stroke-width="1"/>',
-      '    <text v-for="t in geo.ticks" :key="\'t\'+t.y" x="1" :y="t.y+3" font-size="9" fill="#b0b3b8">{{ t.v }}</text>',
+      '    <line v-for="t in geo.ticks" :key="\'g\'+t.y" :x1="geo.padL" :x2="geo.W-geo.padR" :y1="t.y" :y2="t.y" stroke-width="1" style="stroke:var(--c-line-2)"/>',
+      '    <text v-for="t in geo.ticks" :key="\'t\'+t.y" x="1" :y="t.y+3" font-size="9" style="fill:var(--c-text-4)">{{ t.v }}</text>',
       '    <path :d="areaPath" :style="{ fill: color }" opacity=".12" stroke="none"/>',
       '    <path :d="linePath" fill="none" :style="{ stroke: color }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
       '    <circle v-for="(p,i) in geo.pts" :key="\'c\'+i" :cx="p.x" :cy="p.y" r="2.6" :style="{ fill: color }"/>',
@@ -85,7 +85,7 @@
       unit: { type: String, default: '' },
       money: { type: Boolean, default: false },
     },
-    data() { return { palette: ['#4f6bed', '#3aa5d8', '#3cb371', '#8bc34a', '#e0b93c', '#e08a3c', '#e05a5a'] }; },
+    data() { return { palette: ['var(--brand)', 'var(--c-ink-3)', 'var(--c-text-3)', 'var(--c-text-4)', 'var(--brand-soft-2)'] }; },
     methods: {
       colorOf(i) { return this.palette[i % this.palette.length]; },
       fmtVal(it) { return this.money ? H.money(it.value) : (H.num(it.value) + (this.unit || '')); },
