@@ -29,7 +29,8 @@
       },
       render() {
         if (this.chart && this.option) {
-          this.chart.setOption(Object.assign({ backgroundColor: 'transparent' }, this.option), true);
+          // 没指定 color 的图表(如饼图)默认用灰阶调色板, 不用 ECharts 自带彩色
+          this.chart.setOption(Object.assign({ backgroundColor: 'transparent', color: themePalette() }, this.option), true);
         }
       },
     },

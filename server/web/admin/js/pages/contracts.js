@@ -52,7 +52,7 @@ window.AppPages.Contracts = {
         <div class="contract-body">{{ contract.content }}</div>
         <div v-if="contract.sign_status === 1 && contract.sign_img" style="margin-top:12px">
           <div class="text-muted" style="margin-bottom:6px">会员签名：</div>
-          <img :src="contract.sign_img" style="max-height:110px;border:1px dashed #ccc;border-radius:8px;background:#fff" />
+          <img :src="contract.sign_img" style="max-height:110px;border:1px dashed var(--border);border-radius:8px;background:#fff" />
         </div>
       </template>
     </el-dialog>

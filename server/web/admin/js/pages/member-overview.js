@@ -47,11 +47,11 @@ window.AppPages.MemberOverview = {
       </div>
       <div class="metric-card">
         <div class="m-icon"><el-icon size="20"><WarningFilled /></el-icon></div>
-        <div class="m-label">过期召回池</div><div class="m-value" style="color:#d43a3a">{{ d.counts.expired || 0 }}</div>
+        <div class="m-label">过期召回池</div><div class="m-value">{{ d.counts.expired || 0 }}</div>
       </div>
       <div class="metric-card">
         <div class="m-icon"><el-icon size="20"><Postcard /></el-icon></div>
-        <div class="m-label">无卡会员</div><div class="m-value" style="color:#909399">{{ d.counts.none || 0 }}</div>
+        <div class="m-label">无卡会员</div><div class="m-value" style="color:var(--text-muted)">{{ d.counts.none || 0 }}</div>
       </div>
     </div>
     <div class="card-box">

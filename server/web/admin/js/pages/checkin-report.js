@@ -29,7 +29,7 @@ window.AppPages.CheckinReport = {
         grid: { left: 46, right: 20, top: 30, bottom: 40 },
         xAxis: { type: 'category', data: hours.map(h => h + '时') },
         yAxis: { type: 'value', minInterval: 1 },
-        series: [{ name: '入场人次', type: 'bar', color: '#18a08d', barMaxWidth: 26,
+        series: [{ name: '入场人次', type: 'bar', color: themeColor('--brand'), barMaxWidth: 26,
           data: hours.map(h => map[h] || 0) }],
       };
     },

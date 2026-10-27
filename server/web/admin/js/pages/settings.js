@@ -344,8 +344,8 @@ window.AppPages.SettingsBanners = {
       <el-table border :data="list" v-loading="loading" stripe>
         <el-table-column label="图片" width="175">
           <template #default="{ row }">
-            <img v-if="row.image" :src="row.image" style="width:150px;height:60px;object-fit:cover;border-radius:6px;background:#0c1c1a" />
-            <div v-else style="width:128px;height:48px;border-radius:6px;background:linear-gradient(120deg,#f2994a,#f2c94c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px">{{ row.title || '渐变底' }}</div>
+            <img v-if="row.image" :src="row.image" style="width:150px;height:60px;object-fit:cover;border-radius:6px;background:#000" />
+            <div v-else style="width:128px;height:48px;border-radius:6px;background:var(--brand);color:var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:12px">{{ row.title || '渐变底' }}</div>
           </template>
         </el-table-column>
         <el-table-column prop="title" label="标题" min-width="160" />

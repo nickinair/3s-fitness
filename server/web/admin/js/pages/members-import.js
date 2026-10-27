@@ -149,10 +149,10 @@
             <el-table-column prop="card_desc" label="会员卡" min-width="240" />
             <el-table-column label="校验" min-width="260">
               <template #default="{ row }">
-                <span v-if="!row.ok" style="color:#f56c6c">{{ row.errors.join('；') }}</span>
-                <span v-else-if="row.skip" style="color:#909399">{{ (row.warnings || []).join('；') }}</span>
-                <span v-else style="color:#67c23a">
-                  通过<span v-if="row.warnings && row.warnings.length" style="color:#e6a23c">（{{ row.warnings.join('；') }}）</span>
+                <span v-if="!row.ok" style="color:var(--danger)">{{ row.errors.join('；') }}</span>
+                <span v-else-if="row.skip" style="color:var(--text-muted)">{{ (row.warnings || []).join('；') }}</span>
+                <span v-else style="color:var(--text-main)">
+                  通过<span v-if="row.warnings && row.warnings.length" style="color:var(--text-sub)">（{{ row.warnings.join('；') }}）</span>
                 </span>
               </template>
             </el-table-column>

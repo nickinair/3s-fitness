@@ -55,7 +55,7 @@ window.AppPages.MemberDetail = {
         series: [
           { name: '体重(kg)', type: 'line', smooth: true, connectNulls: true, itemStyle: { color: themeColor('--brand') },
             areaStyle: { opacity: .1 }, data: rows.map(r => r.weight != null ? Number(r.weight) : null) },
-          { name: '体脂率(%)', type: 'line', smooth: true, connectNulls: true, yAxisIndex: 1, itemStyle: { color: themeColor('--money') },
+          { name: '体脂率(%)', type: 'line', smooth: true, connectNulls: true, yAxisIndex: 1, itemStyle: { color: themeColor('--chart-3') },
             data: rows.map(r => r.body_fat != null ? Number(r.body_fat) : null) },
         ],
       };
@@ -90,7 +90,7 @@ window.AppPages.MemberDetail = {
             <div style="grid-column: span 2" v-if="comparePhotos.length">
               <span class="lab">目标对比图</span>
               <div style="display:inline-flex;gap:8px;vertical-align:middle;margin-top:4px">
-                <el-image v-for="(img, idx) in comparePhotos" :key="idx" :src="img" :preview-src-list="comparePhotos" fit="cover" style="width:54px;height:54px;border-radius:6px;cursor:pointer;border:1px solid #e5e7eb" />
+                <el-image v-for="(img, idx) in comparePhotos" :key="idx" :src="img" :preview-src-list="comparePhotos" fit="cover" style="width:54px;height:54px;border-radius:6px;cursor:pointer;border:1px solid var(--borderb" />
               </div>
             </div>
             <div style="grid-column: span 2"><span class="lab">备注</span>{{ profile.remark || '-' }}</div>
@@ -289,7 +289,7 @@ window.AppPages.MemberDetail = {
         <div class="contract-body">{{ contract.content }}</div>
         <div v-if="contract.sign_status === 1 && contract.sign_img" style="margin-top:12px">
           <div class="text-muted" style="margin-bottom:6px">会员签名：</div>
-          <img :src="contract.sign_img" style="max-height:110px;border:1px dashed #ccc;border-radius:8px;background:#fff" />
+          <img :src="contract.sign_img" style="max-height:110px;border:1px dashed var(--border);border-radius:8px;background:#fff" />
         </div>
       </template>
     </el-dialog>
@@ -356,7 +356,7 @@ window.AppPages.MemberDetail = {
           <el-col :span="24"><el-form-item label="会馆反馈"><el-input v-model="form.studio_feedback" type="textarea" :rows="2" placeholder="会员对场馆设施/课程安排/教练服务的反馈与建议" /></el-form-item></el-col>
           <el-col :span="24"><el-form-item label="目标对比图">
             <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-              <div v-for="(img, idx) in formPhotos" :key="idx" style="position:relative;width:60px;height:60px;border-radius:6px;overflow:hidden;border:1px solid #dcdfe6">
+              <div v-for="(img, idx) in formPhotos" :key="idx" style="position:relative;width:60px;height:60px;border-radius:6px;overflow:hidden;border:1px solid var(--border)">
                 <el-image :src="img" fit="cover" style="width:100%;height:100%" />
                 <div @click="removePhoto(idx)" style="position:absolute;top:0;right:0;background:rgba(0,0,0,0.6);color:#fff;width:18px;height:18px;line-height:18px;text-align:center;cursor:pointer;font-size:12px;border-bottom-left-radius:4px">×</div>
               </div>
@@ -408,7 +408,7 @@ window.AppPages.MemberDetail = {
               <el-button size="small" type="primary" plain :loading="photoUploading">+ 选择并上传照片</el-button>
             </el-upload>
             <div v-if="photoForm.photo_url" style="margin-top:6px">
-              <img :src="photoForm.photo_url" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #dcdfe6"/>
+              <img :src="photoForm.photo_url" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>
             </div>
           </div>
         </el-form-item>

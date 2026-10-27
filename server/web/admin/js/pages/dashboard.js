@@ -2,7 +2,7 @@
 
 const DashRatioList = {   // 不能叫 RatioList: report.js 也在全局声明了同名常量, 重名会让后加载的 report.js 整个文件报错
   props: { list: { type: Array, default: () => [] }, unit: String, money: Boolean },
-  data() { return { palette: ['#4f6bed', '#3aa5d8', '#3cb371', '#8bc34a', '#e0b93c', '#e08a3c', '#e05a5a'] }; },
+  data() { return { palette: ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'] }; },
   methods: {
     colorOf(i) { return this.palette[i % this.palette.length]; },
     fmtVal(it) { return this.money ? '¥' + window.Fmt.num(it.money || it.value) : (window.Fmt.num(it.cnt || it.value) + (this.unit || '')); },
@@ -105,7 +105,7 @@ window.AppPages.Dashboard = {
           { name: '预收流水', type: 'line', smooth: true, data: pick(this.monthly.revenueTrend),
             itemStyle: { color: themeColor('--brand') }, areaStyle: { opacity: 0.12 } },
           { name: '耗卡金额', type: 'line', smooth: true, data: pick(this.monthly.spendTrend),
-            itemStyle: { color: themeColor('--money') }, areaStyle: { opacity: 0.1 } },
+            itemStyle: { color: themeColor('--chart-3') }, areaStyle: { opacity: 0.1 } },
         ],
       };
     },
@@ -115,7 +115,7 @@ window.AppPages.Dashboard = {
       return {
         tooltip: { trigger: 'item', valueFormatter: v => '¥' + Number(v).toFixed(2) },
         legend: { bottom: 0 },
-        color: [themeColor('--brand'), '#3a7bd5', themeColor('--money')],
+        color: [themeColor('--chart-1'), themeColor('--chart-3'), themeColor('--chart-4')],
         series: [{
           type: 'pie', radius: ['48%', '72%'], center: ['50%', '44%'],
           label: { formatter: '{b}\n¥{c}' },
@@ -145,7 +145,7 @@ window.AppPages.Dashboard = {
         grid: { left: 60, right: 20, top: 20, bottom: 20 },
         xAxis: { type: 'category', data: this.financeData.trend.map(x => x.label), boundaryGap: false },
         yAxis: { type: 'value' },
-        series: [{ type: 'line', smooth: true, data: this.financeData.trend.map(x => x.value), itemStyle: { color: '#e6a23c' }, areaStyle: { opacity: 0.1 } }]
+        series: [{ type: 'line', smooth: true, data: this.financeData.trend.map(x => x.value), itemStyle: { color: themeColor('--brand') }, areaStyle: { opacity: 0.1 } }]
       };
     }
   },

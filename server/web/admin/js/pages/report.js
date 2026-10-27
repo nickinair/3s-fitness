@@ -18,7 +18,7 @@ const RatioList = {
   },
   emits: ['export'],
   data() {
-    return { colors: ['#4f6bed', '#3aa5d8', '#3cb371', '#8bc34a', '#e0b93c', '#e08a3c', '#e05a5a'] };
+    return { colors: ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'] };
   },
   template: `
     <div>

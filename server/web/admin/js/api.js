@@ -166,7 +166,12 @@
   window.DICT = DICT;
   function fmtNum(v) { const n = Number(v); return isNaN(n) ? String(v) : n.toLocaleString('zh-CN', { maximumFractionDigits: 2 }); }
   // 读取 theme.css 里的配色变量实际值, 给 ECharts/二维码这类不认 var() 的地方用
-  window.themeColor = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  // 读取时登记一个响应式依赖: 切换深浅色(fit-theme-change)后, 用到颜色的图表配置(computed)会自动重算
+  const themeState = Vue.reactive({ v: 0 });
+  window.addEventListener('fit-theme-change', () => { themeState.v++; });
+  window.themeColor = (name) => { themeState.v; return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); };
+  // 图表灰阶调色板(随深浅色主题), 多系列图表按顺序取色
+  window.themePalette = () => ['--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5'].map(themeColor);
   window.Fmt = { money: fmtMoney, time: fmtTime, date: fmtDate, dayDiff, num: fmtNum };
   window.AppPages = {};
 })();

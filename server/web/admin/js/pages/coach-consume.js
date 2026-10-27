@@ -43,7 +43,7 @@ window.AppPages.CoachConsume = {
         if (!byCoach[x.coach_name]) byCoach[x.coach_name] = {};
         byCoach[x.coach_name][x.d] = Number(x.lessons || 0);
       });
-      const colors = [themeColor('--brand'), '#3a7bd5', themeColor('--money'), '#7b52ab', '#d43a3a', '#2a9d8f', '#e07b39'];
+      const colors = themePalette();
       const names = Object.keys(byCoach);
       return {
         tooltip: { trigger: 'axis' },

@@ -138,7 +138,7 @@ window.AppPages.PtBookings = {
 
     <!-- 本节课训练计划 -->
     <el-dialog v-model="planDlg.show" title="本节课训练计划" width="480px" destroy-on-close>
-      <div v-if="planDlg.row" style="margin-bottom:12px;color:#666;font-size:13px;line-height:1.6">
+      <div v-if="planDlg.row" style="margin-bottom:12px;color:var(--text-sub);font-size:13px;line-height:1.6">
         会员：<b>{{ planDlg.row.realname }}</b> · 日期：<b>{{ Fmt.date(planDlg.row.date) }} {{ planDlg.row.from_time }}-{{ planDlg.row.to_time }}</b><br>
         课程：{{ planDlg.row.course_title }} · 教练：{{ planDlg.row.coach_name || '未指定' }}
       </div>

@@ -50,7 +50,7 @@ window.AppPages.FinanceMonthly = {
         ],
         series: [
           { name: '营收', type: 'line', smooth: true, color: themeColor('--brand'), areaStyle: { opacity: .12 }, data: months.map(m => revMap[m] || 0) },
-          { name: '新增会员', type: 'line', smooth: true, color: '#3a7bd5', yAxisIndex: 1, data: months.map(m => memMap[m] || 0) },
+          { name: '新增会员', type: 'line', smooth: true, color: themeColor('--chart-3'), yAxisIndex: 1, data: months.map(m => memMap[m] || 0) },
         ],
       };
     },
@@ -68,7 +68,7 @@ window.AppPages.FinanceMonthly = {
       return {
         tooltip: { trigger: 'item', valueFormatter: v => '¥' + Number(v).toLocaleString() },
         legend: { bottom: 0 },
-        color: ['#909399', '#7b52ab', themeColor('--brand'), themeColor('--money'), '#d43a3a'],
+        color: [themeColor('--chart-4'), themeColor('--chart-2'), themeColor('--chart-1'), themeColor('--chart-3'), themeColor('--danger')],
         series: [{ type: 'pie', radius: ['45%', '70%'], center: ['50%', '42%'],
           data: this.d.spendByScene.map(x => ({ name: DICT.spendScene[x.scene] || ('场景' + x.scene), value: Number(x.money || 0) })) }],
       };

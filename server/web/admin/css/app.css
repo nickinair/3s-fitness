@@ -1,51 +1,167 @@
+/* ============ 配色 ============
+ * 色值来自 /static/theme.css(黑白灰), 这里只做后台语义变量与 Element Plus 主题的桥接。
+ * 浅色: 白底黑字, 黑色为唯一强调色; 深色: 黑底白字, 主色反转为白色。
+ * 只有偏暗红(--danger)用于风险状态。 */
 :root {
-  --el-color-primary: #0d5e56;
-  --el-color-primary-dark-2: #0a4b45;
-  --el-color-primary-light-3: #3d7e78;
-  --el-color-primary-light-5: #6d9f9a;
-  --el-color-primary-light-7: #9ebfbc;
-  --el-color-primary-light-8: #b6cfcd;
-  --el-color-primary-light-9: #e7efee;
-  --brand: #0d5e56;
-  --sidebar-bg: #08332f;
-  --sidebar-sub: #062724;
-  /* 语义色板（浅色） */
-  --bg-page: #f0f3f2;
-  --bg-card: #ffffff;
-  --bg-sunken: #f7faf9;
-  --text-main: #253b38;
-  --text-sub: #59706c;
-  --text-muted: #98a9a5;
-  --border: #e4ebe9;
-  --hover-bg: #eef5f3;
-  --shadow: 0 1px 3px rgba(31, 63, 58, .05);
+  /* Element Plus 主色: 黑 */
+  --el-color-primary: var(--brand);
+  --el-color-primary-dark-2: #000000;
+  --el-color-primary-light-3: #4d4d4d;
+  --el-color-primary-light-5: #7f7f7f;
+  --el-color-primary-light-7: #b3b3b3;
+  --el-color-primary-light-8: #cccccc;
+  --el-color-primary-light-9: var(--c-bg-2);
+  /* 成功 = 主色(黑); 警告 = 深灰; 信息 = 中灰; 危险 = 偏暗红 */
+  --el-color-success: var(--brand);
+  --el-color-success-dark-2: #000000;
+  --el-color-success-light-3: #4d4d4d;
+  --el-color-success-light-5: #7f7f7f;
+  --el-color-success-light-7: #b3b3b3;
+  --el-color-success-light-8: #cccccc;
+  --el-color-success-light-9: var(--c-bg-2);
+  --el-color-warning: var(--c-title);
+  --el-color-warning-dark-2: #000000;
+  --el-color-warning-light-3: #4d4d4d;
+  --el-color-warning-light-5: #7f7f7f;
+  --el-color-warning-light-7: #b3b3b3;
+  --el-color-warning-light-8: #cccccc;
+  --el-color-warning-light-9: var(--c-bg-2);
+  --el-color-info: var(--c-text-3);
+  --el-color-info-dark-2: #636363;
+  --el-color-info-light-3: #a3a3a3;
+  --el-color-info-light-5: #bebebe;
+  --el-color-info-light-7: #d8d8d8;
+  --el-color-info-light-8: #e5e5e5;
+  --el-color-info-light-9: var(--c-bg-2);
+  --el-color-danger: var(--danger);
+  --el-color-danger-dark-2: #a83030;
+  --el-color-danger-light-3: #e07777;
+  --el-color-danger-light-5: #e99e9e;
+  --el-color-danger-light-7: #f2c5c5;
+  --el-color-danger-light-8: #f6d8d8;
+  --el-color-danger-light-9: var(--danger-soft);
+  --el-color-error: var(--danger);
+  --el-color-error-light-9: var(--danger-soft);
+  /* Element 中性色: 纯灰, 不带蓝调 */
+  --el-text-color-primary: var(--c-title);
+  --el-text-color-regular: var(--c-text);
+  --el-text-color-secondary: var(--c-text-3);
+  --el-text-color-placeholder: var(--c-text-4);
+  --el-border-color: #dcdcdc;
+  --el-border-color-light: #e4e4e4;
+  --el-border-color-lighter: var(--c-line);
+  --el-border-color-extra-light: var(--c-line-2);
+  --el-fill-color: var(--c-bg-2);
+  --el-fill-color-light: #f5f5f5;
+  --el-fill-color-lighter: #fafafa;
+  --el-bg-color-page: var(--c-bg);
+  /* 后台语义变量 */
+  --sidebar-bg: var(--c-card);
+  --sidebar-sub: var(--c-card);
+  --sidebar-text: var(--c-text-2);
+  --sidebar-active-bg: var(--c-bg-2);
+  --bg-page: var(--c-bg);
+  --bg-card: var(--c-card);
+  --bg-sunken: #fafafa;
+  --text-main: var(--c-title);
+  --text-sub: var(--c-text-2);
+  --text-muted: var(--c-text-3);
+  --border: var(--c-line);
+  --hover-bg: var(--c-bg-2);
+  --shadow: none;                          /* 参考图: 卡片不用阴影, 靠底色区分 */
 }
 
-/* ============ 深色主题 ============ */
+/* ============ 深色主题: 黑底白字 ============ */
 html.dark {
-  --el-color-primary: #34b3a0;
-  --el-color-primary-dark-2: #4ecab6;
-  --el-color-primary-light-3: #2a8f81;
-  --el-color-primary-light-5: #1f6b61;
-  --el-color-primary-light-7: #164e46;
-  --el-color-primary-light-8: #123f39;
-  --el-color-primary-light-9: #0e312c;
-  --brand: #34b3a0;
-  --sidebar-bg: #0c1514;
-  --sidebar-sub: #080f0e;
-  --bg-page: #111917;
-  --bg-card: #1a2422;
-  --bg-sunken: #151e1c;
-  --text-main: #e2eae8;
-  --text-sub: #aabbb7;
-  --text-muted: #7a8c88;
-  --border: #2b3a37;
-  --hover-bg: #22302d;
-  --shadow: 0 1px 3px rgba(0, 0, 0, .3);
+  --brand: #ffffff;                        /* 主色反转为白 */
+  --brand-rgb: 255, 255, 255;
+  --brand-light: #d9d9d9;
+  --brand-soft: #1f1f1f;
+  --brand-soft-2: #333333;
+  --brand-line: #333333;
+  --danger: #e06363;
+  --danger-rgb: 224, 99, 99;
+  --danger-soft: #2a1414;
+  --danger-line: #5c2a2a;
+  --up: #ffffff;
+  --money: #ffffff;
+  --c-title: #ffffff;
+  --c-text: #e0e0e0;
+  --c-text-2: #b4b4b4;
+  --c-text-3: #8c8c8c;
+  --c-text-4: #5c5c5c;
+  --c-line: #2a2a2a;
+  --c-line-2: #222222;
+  --c-bg: #000000;
+  --c-bg-2: #1f1f1f;
+  --c-card: #141414;
+  /* Element 自带深色变量会把这些基础色设成默认蓝/绿/橙, 必须重新指定 */
+  --el-color-primary: var(--brand);
+  --el-color-success: var(--brand);
+  --el-color-warning: var(--c-title);
+  --el-color-info: var(--c-text-3);
+  --el-color-danger: var(--danger);
+  --el-color-error: var(--danger);
+  --el-color-primary-dark-2: #ffffff;
+  --el-color-primary-light-3: #b3b3b3;
+  --el-color-primary-light-5: #808080;
+  --el-color-primary-light-7: #4d4d4d;
+  --el-color-primary-light-8: #333333;
+  --el-color-primary-light-9: #1f1f1f;
+  --el-color-success-dark-2: #ffffff;
+  --el-color-success-light-3: #b3b3b3;
+  --el-color-success-light-5: #808080;
+  --el-color-success-light-7: #4d4d4d;
+  --el-color-success-light-8: #333333;
+  --el-color-success-light-9: #1f1f1f;
+  --el-color-warning-dark-2: #ffffff;
+  --el-color-warning-light-3: #b3b3b3;
+  --el-color-warning-light-5: #808080;
+  --el-color-warning-light-7: #4d4d4d;
+  --el-color-warning-light-8: #333333;
+  --el-color-warning-light-9: #1f1f1f;
+  --el-color-info-dark-2: #b4b4b4;
+  --el-color-info-light-3: #6b6b6b;
+  --el-color-info-light-5: #4f4f4f;
+  --el-color-info-light-7: #3a3a3a;
+  --el-color-info-light-8: #2e2e2e;
+  --el-color-info-light-9: #1f1f1f;
+  --el-color-danger-dark-2: #ff8a8a;
+  --el-color-danger-light-3: #a84b4b;
+  --el-color-danger-light-5: #7a3838;
+  --el-color-danger-light-7: #4d2626;
+  --el-color-danger-light-8: #3a1d1d;
+  --el-color-danger-light-9: #2a1414;
+  /* Element 在主色/彩色底上的文字都用 --el-color-white; 主色变白后这些文字要变黑 */
+  --el-color-white: #000000;
+  --chart-1: #ffffff;
+  --chart-2: #bfbfbf;
+  --chart-3: #8c8c8c;
+  --chart-4: #595959;
+  --chart-5: #333333;
+  --el-bg-color: var(--c-card);
+  --el-bg-color-overlay: #1a1a1a;
+  --el-text-color-primary: var(--c-title);
+  --el-text-color-regular: var(--c-text);
+  --el-text-color-secondary: var(--c-text-3);
+  --el-text-color-placeholder: var(--c-text-4);
+  --el-border-color: #3a3a3a;
+  --el-border-color-light: #303030;
+  --el-border-color-lighter: var(--c-line);
+  --el-border-color-extra-light: var(--c-line-2);
+  --el-fill-color: #1f1f1f;
+  --el-fill-color-light: #1a1a1a;
+  --el-fill-color-lighter: #161616;
+  --el-fill-color-blank: var(--c-card);
+  --sidebar-bg: #000000;
+  --sidebar-sub: #000000;
+  --sidebar-active-bg: #1f1f1f;
+  --bg-sunken: #0d0d0d;
+  --hover-bg: #1f1f1f;
   color-scheme: dark;
 }
 html.dark .el-card, html.dark .el-dialog, html.dark .el-drawer { --el-bg-color: var(--bg-card); }
-/* 深色下表格沿用卡片色系(#1a2422), 不要 Element 默认的近黑 */
+/* 深色下表格沿用卡片色, 不要 Element 默认的近黑 */
 html.dark .el-table {
   --el-table-bg-color: var(--bg-card);
   --el-table-tr-bg-color: var(--bg-card);
@@ -63,43 +179,50 @@ html.dark .el-table__fixed-right-patch, html.dark .el-table__empty-block { backg
 /* 分页、筛选区等容器同样跟随卡片色 */
 html.dark .el-pagination { --el-bg-color: var(--bg-card); --el-text-color-regular: var(--text-sub); }
 
+/* ============ 状态标签四种形态(与移动端一致) ============
+ * 已确认/使用中/已完成 = 黑底白字; 待确认/待开卡 = 黑框; 已取消/已过期 = 灰底灰字; 爽约/退卡/黑名单 = 红框 */
+.el-tag.el-tag--primary:not(.el-tag--plain), .el-tag.el-tag--success:not(.el-tag--plain) {
+  --el-tag-bg-color: var(--brand); --el-tag-border-color: var(--brand); --el-tag-text-color: var(--el-color-white, #fff); }
+.el-tag.el-tag--warning:not(.el-tag--plain) { --el-tag-bg-color: transparent; --el-tag-border-color: var(--c-title); --el-tag-text-color: var(--c-title); }
+.el-tag.el-tag--info:not(.el-tag--plain) { --el-tag-bg-color: var(--c-bg-2); --el-tag-border-color: var(--c-bg-2); --el-tag-text-color: var(--c-text-3); }
+.el-tag.el-tag--danger:not(.el-tag--plain) { --el-tag-bg-color: transparent; --el-tag-border-color: var(--danger); --el-tag-text-color: var(--danger); }
+
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-page); font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif; }
 #app { height: 100%; }
 
-/* ============ 登录页 ============ */
-.login-wrap { height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: var(--brand-grad-deep); position: relative; overflow: hidden; }
-.login-wrap::before { content: ''; position: absolute; width: 620px; height: 620px; border-radius: 50%;
-  background: rgba(255,255,255,.05); top: -220px; right: -160px; }
-.login-wrap::after { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%;
-  background: rgba(255,255,255,.04); bottom: -160px; left: -120px; }
-.login-card { width: 400px; background: var(--bg-card); border-radius: 14px; padding: 40px 36px 34px; box-shadow: 0 22px 60px rgba(0,0,0,.28); position: relative; z-index: 2; }
-.login-logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 6px; }
-.login-logo .badge { width: 42px; height: 42px; border-radius: 11px; background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 19px; letter-spacing: -1px; }
-.login-logo h1 { font-size: 22px; margin: 0; color: var(--text-main); }
+/* ============ 登录页: 白底 + 居中黑色 Logo(深色模式换白色 Logo) ============ */
+.login-wrap { height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-card); }
+.login-card { width: 400px; background: var(--bg-card); padding: 20px 36px 34px; }
+.login-logo { text-align: center; margin-bottom: 10px; }
+.login-logo img { width: 210px; display: inline-block; }
+.login-logo .logo-dark { display: none; }
+html.dark .login-logo .logo-light { display: none; }
+html.dark .login-logo .logo-dark { display: inline-block; }
+.login-logo h1 { font-size: 18px; margin: 12px 0 0; color: var(--text-main); font-weight: 600; }
 .login-sub { text-align: center; color: var(--text-muted); font-size: 13px; margin-bottom: 28px; }
 .login-tip { margin-top: 16px; font-size: 12px; color: var(--text-muted); text-align: center; line-height: 1.8; }
 
 /* ============ 布局 ============ */
 .layout { display: flex; height: 100vh; }
-.sidebar { width: 220px; flex-shrink: 0; background: var(--sidebar-bg); display: flex; flex-direction: column; overflow: hidden; }
+.sidebar { width: 220px; flex-shrink: 0; background: var(--sidebar-bg); display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--border); }
 .sidebar .brand { height: 60px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--sidebar-sub); flex-shrink: 0; }
-.sidebar .brand .badge { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg,#18a08d,var(--brand)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
-.sidebar .brand span { color: #fff; font-weight: 600; font-size: 16px; letter-spacing: .5px; white-space: nowrap; }
+.sidebar .brand .badge { width: 32px; height: 32px; border-radius: 8px; background: var(--brand); color: var(--bg-card); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
+.sidebar .brand span { color: var(--text-main); font-weight: 600; font-size: 16px; letter-spacing: .5px; white-space: nowrap; }
 /* 「管理后台」做成小标签, 避免标题折行 */
-.sidebar .brand .brand-tag { font-style: normal; font-size: 11px; color: rgba(255,255,255,.82);
-  background: rgba(255,255,255,.14); border-radius: 4px; padding: 2px 6px; white-space: nowrap; flex-shrink: 0; }
+.sidebar .brand .brand-tag { font-style: normal; font-size: 11px; color: var(--text-sub);
+  background: var(--hover-bg); border-radius: 4px; padding: 2px 6px; white-space: nowrap; flex-shrink: 0; }
 .sidebar .menu-scroll { flex: 1; overflow-y: auto; }
 .sidebar .menu-scroll::-webkit-scrollbar { width: 0; }
 .sidebar .el-menu { border-right: none; background: transparent; }
-.sidebar .el-sub-menu__title, .sidebar .el-menu-item { color: #b6cfc9; }
-.sidebar .el-sub-menu__title:hover, .sidebar .el-menu-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+.sidebar .el-sub-menu__title, .sidebar .el-menu-item { color: var(--sidebar-text); }
+.sidebar .el-sub-menu__title { color: var(--text-main); font-weight: 600; }
+.sidebar .el-sub-menu__title:hover, .sidebar .el-menu-item:hover { background: var(--hover-bg); color: var(--text-main); }
 .sidebar .el-menu--inline { background: var(--sidebar-sub) !important; }
-.sidebar .el-menu-item.is-active { background: linear-gradient(90deg, rgba(24,160,141,.35), transparent); color: #4be3c9; border-right: 3px solid #18a08d; }
+.sidebar .el-menu-item.is-active { background: var(--sidebar-active-bg); color: var(--text-main); font-weight: 600; box-shadow: inset 3px 0 0 var(--brand); }
 
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.topbar { height: 60px; background: var(--bg-card); display: flex; align-items: center; padding: 0 22px; box-shadow: 0 1px 4px rgba(0,21,41,.06); z-index: 5; flex-shrink: 0; }
+.topbar { height: 60px; background: var(--bg-card); display: flex; align-items: center; padding: 0 22px; border-bottom: 1px solid var(--border); z-index: 5; flex-shrink: 0; }
 .topbar .page-title { font-size: 16px; font-weight: 600; color: var(--text-main); }
 .topbar .page-head { display: flex; align-items: center; gap: 4px; }
 .topbar .back-btn { padding: 4px 8px; font-size: 14px; color: var(--text-sub); }
@@ -116,7 +239,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-page); fo
 .content { flex: 1; overflow-y: auto; padding: 18px 22px; }
 
 /* ============ 通用卡片 ============ */
-.card-box { background: var(--bg-card); border-radius: 10px; padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.card-box { background: var(--bg-card); border-radius: var(--radius-card); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
 .card-box .box-title { font-size: 15px; font-weight: 600; color: var(--text-main); margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
 .search-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
 .pager { display: flex; justify-content: flex-end; margin-top: 14px; }
@@ -131,13 +254,13 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-page); fo
 
 /* ============ 指标卡 ============ */
 .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
-.metric-card { background: var(--bg-card); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.metric-card { background: var(--bg-card); border-radius: var(--radius-card); padding: 16px 18px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
 .metric-card .m-label { font-size: 13px; color: var(--text-sub); }
 .metric-card .m-value { font-size: 26px; font-weight: 700; color: var(--text-main); margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
 .metric-card .m-value small { font-size: 14px; font-weight: 500; }
 .metric-card .m-diff { font-size: 12px; color: var(--text-muted); }
-.metric-card .m-diff .up { color: #d43a3a; }
-.metric-card .m-diff .down { color: #17a26b; }
+.metric-card .m-diff .up { color: var(--up); }
+.metric-card .m-diff .down { color: var(--down); }
 .metric-card .m-icon { position: absolute; right: 12px; top: 14px; width: 38px; height: 38px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center; background: var(--el-color-primary-light-9); color: var(--brand); }
 
@@ -157,7 +280,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-page); fo
 .cat-card:hover { border-color: var(--brand); }
 .cat-card.active { border-color: var(--brand); background: var(--el-color-primary-light-9); box-shadow: 0 0 0 1px var(--brand) inset; }
 .cat-card .t { font-weight: 600; color: var(--text-main); font-size: 14px; }
-.cat-card .p { color: #d4633a; font-weight: 700; margin-top: 6px; }
+.cat-card .p { color: var(--money); font-weight: 700; margin-top: 6px; }
 .cat-card .d { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
 
 /* ============ 排课周视图 ============ */
@@ -167,43 +290,42 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-page); fo
 .week-day .day-head b { display: block; font-size: 17px; color: var(--text-main); }
 .week-day.today { background: var(--el-color-primary-light-9); outline: 1.5px solid var(--el-color-primary-light-7); }
 .class-card { background: var(--bg-card); border-left: 4px solid var(--brand); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer;
-  box-shadow: 0 1px 3px rgba(31,63,58,.08); transition: .15s; }
-.class-card:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(31,63,58,.13); }
+  border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); transition: .15s; }
+.class-card:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.08); }
 .class-card .tm { font-size: 12px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
 .class-card .tt { font-weight: 600; color: var(--text-main); font-size: 13px; margin: 2px 0; }
 .class-card .sub { font-size: 12px; color: var(--text-muted); }
 .class-card .cnt { font-size: 12px; margin-top: 3px; color: var(--brand); font-weight: 600; }
-.class-card.cancelled { border-left-color: #c0c4cc; opacity: .55; }
-.class-card.cancelled .cnt { color: #909399; }
-.class-card.finished { border-left-color: #909399; background: var(--bg-sunken); }
-.class-card.full .cnt { color: #d4633a; }
+.class-card.cancelled { border-left-color: var(--c-text-4); opacity: .55; }
+.class-card.cancelled .cnt { color: var(--c-text-3); }
+.class-card.finished { border-left-color: var(--c-text-3); background: var(--bg-sunken); }
+.class-card.full .cnt { color: var(--c-title); text-decoration: underline; }
 
 /* ============ 签到页 ============ */
 .checkin-hero { display: flex; gap: 16px; align-items: stretch; }
 .checkin-result { text-align: center; padding: 26px 10px; }
 .checkin-result .big { font-size: 40px; }
 .member-profile-card { display: flex; gap: 14px; align-items: flex-start; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
-.avatar-circle { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,#18a08d,var(--brand)); color: #fff;
+.avatar-circle { width: 52px; height: 52px; border-radius: 50%; background: var(--brand); color: var(--bg-card);
   display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; flex-shrink: 0; }
-.black-warn { background: #fdeaea; border: 1px solid #f5b5b5; color: #c22; border-radius: 8px; padding: 8px 12px; margin-top: 8px; font-size: 13px; }
-html.dark .black-warn { background: #3a1a1a; border-color: #6e2c2c; color: #ff9a9a; }
+.black-warn { background: var(--danger-soft); border: 1px solid var(--danger-line); color: var(--danger); border-radius: 8px; padding: 8px 12px; margin-top: 8px; font-size: 13px; }
 
 /* 会员详情 */
 .profile-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 20px; font-size: 13px; }
 .profile-grid .lab { color: var(--text-muted); margin-right: 6px; }
 .rights-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-.right-card { border-radius: 10px; padding: 14px 16px; color: #fff; position: relative; overflow: hidden;
-  background: linear-gradient(135deg, #16826f, #0b4a42); }
-.right-card.k2 { background: linear-gradient(135deg, #3a7bd5, #24508f); }
-.right-card.k3 { background: linear-gradient(135deg, var(--money), #8f5c14); }
-.right-card.k4 { background: linear-gradient(135deg, #7b52ab, #4b2e72); }
-.right-card.dead { background: linear-gradient(135deg, #9aa7a5, #6f7c7a); }
+.right-card { border-radius: var(--radius-card); padding: 14px 16px; color: #fff; position: relative; overflow: hidden; background: #000; }
+.right-card.k2 { background: var(--c-ink-1); }
+.right-card.k3 { background: var(--c-ink-2); }
+.right-card.k4 { background: var(--c-ink-3); }
+.right-card.dead { background: var(--c-text-4); }
+html.dark .right-card { border: 1px solid var(--brand-line); }
 .right-card .rc-title { font-weight: 600; font-size: 14px; }
 .right-card .rc-main { font-size: 21px; font-weight: 700; margin: 8px 0 4px; }
 .right-card .rc-sub { font-size: 12px; opacity: .85; }
 .right-card .rc-tag { position: absolute; top: 10px; right: 12px; font-size: 11px; background: rgba(255,255,255,.22); border-radius: 20px; padding: 2px 9px; }
 
-.money { color: #d4633a; font-weight: 600; font-variant-numeric: tabular-nums; }
+.money { color: var(--money); font-weight: 600; font-variant-numeric: tabular-nums; }
 .text-muted { color: var(--text-muted); font-size: 12px; }
 .contract-body { white-space: pre-wrap; background: var(--bg-sunken); border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.9; color: var(--text-sub); max-height: 46vh; overflow-y: auto; }
 .form-section-title { font-weight: 600; color: var(--brand); border-left: 3px solid var(--brand); padding-left: 8px; margin: 6px 0 14px; font-size: 14px; }
@@ -214,24 +336,26 @@ html.dark .black-warn { background: #3a1a1a; border-color: #6e2c2c; color: #ff9a
 
 /* v2: 菜单/Tab 待办数徽标 */
 .menu-badge { display: inline-block; margin-left: 6px; min-width: 16px; padding: 0 5px; height: 16px; line-height: 16px;
-  font-size: 11px; text-align: center; color: #fff; background: var(--el-color-danger); border-radius: 9px; vertical-align: 1px; }
+  font-size: 11px; text-align: center; color: var(--bg-card); background: var(--brand); border-radius: 9px; vertical-align: 1px; }
+/* 数量角标统一黑色(深色模式白底黑字), 红色只留给风险状态 */
+.el-badge__content { background-color: var(--brand) !important; color: var(--bg-card) !important; }
 
 /* ============ v3: 报表中心 ============ */
 /* 数据概览: 11 指标 3 列网格 */
 .rpt-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.rpt-metric { background: var(--bg-card); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); }
+.rpt-metric { background: var(--bg-card); border-radius: var(--radius-card); padding: 16px 18px; box-shadow: var(--shadow); }
 .rpt-metric .rpt-m-label { font-size: 13px; color: var(--text-sub); }
 .rpt-metric .rpt-m-value { font-size: 24px; font-weight: 700; color: var(--text-main); margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
 .rpt-metric .rpt-m-prev { font-size: 12px; color: var(--text-muted); }
 
 /* 报表中心(用户数据/财务数据): KPI 卡 + 环比 */
 .rpt-kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
-.rpt-kpi { background: var(--bg-card); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); }
+.rpt-kpi { background: var(--bg-card); border-radius: var(--radius-card); padding: 16px 18px; box-shadow: var(--shadow); }
 .rpt-kpi .rpt-kpi-label { font-size: 13px; color: var(--text-sub); }
 .rpt-kpi .rpt-kpi-value { font-size: 24px; font-weight: 700; color: var(--text-main); margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
 .rpt-kpi .rpt-kpi-pct { font-size: 12px; color: var(--text-muted); }
-.rpt-kpi .rpt-kpi-pct.up { color: #d43a3a; }
-.rpt-kpi .rpt-kpi-pct.down { color: #17a26b; }
+.rpt-kpi .rpt-kpi-pct.up { color: var(--up); }
+.rpt-kpi .rpt-kpi-pct.down { color: var(--down); }
 
 /* 比例条列表: 标题行(含导出) + 名称/数值/百分比 + 进度条 */
 .rpt-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
@@ -273,6 +397,6 @@ html.dark .black-warn { background: #3a1a1a; border-color: #6e2c2c; color: #ff9a
 .seg-panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .seg-panel { border: 1px solid var(--border); border-radius: 8px; padding: 14px 12px;
   cursor: pointer; transition: all .15s; background: var(--bg-sunken); }
-.seg-panel:hover { border-color: var(--brand); background: var(--bg-card); box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.seg-panel:hover { border-color: var(--brand); background: var(--bg-card); }
 .seg-panel .sp-title { font-size: 14px; font-weight: 600; color: var(--text-main); padding-right: 10px; }
 .seg-panel .sp-desc { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
