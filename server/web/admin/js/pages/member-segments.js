@@ -47,6 +47,12 @@ window.AppPages.MemberSegment = {
             <span :class="{ money: key === 'low_lesson' }">{{ row.left_total }}</span> 节
           </template>
         </el-table-column>
+        <el-table-column v-if="key === 'trained_10'" label="当月训练" width="100" align="right">
+          <template #default="{ row }"><span class="money">{{ row.trained_month }}</span> 次</template>
+        </el-table-column>
+        <el-table-column v-if="key === 'trained_50' || key === 'trained_20'" label="半年训练" width="100" align="right">
+          <template #default="{ row }"><span class="money">{{ row.trained_half_year }}</span> 次</template>
+        </el-table-column>
         <el-table-column label="累计训练" width="100" align="right">
           <template #default="{ row }">{{ row.trained }} 次</template>
         </el-table-column>

@@ -20,6 +20,10 @@ const CALC = `
      WHERE c.vip_id=v.id AND c.card_kind IN (${COUNT_KINDS}) AND c.status IN (${LIVE_CARD})) AS SIGNED) left_total,
   (SELECT COUNT(*) FROM biz_member_card c
      WHERE c.vip_id=v.id AND c.card_kind IN (${COUNT_KINDS}) AND c.status IN (${LIVE_CARD})) cnt_cards,
+  ((SELECT COUNT(*) FROM biz_ptrain_record pr WHERE pr.vip_id=v.id AND pr.insert_time >= DATE_FORMAT(NOW(), '%Y-%m-01 00:00:00'))
+   + (SELECT COUNT(*) FROM biz_syllabus_subscribe_record sb WHERE sb.vip_id=v.id AND sb.status=2 AND sb.class_start_time >= DATE_FORMAT(NOW(), '%Y-%m-01 00:00:00'))) trained_month,
+  ((SELECT COUNT(*) FROM biz_ptrain_record pr WHERE pr.vip_id=v.id AND pr.insert_time >= DATE_SUB(NOW(), INTERVAL 6 MONTH))
+   + (SELECT COUNT(*) FROM biz_syllabus_subscribe_record sb WHERE sb.vip_id=v.id AND sb.status=2 AND sb.class_start_time >= DATE_SUB(NOW(), INTERVAL 6 MONTH))) trained_half_year,
   ((SELECT COUNT(*) FROM biz_ptrain_record pr WHERE pr.vip_id=v.id)
    + (SELECT COUNT(*) FROM biz_syllabus_subscribe_record sb WHERE sb.vip_id=v.id AND sb.status=2)) trained,
   (SELECT COUNT(*) FROM biz_member_card c WHERE c.vip_id=v.id AND c.card_kind=2 AND c.status IN (${LIVE_CARD})) tc_active,
@@ -48,12 +52,16 @@ const SEGMENTS = {
     sortField: `DATE_FORMAT(v.birthday,'%m-%d')`, defaultSort: 'asc',
   },
   trained_10: {
-    title: '满10次会员', icon: 'medal-o', desc: '累计训练满 10 次',
-    having: 'trained >= 10', sortField: 'trained', defaultSort: 'desc',
+    title: '当月满10次', icon: 'medal-o', desc: '当月训练满 10 次',
+    having: 'trained_month >= 10', sortField: 'trained_month', defaultSort: 'desc',
   },
-  trained_20: {
-    title: '满20次会员', icon: 'medal', desc: '累计训练满 20 次',
-    having: 'trained >= 20', sortField: 'trained', defaultSort: 'desc',
+  trained_50: {
+    title: '半年满50次', icon: 'diamond-o', desc: '半年内训练满 50 次',
+    having: 'trained_half_year >= 50', sortField: 'trained_half_year', defaultSort: 'desc',
+  },
+  trained_20: { // 兼容旧路由与历史书签
+    title: '半年满50次', icon: 'diamond-o', desc: '半年内训练满 50 次',
+    having: 'trained_half_year >= 50', sortField: 'trained_half_year', defaultSort: 'desc',
   },
   timecard_active: {
     title: '有效期卡', icon: 'card', desc: '持有有效期卡(时间卡)的会员',
@@ -96,6 +104,7 @@ r.get('/member-segments', staffAuth(), async (req, res, next) => {
   try {
     const out = [];
     for (const key of Object.keys(SEGMENTS)) {
+      if (key === 'trained_20') continue; // 兼容 key, 避免面板列表中重复出现
       const { seg, where, params, having, hParams } = build(req, key, req.query);
       const sql = `SELECT COUNT(*) n FROM (
                      SELECT v.id, ${CALC} FROM biz_vip_user v WHERE ${where}

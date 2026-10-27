@@ -28,8 +28,9 @@
     /* 会员分群面板: badge 用 'seg:<key>' 取 /member-segments 的数量, 新增维度只需在此加一条 */
     segLow: { t: '课时不足', icon: 'warning-o', to: '/staff/segment/low_lesson', roles: ['admin', 'manager', 'membership', 'reception', 'coach'], badge: 'seg:low_lesson' },
     segBirth: { t: '会员生日', icon: 'gift-o', to: '/staff/segment/birthday_week', roles: ['admin', 'manager', 'membership', 'reception', 'coach'], badge: 'seg:birthday_week' },
-    seg10: { t: '满10次会员', icon: 'medal-o', to: '/staff/segment/trained_10', roles: ['admin', 'manager', 'membership', 'coach'], badge: 'seg:trained_10' },
-    seg20: { t: '满20次会员', icon: 'diamond-o', to: '/staff/segment/trained_20', roles: ['admin', 'manager', 'membership', 'coach'], badge: 'seg:trained_20' },
+    seg10: { t: '当月满10次', icon: 'medal-o', to: '/staff/segment/trained_10', roles: ['admin', 'manager', 'membership', 'coach'], badge: 'seg:trained_10' },
+    seg50: { t: '半年满50次', icon: 'diamond-o', to: '/staff/segment/trained_50', roles: ['admin', 'manager', 'membership', 'coach'], badge: 'seg:trained_50' },
+    seg20: { t: '半年满50次', icon: 'diamond-o', to: '/staff/segment/trained_50', roles: ['admin', 'manager', 'membership', 'coach'], badge: 'seg:trained_50' },
     tcActive: { t: '有效期卡', icon: 'vip-card-o', to: '/staff/segment/timecard_active', roles: ['admin', 'manager', 'membership', 'reception', 'coach'], badge: 'seg:timecard_active' },
     tcExpired: { t: '过期期卡', icon: 'underway-o', to: '/staff/segment/timecard_expired', roles: ['admin', 'manager', 'membership', 'reception', 'coach'], badge: 'seg:timecard_expired' },
     contracts: { t: '合同管理', icon: 'sign', to: '/staff/contracts', roles: ['admin', 'manager', 'reception'], badge: 'contract' },
@@ -62,10 +63,10 @@
   /* 顺序即工作台展示顺序 —— 教练: 预约管理(主按钮)→会员各维度数据; 管理员: 开卡/约课(主按钮)→看数据→会员维度 */
   const ROLE_MENUS = {
     reception: ['checkin', 'segLow', 'segBirth', 'tcActive', 'tcExpired', 'intents', 'members', 'groupToday', 'todayBook', 'myperf'],
-    membership: ['members', 'segLow', 'segBirth', 'seg10', 'seg20', 'tcActive', 'tcExpired', 'potential', 'intents', 'myperf', 'sales'],
-    coach: ['segLow', 'seg10', 'seg20', 'segBirth', 'tcActive', 'tcExpired', 'cstudents', 'cschedule', 'cplans', 'cmilestones', 'myperf', 'cperf', 'crests', 'cprofile'],
-    manager: ['dashboard', 'report', 'segLow', 'segBirth', 'seg10', 'seg20', 'tcExpired', 'cplans', 'members', 'todayBook', 'cbookings', 'intents', 'contracts', 'potential', 'salesAll', 'perfAll', 'myperf'],
-    admin: ['dashboard', 'report', 'segLow', 'segBirth', 'seg10', 'seg20', 'tcExpired', 'cplans', 'members', 'todayBook', 'cbookings', 'intents', 'contracts', 'potential', 'salesAll', 'perfAll', 'myperf'],
+    membership: ['members', 'segLow', 'segBirth', 'seg10', 'seg50', 'tcActive', 'tcExpired', 'potential', 'intents', 'myperf', 'sales'],
+    coach: ['segLow', 'seg10', 'seg50', 'segBirth', 'tcActive', 'tcExpired', 'cstudents', 'cschedule', 'cplans', 'cmilestones', 'myperf', 'cperf', 'crests', 'cprofile'],
+    manager: ['dashboard', 'report', 'segLow', 'segBirth', 'seg10', 'seg50', 'tcExpired', 'cplans', 'members', 'todayBook', 'cbookings', 'intents', 'contracts', 'potential', 'salesAll', 'perfAll', 'myperf'],
+    admin: ['dashboard', 'report', 'segLow', 'segBirth', 'seg10', 'seg50', 'tcExpired', 'cplans', 'members', 'todayBook', 'cbookings', 'intents', 'contracts', 'potential', 'salesAll', 'perfAll', 'myperf'],
   };
 
   /* 全部功能: 与 PC 后台菜单(web/admin/js/app.js)一一对齐, roles 取值一致 */
@@ -74,8 +75,8 @@
       { t: '会员查询', to: '/staff/members', roles: ['admin', 'manager', 'membership', 'reception'] },
       { t: '课时不足', to: '/staff/segment/low_lesson', roles: ['admin', 'manager', 'membership', 'reception', 'coach'] },
       { t: '会员生日', to: '/staff/segment/birthday_week', roles: ['admin', 'manager', 'membership', 'reception', 'coach'] },
-      { t: '满10次会员', to: '/staff/segment/trained_10', roles: ['admin', 'manager', 'membership', 'coach'] },
-      { t: '满20次会员', to: '/staff/segment/trained_20', roles: ['admin', 'manager', 'membership', 'coach'] },
+      { t: '当月满10次', to: '/staff/segment/trained_10', roles: ['admin', 'manager', 'membership', 'coach'] },
+      { t: '半年满50次', to: '/staff/segment/trained_50', roles: ['admin', 'manager', 'membership', 'coach'] },
       { t: '有效期卡', to: '/staff/segment/timecard_active', roles: ['admin', 'manager', 'membership', 'reception', 'coach'] },
       { t: '过期期卡', to: '/staff/segment/timecard_expired', roles: ['admin', 'manager', 'membership', 'reception', 'coach'] },
       { t: '潜在客户', to: '/staff/potential', roles: ['admin', 'manager', 'membership'] },
@@ -169,12 +170,19 @@
       menuDefs() { return this.availKeys.reduce((m, k) => { m[k] = { t: MENU[k].t, icon: MENU[k].icon }; return m; }, {}); },
       // 主按钮的 to 集合: 已在顶部大按钮展示, 九宫格里不再重复
       mainTos() { return this.mainActs.map(a => a.to); },
-      // 九宫格当前布局: 过滤掉已失效(角色变化/入口下线)与主按钮重复项
+      // 九宫格当前布局: 过滤掉已失效(角色变化/入口下线)与主按钮重复项, 平滑升级 seg20 -> seg50
       gridKeys() {
-        return this.layout.filter(k => MENU[k] && MENU[k].roles.includes(this.role) && !this.mainTos.includes(MENU[k].to));
+        return this.layout.map(k => k === 'seg20' ? 'seg50' : k)
+          .filter((k, i, arr) => arr.indexOf(k) === i)
+          .filter(k => MENU[k] && MENU[k].roles.includes(this.role) && !this.mainTos.includes(MENU[k].to));
       },
       // 可添加池: 排除已添加(layout)与已常驻顶部主按钮的(避免重复出现)
-      poolKeys() { return this.availKeys.filter(k => !this.layout.includes(k) && !this.mainTos.includes(MENU[k].to)); },
+      poolKeys() {
+        const cur = this.layout.map(k => k === 'seg20' ? 'seg50' : k);
+        return this.availKeys
+          .filter(k => k !== 'seg20')
+          .filter(k => !cur.includes(k) && !this.mainTos.includes(MENU[k].to));
+      },
       menuBadges() {
         return this.gridKeys.reduce((m, k) => { const n = this.badgeCount(k); if (n) m[k] = n; return m; }, {});
       },
