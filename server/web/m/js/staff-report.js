@@ -239,8 +239,8 @@
         tab: 'members',
         club_id: 'all',
         clubList: [
-          { id: '2', name: '3S健身·南坪店', shortName: '南坪' },
-          { id: '1', name: '3S健身·巴南店', shortName: '巴南' },
+          { id: '2', name: '3S健身·南坪店', shortName: '南坪店' },
+          { id: '1', name: '3S健身·巴南店', shortName: '巴南店' },
         ],
         month: dayjs().format('YYYY-MM'),
         monthPop: false, monthVal: [],
@@ -366,7 +366,8 @@
           var rows = await API.get('/clubs', { silent: true });
           if (!rows || !rows.length) return;
           var list = rows.map(function (c) {
-            var shortName = c.name.replace(/^3S健身[·\s]*/, '').replace(/店$/, '');
+            var shortName = c.name.replace(/^3S健身[·\s]*/, '');
+            if (!shortName.endsWith('店')) shortName += '店';
             return { id: String(c.id), name: c.name, shortName: shortName || c.name };
           });
           list.sort(function (a, b) {
