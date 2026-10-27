@@ -5,46 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>3S运动中心 · 系统入口</title>
 <link rel="stylesheet" href="/static/theme.css">
-<link rel="stylesheet" href="/static/theme-legacy.css"><!-- 黑白改版前的过渡配色, 本端改版后删除 -->
 <style>
+  /* 门户页: 黑白极简风格, 配色变量来自 /static/theme.css */
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif; min-height:100vh;
-    background:var(--brand-grad-deep); display:flex; align-items:center; justify-content:center; padding:32px; }
+    background:var(--c-bg); color:var(--c-title); display:flex; align-items:center; justify-content:center; padding:32px; }
   .wrap { max-width:1060px; width:100%; }
-  h1 { color:#fff; font-size:34px; letter-spacing:2px; text-align:center; }
-  .sub { color:rgba(255,255,255,.75); text-align:center; margin:10px 0 40px; font-size:15px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:24px; }
-  .card { background:#fff; border-radius:16px; padding:28px; text-decoration:none; color:#1a1a1a;
-    box-shadow:0 12px 40px rgba(0,0,0,.25); transition:transform .15s; display:block; }
-  .card:hover { transform:translateY(-4px); }
-  .icon { font-size:38px; }
-  .card h2 { font-size:20px; margin:14px 0 8px; }
+  .logo { display:block; width:200px; margin:0 auto 18px; }
+  h1 { font-size:28px; letter-spacing:2px; text-align:center; font-weight:700; }
+  .sub { color:var(--c-text-3); text-align:center; margin:10px 0 40px; font-size:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; }
+  .card { background:var(--c-card); border-radius:var(--radius-card); padding:28px; text-decoration:none; color:var(--c-title);
+    border:1px solid transparent; transition:border-color .15s, transform .15s; display:block; }
+  .card:hover { border-color:var(--brand); transform:translateY(-2px); }
+  .icon { width:36px; height:36px; display:block; stroke:var(--c-title); fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+  .card h2 { font-size:19px; margin:16px 0 8px; display:flex; align-items:center; gap:8px; }
   .card p { color:var(--c-text-2); font-size:13px; line-height:1.7; min-height:44px; }
-  .acc { background:#f4f7f6; border-radius:8px; padding:10px 12px; font-size:12px; color:#555; margin-top:14px; line-height:1.9; }
-  .acc b { color:var(--brand); }
-  .tag { display:inline-block; background:var(--brand); color:#fff; font-size:12px; border-radius:20px; padding:3px 12px; margin-top:4px;}
-  .foot { color:rgba(255,255,255,.55); text-align:center; margin-top:36px; font-size:12px; }
+  .acc { background:var(--c-bg-2); border-radius:8px; padding:10px 12px; font-size:12px; color:var(--c-text-2); margin-top:14px; line-height:1.9; }
+  .acc b { color:var(--c-title); }
+  .tag { display:inline-block; background:var(--brand); color:#fff; font-size:11px; font-weight:500; border-radius:var(--radius-pill); padding:2px 10px; }
+  .foot { color:var(--c-text-4); text-align:center; margin-top:36px; font-size:12px; }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <img class="logo" src="/static/logo-black.png" alt="3S运动中心 FITNESS">
   <h1>3S 运动中心管理系统</h1>
   <div class="sub">多商户 SaaS · 会员端 + 员工端（移动） · 商户管理后台 · 平台总后台</div>
   <div class="grid">
     <a class="card" href="/m/">
-      <div class="icon">📱</div>
+      <svg class="icon" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>
       <h2>会员端 / 员工端 <span class="tag">移动 H5</span></h2>
       <p>浏览场馆与教练、在线购卡签约、约团课/私教、扫码签到、消课确认；员工按角色开卡、核销、管理预约。</p>
       <div class="acc"><b>会员</b> 13911110001~16 / 123456<br><b>员工</b> front01·sale01·coach01·manager01 / admin123</div>
     </a>
     <a class="card" href="/admin/">
-      <div class="icon">🖥️</div>
+      <svg class="icon" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8.5 21h7M12 17v4"/></svg>
       <h2>商户管理后台 <span class="tag">Web</span></h2>
       <p>数据看板、会员与会员卡管理、卡类型配置、排课与核销、教练与消课、财务双口径报表、员工权限。</p>
       <div class="acc"><b>店长</b> manager01 / admin123<br><b>商户管理员</b> admin / admin123</div>
     </a>
     <a class="card" href="/platform/">
-      <div class="icon">🏢</div>
+      <svg class="icon" viewBox="0 0 24 24"><path d="M4 21V5.5L12 3l8 2.5V21"/><path d="M2.5 21h19M9 8h1.5M13.5 8H15M9 12h1.5M13.5 12H15M10.5 21v-4.5h3V21"/></svg>
       <h2>平台总后台 <span class="tag">Web</span></h2>
       <p>商户与门店开通、平台经营总览、通知发布、操作日志监控。</p>
       <div class="acc"><b>平台管理员</b> platform / admin123</div>

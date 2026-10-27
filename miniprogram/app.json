@@ -1,9 +1,9 @@
 {
   "pages": ["pages/index/index"],
   "window": {
-    "navigationBarBackgroundColor": "#0d5e56",
+    "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTitleText": "3S健身",
-    "navigationBarTextStyle": "white",
+    "navigationBarTextStyle": "black",
     "navigationStyle": "custom"
   },
   "sitemapLocation": "sitemap.json"

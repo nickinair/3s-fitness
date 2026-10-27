@@ -336,9 +336,9 @@ html.dark .right-card { border: 1px solid var(--brand-line); }
 
 /* v2: 菜单/Tab 待办数徽标 */
 .menu-badge { display: inline-block; margin-left: 6px; min-width: 16px; padding: 0 5px; height: 16px; line-height: 16px;
-  font-size: 11px; text-align: center; color: var(--bg-card); background: var(--brand); border-radius: 9px; vertical-align: 1px; }
-/* 数量角标统一黑色(深色模式白底黑字), 红色只留给风险状态 */
-.el-badge__content { background-color: var(--brand) !important; color: var(--bg-card) !important; }
+  font-size: 11px; text-align: center; color: #fff; background: var(--badge); border-radius: 9px; vertical-align: 1px; }
+/* 数量气泡保留红色(深浅色一致, 白字) */
+.el-badge__content { background-color: var(--badge) !important; color: #fff !important; }
 
 /* ============ v3: 报表中心 ============ */
 /* 数据概览: 11 指标 3 列网格 */

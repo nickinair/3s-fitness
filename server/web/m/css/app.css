@@ -21,7 +21,7 @@
   --van-dialog-confirm-button-text-color: var(--brand);
   --van-toast-background: rgba(0, 0, 0, .88);
   --van-switch-on-background: var(--brand);
-  --van-badge-background: var(--brand);       /* 数量角标用黑色, 红色只留给风险状态 */
+  --van-badge-background: var(--badge);       /* 图标右上角数量气泡保留红色 */
   /* 刘海/灵动岛安全区, 无安全区的设备回落 0 */
   --safe-top: env(safe-area-inset-top, 0px);
 }
