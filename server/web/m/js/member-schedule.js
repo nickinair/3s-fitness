@@ -4,6 +4,9 @@ window.Pages.MemberSchedule = {
     return {
       tab: this.$route.query.tab === 'group' ? 'group' : 'pt',
       days: H.monthDays(), date: H.today(),
+      calShow: false,
+      minDate: dayjs().subtract(1, 'year').toDate(),
+      maxDate: dayjs().add(3, 'month').toDate(),
       list: [], loading: true,
       pt: { coaches: [], mine: [], clubs: [], default_club_id: null },
       ptShow: false, ptCur: null, ptCourseId: null, ptCards: null, ptCardId: null, ptClubId: null, ptFrom: null,
@@ -13,6 +16,7 @@ window.Pages.MemberSchedule = {
     };
   },
   computed: {
+    calDefaultDate() { return dayjs(this.date).toDate(); },
     defaultOpen() { const c = (this.pt.clubs || []).find(x => x.id === this.pt.default_club_id) || (this.pt.clubs || [])[0]; return c ? c.open_time : '08:00-21:00'; },
     ptOpen() { const c = (this.pt.clubs || []).find(x => x.id === this.ptClubId); return c ? c.open_time : this.defaultOpen; },
     ptDuration() { const cs = this.ptCur && this.ptCur.coach.courses.find(x => x.id === this.ptCourseId); return cs ? cs.duration : 60; },
@@ -28,6 +32,15 @@ window.Pages.MemberSchedule = {
     '    <van-tab title="私教课" name="pt"></van-tab>',
     '    <van-tab title="团课" name="group"></van-tab>',
     '  </van-tabs>',
+    '  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px 4px">',
+    '    <div style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer" @click="calShow=true">',
+    '      <span>{{ H.day(date) }}</span><van-icon name="calendar-o" color="var(--brand)" size="16"/>',
+    '    </div>',
+    '    <div style="display:flex;gap:6px">',
+    '      <van-button v-if="date!==H.today()" size="mini" round plain type="primary" @click="goToday">回今天</van-button>',
+    '      <van-button size="mini" round plain icon="calendar-o" @click="calShow=true">选日期</van-button>',
+    '    </div>',
+    '  </div>',
     '  <div class="day-strip" ref="strip">',
     '    <div v-for="d in days" :key="d.date" class="day-item" :class="{on:d.date===date, past:d.past}" :data-date="d.date" @click="pick(d.date)">',
     '      <div class="w">{{ d.w }}</div><div class="d">{{ d.d }}</div>',
@@ -110,7 +123,7 @@ window.Pages.MemberSchedule = {
     '      </div>',
     '      </template>',
     '      <div class="sec-title" style="margin:14px 0 6px">选择上课时间</div>',
-    '      <m-time-picker v-model="ptFrom" :date="date" :open-time="ptOpen" :busy="ptCur.coach.busy" :mine="pt.my_busy || []" :duration="ptDuration"></m-time-picker>',
+    '      <m-time-picker v-model="ptFrom" :date="date" :open-time="ptOpen" :busy="ptCur.coach.busy" :mine="pt.my_busy || []" :duration="ptDuration" :allow-past="true"></m-time-picker>',
     '      <div class="sec-title" style="margin:14px 0 6px">选择课程</div>',
     '      <van-radio-group v-model="ptCourseId">',
     '        <div v-for="cs in ptCur.coach.courses" :key="cs.id" class="cat-pick flex" :class="{on:ptCourseId===cs.id}" @click="pickCourse(cs.id)">',
@@ -189,6 +202,7 @@ window.Pages.MemberSchedule = {
     '      </div>',
     '    </div>',
     '  </van-popup>',
+    '  <van-calendar v-model:show="calShow" :min-date="minDate" :max-date="maxDate" :default-date="calDefaultDate" color="var(--brand)" @confirm="onDateConfirm"/>',
     '</div>',
   ].join('\n'),
   methods: {
@@ -198,6 +212,11 @@ window.Pages.MemberSchedule = {
       if (c.card_kind === 2) return '时间卡不限次';
       if (c.card_kind === 3) return '储值卡余额 ¥' + H.money(c.left_money);
       return '剩余 ' + c.left_counts + ' 次';
+    },
+    goToday() { this.pick(H.today()); },
+    onDateConfirm(d) {
+      this.calShow = false;
+      this.pick(dayjs(d).format('YYYY-MM-DD'));
     },
     pick(d) { this.date = d; this.load(); this.scrollDay(); },
     // 选中的日期滚到可见区域中间
@@ -230,8 +249,8 @@ window.Pages.MemberSchedule = {
       return { text: '已确认', type: 'primary' };
     },
     slotReason(c) {
-      if (this.date < H.today()) return '已过去的日期，仅供查看';
       if ((c.busy || []).some(b => b.type === 'rest' && b.from === '00:00')) return '教练当天休息';
+      if (this.date < H.today()) return '当天已约满';
       if (this.date === H.today()) return '今天已没有可约时间';
       return '当天已约满';
     },
@@ -244,7 +263,7 @@ window.Pages.MemberSchedule = {
     },
     async pickCourse(id) {
       this.ptCourseId = id; this.ptCards = null; this.ptCardId = null;
-      this.ptCards = await API.get('/member/my-pt-cards?course_id=' + id);
+      this.ptCards = await API.get('/member/my-pt-cards?course_id=' + id + '&date=' + this.date);
       const usable = this.usablePtCards;
       if (usable.length) this.ptCardId = usable[0].id;
     },
@@ -268,8 +287,7 @@ window.Pages.MemberSchedule = {
     btn(it) {
       if (it.status === 3) return { text: '已结课', disabled: true };
       if (it.status === 2) return { text: '已取消', disabled: true };
-      if (H.isPast(it.start_time)) return { text: it.my_booked ? '已预约' : '已开课', disabled: true };
-      if (it.my_booked) return { text: '取消预约', type: 'default', action: 'cancel' };
+      if (it.my_booked) return { text: '已预约', type: 'default', disabled: H.isPast(it.start_time), action: 'cancel' };
       if (it.booked_count >= it.people_count) return { text: '排队候补', type: 'warning', action: 'book' };
       return { text: '预约', type: 'primary', action: 'book' };
     },

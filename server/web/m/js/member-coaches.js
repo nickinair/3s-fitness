@@ -48,12 +48,16 @@ window.Pages.MemberCoachDetail = {
       coach: null, courses: [], loading: true, clubs: [], clubId: null,
       show: false, course: null,
       days: H.monthDays(), date: H.today(),
+      calShow: false,
+      minDate: dayjs().subtract(1, 'year').toDate(),
+      maxDate: dayjs().add(3, 'month').toDate(),
       busy: [], myBusy: [], slotLoading: false, from: null,
       cards: null, cardId: null,
       submitting: false,
     };
   },
   computed: {
+    calDefaultDate() { return dayjs(this.date).toDate(); },
     openTime() { const c = this.clubs.find(x => x.id === this.clubId); return c ? c.open_time : '08:00-21:00'; },
     usableCards() { return (this.cards || []).filter(c => c.usable); },
     blockedCards() { return (this.cards || []).filter(c => !c.usable); },
@@ -105,7 +109,13 @@ window.Pages.MemberCoachDetail = {
     '        </div>',
     '      </div>',
     '      </template>',
-    '      <div class="sec-title" style="margin:14px 0 6px">选择日期</div>',
+    '      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 6px">',
+    '        <div class="sec-title" style="margin:0">选择日期 ({{ H.day(date) }})</div>',
+    '        <div style="display:flex;gap:6px">',
+    '          <van-button v-if="date!==H.today()" size="mini" round plain type="primary" @click="goToday">回今天</van-button>',
+    '          <van-button size="mini" round plain icon="calendar-o" @click="calShow=true">日历选择</van-button>',
+    '        </div>',
+    '      </div>',
     '      <div class="day-strip" ref="strip" style="padding:4px 0;background:transparent">',
     '        <div v-for="d in days" :key="d.date" class="day-item" :class="{on:d.date===date, past:d.past}" @click="pickDate(d.date)">',
     '          <div class="w">{{ d.w }}</div><div class="d">{{ d.d }}</div>',
@@ -113,7 +123,7 @@ window.Pages.MemberCoachDetail = {
     '      </div>',
     '      <div class="sec-title" style="margin:12px 0 6px">选择上课时间</div>',
     '      <div v-if="slotLoading" style="text-align:center;padding:14px"><van-loading size="20" color="var(--brand)"/></div>',
-    '      <m-time-picker v-else v-model="from" :date="date" :open-time="openTime" :busy="busy" :mine="myBusy" :duration="course.duration || 60"></m-time-picker>',
+    '      <m-time-picker v-else v-model="from" :date="date" :open-time="openTime" :busy="busy" :mine="myBusy" :duration="course.duration || 60" :allow-past="true"></m-time-picker>',
     '      <div class="sec-title" style="margin:14px 0 6px">选择支付卡</div>',
     '      <template v-if="cards">',
     '        <van-radio-group v-model="cardId">',
@@ -141,6 +151,7 @@ window.Pages.MemberCoachDetail = {
     '      </div>',
     '    </div>',
     '  </van-popup>',
+    '  <van-calendar v-model:show="calShow" :min-date="minDate" :max-date="maxDate" :default-date="calDefaultDate" color="var(--brand)" @confirm="onDateConfirm"/>',
     '</div>',
   ].join('\n'),
   methods: {
@@ -162,7 +173,12 @@ window.Pages.MemberCoachDetail = {
       this.date = H.today();
       this.loadBusy(); this.loadCards();
     },
-    pickDate(d) { this.date = d; this.from = null; this.loadBusy(); this.scrollDay(); },
+    goToday() { this.pickDate(H.today()); },
+    onDateConfirm(d) {
+      this.calShow = false;
+      this.pickDate(dayjs(d).format('YYYY-MM-DD'));
+    },
+    pickDate(d) { this.date = d; this.from = null; this.loadBusy(); this.loadCards(); this.scrollDay(); },
     scrollDay() {
       this.$nextTick(() => {
         const strip = this.$refs.strip; if (!strip) return;
@@ -178,7 +194,7 @@ window.Pages.MemberCoachDetail = {
       } finally { this.slotLoading = false; }
     },
     async loadCards() {
-      this.cards = await API.get('/member/my-pt-cards?course_id=' + this.course.id);
+      this.cards = await API.get('/member/my-pt-cards?course_id=' + this.course.id + '&date=' + this.date);
       const usable = this.usableCards;
       if (usable.length) this.cardId = usable[0].id;
     },

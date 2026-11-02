@@ -10,6 +10,9 @@ window.Pages.StaffBook = {
       kw: '', results: [], searching: false, rPage: 1, rTotal: 0, kwTimer: null, vip: null,
       // 日期
       days: H.monthDays(), date: H.today(),
+      calShow: false,
+      minDate: dayjs().subtract(1, 'year').toDate(),
+      maxDate: dayjs().add(3, 'month').toDate(),
       // 私教
       loadingPt: false, pt: null, coachId: null, courseId: null, clubId: null, fromTime: null, cardId: null,
       // 团课
@@ -19,6 +22,7 @@ window.Pages.StaffBook = {
   },
   computed: {
     isCoach() { return (Store.user || {}).role === 'coach'; },
+    calDefaultDate() { return dayjs(this.date).toDate(); },
     coach() { return this.pt ? (this.pt.coaches || []).find(c => c.id === this.coachId) : null; },
     courses() { return this.coach ? this.coach.courses : []; },
     course() { return this.courses.find(c => c.id === this.courseId) || null; },
@@ -76,6 +80,13 @@ window.Pages.StaffBook = {
     '    </van-tabs>',
     '  </div>',
 
+    '  <div class="flex" style="align-items:center;justify-content:space-between;padding:4px 4px 6px">',
+    '    <span class="muted" style="font-size:13px;font-weight:600">{{ H.day(date) }}</span>',
+    '    <div style="display:flex;gap:6px">',
+    '      <van-button v-if="date!==H.today()" size="mini" round plain type="primary" @click="goToday">回今天</van-button>',
+    '      <van-button size="mini" round plain icon="calendar-o" @click="calShow=true">选日期</van-button>',
+    '    </div>',
+    '  </div>',
     '  <div class="day-strip" ref="strip">',
     '    <div v-for="d in days" :key="d.date" class="day-item" :class="{on:d.date===date, past:d.past}" @click="pickDate(d.date)">',
     '      <div class="w">{{ d.w }}</div><div class="d">{{ d.d }}</div>',
@@ -185,6 +196,7 @@ window.Pages.StaffBook = {
     '    </div>',
     '    <van-button type="primary" round :loading="submitting" :disabled="!canSubmitPt" @click="doBookPt" style="min-width:120px">确认代约</van-button>',
     '  </div>',
+    '  <van-calendar v-model:show="calShow" :min-date="minDate" :max-date="maxDate" :default-date="calDefaultDate" color="var(--brand)" @confirm="onDateConfirm"/>',
     '</div>',
   ].join('\n'),
   methods: {
@@ -213,6 +225,11 @@ window.Pages.StaffBook = {
     clearVip() { this.vip = null; this.pt = null; this.glist = []; this.resetPt(); this.search(true); },
     /* ---- 通用 ---- */
     onTab() { this.load(); },
+    goToday() { this.pickDate(H.today()); },
+    onDateConfirm(d) {
+      this.calShow = false;
+      this.pickDate(dayjs(d).format('YYYY-MM-DD'));
+    },
     pickDate(d) { this.date = d; this.fromTime = null; this.load(); this.scrollDay('smooth'); },
     scrollDay(behavior) {
       this.$nextTick(() => {

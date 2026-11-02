@@ -71,6 +71,7 @@
           .map(b => ({ ...b, left: (b.cf - open) * PX, w: (b.ct - b.cf) * PX, text: b.type === 'rest' && b.f <= open && b.t >= close ? b.label : b.label }));
       },
       past() {
+        if (this.allowPast) return null;
         const { open, close } = this.range;
         const end = Math.min(this.nowMin, close);
         return end > open ? { left: 0, w: (end - open) * PX } : null;

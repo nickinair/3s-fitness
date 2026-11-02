@@ -117,8 +117,8 @@
     full(s) { return s ? String(s).slice(0, 16) : ''; },
     isPast(s) { return s ? dayjs(String(s)).isBefore(dayjs()) : false; },
     today() { return dayjs().format('YYYY-MM-DD'); },
-    // 日期条: 前后各一个月(今天居中), 过去的日期带 past 标记
-    monthDays() { return H.days(61, -30); },
+    // 日期条: 过去1年到未来30天, 过去的日期带 past 标记
+    monthDays() { return H.days(365 + 30, -365); },
     days(n, offset) { /* 日期条 */
       const arr = [];
       for (let i = 0; i < (n || 7); i++) {

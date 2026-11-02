@@ -231,7 +231,7 @@ async function createGroupBooking({ mid, clubId, syllabusId, vipId, cardId, user
   const s = await db.queryOne('SELECT * FROM biz_syllabus_group WHERE id=? AND merchant_id=?', [syllabusId, mid]);
   if (!s) throw new BizError('课程不存在');
   if (s.status !== 1) throw new BizError('该课程已取消或已结课');
-  if (dayjs(s.start_time).isBefore(dayjs())) throw new BizError('该课程已开课，无法预约');
+  if (dayjs(s.start_time).isBefore(dayjs().subtract(1, 'year'))) throw new BizError('只能预约1年以内的课程');
   const vip = await db.queryOne('SELECT * FROM biz_vip_user WHERE id=? AND merchant_id=?', [vipId, mid]);
   if (!vip) throw new BizError('会员不存在');
   if (vip.is_black) throw new BizError('该会员在黑名单中，禁止预约');

@@ -172,7 +172,7 @@ r.get('/schedule/:id/available-cards', async (req, res, next) => {
       `SELECT id,card_kind,card_type_id,card_type_name,counts,left_counts,left_money,expire_time,status FROM biz_member_card
        WHERE vip_id=? ORDER BY FIELD(status,1,0,3,2,4,5), FIELD(card_kind,1,2,4,3), expire_time DESC`, [req.user.vip]);
     cards.forEach(c => {
-      let reason = cardBlockReason(c);
+      let reason = cardBlockReason(c, s.start_time);
       if (!reason && scope.length && !scope.includes(c.card_type_id)) reason = '不支持「' + (g ? g.title : '该课程') + '」';
       if (!reason && c.expire_time && dayjs(c.expire_time).isBefore(dayjs(s.start_time))) reason = '开课前已到期';
       c.usable = !reason; c.reason = reason;
@@ -257,7 +257,7 @@ r.get('/pt-schedule', async (req, res, next) => {
       let free = 0;
       for (let m = open; m + 60 <= close; m += 15) {
         const hh = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-        if (!checkTimeRange({ date, fromTime: hh, duration: 60, openTime: defClub.open_time, coachBusy: c.busy, memberBusy: [] })) free++;
+        if (!checkTimeRange({ date, fromTime: hh, duration: 60, openTime: defClub.open_time, coachBusy: c.busy, memberBusy: [], allowPast: true })) free++;
       }
       c.free = free;
     }
@@ -296,7 +296,7 @@ r.get('/my-pt-cards', async (req, res, next) => {
       `SELECT id,card_type_id,card_type_name,card_kind,counts,left_counts,left_money,expire_time,status FROM biz_member_card
        WHERE vip_id=? ORDER BY FIELD(status,1,0,3,2,4,5), FIELD(card_kind,4,1,2,3), expire_time DESC`, [req.user.vip]);
     cards.forEach(c => {
-      let reason = cardBlockReason(c);
+      let reason = cardBlockReason(c, req.query.date);
       if (!reason && scope.length && !scope.includes(c.card_type_id)) reason = '不支持「' + courseTitle + '」';
       c.usable = !reason; c.reason = reason;
     });
@@ -304,13 +304,14 @@ r.get('/my-pt-cards', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// 私教预约（会员自约 → 待教练确认）
+// 私教预约（会员自约 → 待教练确认，允许约1年内历史课）
 r.post('/pt-bookings', async (req, res, next) => {
   try {
     const b = req.body;
     const result = await createPtBooking({
       mid: req.user.mid, clubId: b.club_id, vipId: req.user.vip, coachId: b.coach_id, courseId: b.course_id,
       date: b.date, fromTime: b.from_time, cardId: b.card_id, recordType: 1, remark: '', autoConfirm: false,
+      allowPast: true,
     });
     res.json(ok(result));
   } catch (e) { next(e); }

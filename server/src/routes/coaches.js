@@ -201,13 +201,15 @@ async function getMemberBusy(vipId, date, excludeBookingId = 0) {
 }
 
 // 统一的约课时间校验, 通过返回 null, 否则返回中文原因
-// allowPast: 员工代约补录场景放开"开始时间已过"限制(会员自约仍禁止)
+// allowPast: 允许补录历史课程(放宽至1年内，超过1年则限制)
 function checkTimeRange({ date, fromTime, duration, openTime, coachBusy, memberBusy, allowPast }) {
   if (!/^\d{2}:(00|15|30|45)$/.test(String(fromTime))) return '开始时间须为整点、15分、30分或45分';
   const f = toMin(fromTime), t = f + duration;
   const { open, close } = parseOpen(openTime);
   if (f < open || t > close) return `超出营业时间（${fromMin(open)}-${fromMin(close)}）`;
-  if (!allowPast && dayjs(`${date} ${fromTime}`).isBefore(dayjs())) return '开始时间已过';
+  const dt = dayjs(`${date} ${fromTime}`);
+  if (dt.isBefore(dayjs().subtract(1, 'year'))) return '只能预约1年以内的课程';
+  if (!allowPast && dt.isBefore(dayjs())) return '开始时间已过';
   const cb = (coachBusy || []).find(b => overlap(f, t, toMin(b.from), toMin(b.to)));
   if (cb) return `教练该时段有安排（${cb.label} ${cb.from}-${cb.to}）`;
   const mb = (memberBusy || []).find(b => overlap(f, t, toMin(b.from), toMin(b.to)));
@@ -215,14 +217,14 @@ function checkTimeRange({ date, fromTime, duration, openTime, coachBusy, memberB
   return null;
 }
 
-// 整点时段列表(后台代约下拉仍按整点展示, 底层用同一套区间校验)
+// 整点时段列表(后台代约下拉仍按整点展示, 底层用同一套区间校验, 允许代约1年内的历史课程)
 async function getCoachSlots(coachId, date, duration = 60, openTime = DEFAULT_OPEN) {
   const busy = await getCoachBusy(coachId, date);
   const { open, close } = parseOpen(openTime);
   const slots = [];
   for (let m = Math.ceil(open / 60) * 60; m + duration <= close; m += 60) {
     const from = fromMin(m);
-    const reason = checkTimeRange({ date, fromTime: from, duration, openTime, coachBusy: busy, memberBusy: [] });
+    const reason = checkTimeRange({ date, fromTime: from, duration, openTime, coachBusy: busy, memberBusy: [], allowPast: true });
     slots.push({ from_time: from, to_time: fromMin(m + duration), available: !reason,
       reason: !reason ? '' : reason.includes('已过') ? '已过' : reason.includes('休息') ? '休息' : '已占用' });
   }
@@ -282,8 +284,8 @@ r.get('/agent-booking/pt', staffAuth('admin', 'manager', 'coach'), async (req, r
     const clubs = await db.query('SELECT id, name, address, open_time FROM biz_club WHERE merchant_id=? AND status=1 ORDER BY sort, id', [mid]);
     const cards = vipId ? await db.query(
       `SELECT id, card_type_id, card_type_name, card_kind, counts, left_counts, left_money, expire_time, status FROM biz_member_card
-       WHERE vip_id=? AND merchant_id=? AND status IN (0,1) ORDER BY FIELD(card_kind,4,1,2,3), expire_time`, [vipId, mid]) : [];
-    cards.forEach(c => { const why = cardBlockReason(c); c.usable = !why; c.reason = why; });
+       WHERE vip_id=? AND merchant_id=? AND status IN (0,1,2) ORDER BY FIELD(status,1,0,2), FIELD(card_kind,4,1,2,3), expire_time`, [vipId, mid]) : [];
+    cards.forEach(c => { const why = cardBlockReason(c, date); c.usable = !why; c.reason = why; });
     const mine = vipId ? await db.query(
       `SELECT id, coach_name, course_title, from_time, to_time, status FROM biz_ptrain_bespeak_record
        WHERE vip_id=? AND \`date\`=? AND status IN (0,1,3) ORDER BY from_time`, [vipId, date]) : [];
@@ -310,7 +312,7 @@ async function createPtBooking({ mid, clubId, vipId, coachId, courseId, date, fr
   const card = await db.queryOne('SELECT * FROM biz_member_card WHERE id=? AND vip_id=?', [cardId, vipId]);
   if (!card) throw new BizError('支付卡不存在');
   // 2026-09-21: 任何卡种都能约任何课程; 次卡/私教卡按次扣, 时间卡不扣次, 储值卡看余额
-  const cardWhy = cardBlockReason(card);
+  const cardWhy = cardBlockReason(card, date);
   if (cardWhy) throw new BizError(`该卡${cardWhy}`);
   const deductNum = cardDeduct(card.card_kind, 1);
   // 卡类型规则
