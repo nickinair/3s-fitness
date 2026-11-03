@@ -251,7 +251,11 @@ window.Pages.StaffBook = {
         if (!this.clubId) this.clubId = d.default_club_id || ((d.clubs || [])[0] || {}).id || null;
         const list = d.coaches || [];
         const keep = list.find(c => c.id === keepCoach);
-        this.coachId = keep ? keep.id : (d.locked_coach_id || (list[0] || {}).id || null);
+        // 当前登录教练: 优先使用后端识别的 my_coach_id / locked_coach_id，或本地 Store.user
+        const myCoachId = d.my_coach_id || d.locked_coach_id || (Store.user && Store.user.coach_id) || 0;
+        const myCoach = myCoachId ? list.find(c => c.id === myCoachId) : (Store.user && Store.user.realname ? list.find(c => c.realname === Store.user.realname) : null);
+        const mainCoach = list.find(c => c.is_main);
+        this.coachId = keep ? keep.id : (myCoach ? myCoach.id : (mainCoach ? mainCoach.id : (list[0] || {}).id || null));
         this.fromTime = null;
         const cs = this.courses;
         if (!cs.some(c => c.id === this.courseId)) this.courseId = (cs[0] || {}).id || null;

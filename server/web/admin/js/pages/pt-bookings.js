@@ -240,7 +240,7 @@ window.AppPages.PtBookings = {
     openBook() {
       this.bkForm = { club_id: (Auth.getClubId() && Auth.getClubId() !== 'all') ? Number(Auth.getClubId()) : ((this.clubs[0] || {}).id || null), vip_id: null, coach_id: null, course_id: null, date: dayjs().format('YYYY-MM-DD'), from_time: '', card_id: null, remark: '' };
       if (!this.clubs.length) api.get('/clubs').then(cs => { this.clubs = cs; if (!this.bkForm.club_id && cs.length) this.bkForm.club_id = cs[0].id; });
-      if (this.role === 'coach' && this.myCoachId) this.bkForm.coach_id = this.myCoachId;
+      if (this.myCoachId) this.bkForm.coach_id = this.myCoachId;
       this.memberCards = []; this.slots = [];
       this.dlg = true;
     },

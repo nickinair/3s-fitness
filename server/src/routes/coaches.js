@@ -239,6 +239,10 @@ r.post('/ptrain-bookings', staffAuth('admin', 'manager', 'coach'), async (req, r
     const b = req.body;
     let coachId = Number(b.coach_id) || 0;
     if (req.user.role === 'coach') {
+      if (!req.user.coachId && req.user.uid) {
+        const mc = await db.queryOne('SELECT id FROM biz_club_coach WHERE user_id=? AND status=1', [req.user.uid]);
+        if (mc) req.user.coachId = mc.id;
+      }
       if (!req.user.coachId) throw new BizError('当前账号未绑定教练档案，无法代约');
       coachId = req.user.coachId;
     }
@@ -263,7 +267,19 @@ r.get('/agent-booking/pt', staffAuth('admin', 'manager', 'coach'), async (req, r
     const vipId = Number(req.query.vip_id) || 0;
     const vip = vipId ? await db.queryOne('SELECT id, realname, phone, coach_id, sub_coach_id, is_black FROM biz_vip_user WHERE id=? AND merchant_id=?', [vipId, mid]) : null;
     if (vipId && !vip) throw new BizError('会员不存在');
-    const onlyMe = req.user.role === 'coach' ? (req.user.coachId || 0) : 0;
+
+    // 确定当前登录用户关联的教练ID (不限角色: 管理员/店长/教练若有教练档案, 均支持识别)
+    let myCoachId = req.user.coachId || 0;
+    if (!myCoachId && req.user.uid) {
+      const mc = await db.queryOne('SELECT id FROM biz_club_coach WHERE user_id=? AND status=1', [req.user.uid]);
+      if (mc) myCoachId = mc.id;
+    }
+    if (!myCoachId && req.user.name) {
+      const mc = await db.queryOne('SELECT id FROM biz_club_coach WHERE merchant_id=? AND realname=? AND status=1', [mid, req.user.name]);
+      if (mc) myCoachId = mc.id;
+    }
+
+    const onlyMe = req.user.role === 'coach' ? (myCoachId || 0) : 0;
     const coaches = await db.query(
       `SELECT id, realname, good_at FROM biz_club_coach WHERE merchant_id=? AND status=1${onlyMe ? ' AND id=?' : ''} ORDER BY sort, id`,
       onlyMe ? [mid, onlyMe] : [mid]);
@@ -280,7 +296,14 @@ r.get('/agent-booking/pt', staffAuth('admin', 'manager', 'coach'), async (req, r
         busy: await getCoachBusy(c.id, date),
       });
     }
-    list.sort((a, b) => (b.is_main - a.is_main) || (b.is_sub - a.is_sub));
+    // 排序: 当前登录的教练排最前, 其次是该会员的主教练/副教练
+    list.sort((a, b) => {
+      if (myCoachId) {
+        if (a.id === myCoachId) return -1;
+        if (b.id === myCoachId) return 1;
+      }
+      return (b.is_main - a.is_main) || (b.is_sub - a.is_sub);
+    });
     const clubs = await db.query('SELECT id, name, address, open_time FROM biz_club WHERE merchant_id=? AND status=1 ORDER BY sort, id', [mid]);
     const cards = vipId ? await db.query(
       `SELECT id, card_type_id, card_type_name, card_kind, counts, left_counts, left_money, expire_time, status FROM biz_member_card
@@ -294,6 +317,7 @@ r.get('/agent-booking/pt', staffAuth('admin', 'manager', 'coach'), async (req, r
       default_club_id: (req.clubId && clubs.some(c => c.id === req.clubId)) ? req.clubId : ((clubs[0] || {}).id || null),
       cards, mine, member_busy: vipId ? await getMemberBusy(vipId, date) : [],
       locked_coach_id: onlyMe || null,
+      my_coach_id: myCoachId || null,
     }));
   } catch (e) { next(e); }
 });
