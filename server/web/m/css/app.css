@@ -1003,3 +1003,50 @@ body:has(.login-page) { background: var(--c-card); }
 :root { --van-nav-bar-height: var(--nav-h, 46px); }
 .m-nav .van-nav-bar__title { max-width: min(60%, calc(100% - 2 * var(--cap-w, 0px) - 16px)); }
 .m-nav .van-nav-bar__right { right: var(--cap-w, 0px); }
+
+/* ===== 会员端「我的」: 对标 M Stand 我的页 (member-mine.js) ===== */
+.mn-page { background: var(--c-bg); }
+.mn-head { display: flex; align-items: center; padding: calc(var(--safe-top) + 26px) 18px 18px; }
+.mn-avatar { box-shadow: 0 0 0 4px var(--c-panel-2); font-size: 24px; }
+.mn-name { font-size: 22px; font-weight: 700; color: var(--c-title); letter-spacing: .3px; }
+.mn-sub { font-size: 12.5px; color: var(--c-text-3); margin-top: 4px; }
+.mn-sub b { color: var(--c-title); }
+.mn-exp { font-size: 11px; color: var(--c-text-3); margin-top: 6px; }
+.mn-card { background: var(--c-card); border-radius: var(--radius-card); margin: 0 12px 12px; padding: 18px 18px; box-shadow: 0 2px 12px rgba(0,0,0,.035); }
+.mn-card:active { background: var(--c-panel); }
+.mn-title { font-size: 16px; font-weight: 700; color: var(--c-title); }
+.mn-ico { font-size: 20px; margin-right: 8px; }
+.mn-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mn-big { font-size: 30px; font-weight: 700; color: var(--c-title); line-height: 1; font-variant-numeric: tabular-nums; }
+.mn-mid { font-size: 26px; font-weight: 700; color: var(--c-title); line-height: 1; font-variant-numeric: tabular-nums; }
+.mn-big small, .mn-mid small { font-size: 12px; font-weight: 400; color: var(--c-text-3); margin-left: 4px; }
+.mn-link { font-size: 13px; color: var(--c-text-2); white-space: nowrap; display: flex; align-items: center; gap: 2px; }
+.mn-link.strong { color: var(--c-title); font-weight: 600; }
+.mn-bar { height: 4px; border-radius: 2px; background: var(--c-line); margin-top: 16px; overflow: hidden; }
+.mn-bar i { display: block; height: 100%; background: var(--brand); border-radius: 2px; transition: width .4s; }
+/* 缩略图 + 标题 + 描边胶囊(「限时福利活动」行) */
+.mn-item { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+.mn-thumb { width: 52px; height: 52px; border-radius: 50%; background: var(--c-panel); display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--c-title); flex-shrink: 0; }
+.mn-it { font-size: 15px; font-weight: 600; color: var(--c-title); }
+.mn-is { font-size: 12.5px; color: var(--c-text-3); margin-top: 4px; }
+.mn-pill { border: 1px solid var(--c-text-4); border-radius: var(--radius-pill); padding: 6px 16px; font-size: 13px; color: var(--c-title); white-space: nowrap; background: var(--c-card); }
+.mn-pill:active { background: var(--c-panel); }
+/* 会员卡行 / 空态 */
+.mn-crow { display: flex; align-items: center; gap: 10px; padding: 12px 0 0; margin-top: 12px; border-top: 1px solid var(--c-line-2); }
+.mn-empty { font-size: 13.5px; color: var(--c-text-3); margin-top: 14px; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 左右两栏 + 黑色胶囊(「余额 / 积分」卡) */
+.mn-duo { display: flex; align-items: stretch; padding: 18px 14px; }
+.mn-half { flex: 1; min-width: 0; padding: 0 6px; }
+.mn-sep { width: 1px; background: var(--c-line); margin: 4px 8px; }
+.mn-ht { font-size: 14px; color: var(--c-text-2); }
+.mn-btn { background: var(--brand); color: #fff; border-radius: var(--radius-pill); padding: 7px 16px; font-size: 13px; white-space: nowrap; }
+.mn-btn:active { background: var(--brand-light); }
+/* 服务宫格(「M Stand服务」), 标题下一道红色短线 */
+.mn-sec { font-size: 18px; font-weight: 700; color: var(--c-title); position: relative; padding-bottom: 10px; }
+.mn-sec::after { content: ''; position: absolute; left: 0; bottom: 0; width: 26px; height: 3px; border-radius: 2px; background: var(--badge); }
+.mn-grid { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 16px; row-gap: 14px; }
+.mn-gi { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12.5px; color: var(--c-text); }
+.mn-gi .van-icon { font-size: 24px; color: var(--c-title); }
+.mn-logout { margin: 8px 12px 0; text-align: center; padding: 14px 0; font-size: 14px; color: var(--c-text-3); }
+.mn-logout:active { color: var(--danger); }
