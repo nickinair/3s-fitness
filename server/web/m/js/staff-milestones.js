@@ -9,7 +9,7 @@ window.Pages.StaffMilestones = {
   template: [
     '<div class="page">',
     '  <m-nav title="里程碑总结"></m-nav>',
-    '  <van-tabs v-model:active="tab" color="var(--brand)" sticky offset-top="46" @change="load">',
+    '  <van-tabs v-model:active="tab" color="var(--brand)" sticky :offset-top="H.navTop()" @change="load">',
     '    <van-tab title="待总结" :name="0"></van-tab>',
     '    <van-tab title="已总结" :name="1"></van-tab>',
     '  </van-tabs>',

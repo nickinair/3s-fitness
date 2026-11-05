@@ -26,7 +26,7 @@ window.Pages.MemberBuy = {
     '  <m-nav title="购卡"></m-nav>',
     '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
-    '    <van-tabs v-model:active="kind" color="var(--brand)" sticky offset-top="46">',
+    '    <van-tabs v-model:active="kind" color="var(--brand)" sticky :offset-top="H.navTop()">',
     '      <van-tab v-for="k in kinds" :key="k" :title="DICT.cardKind[k]" :name="k"></van-tab>',
     '    </van-tabs>',
     '    <van-empty v-if="!curList.length" description="暂无在售卡" />',

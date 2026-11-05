@@ -9,7 +9,7 @@ window.Pages.StaffIntents = {
   template: [
     '<div class="page">',
     '  <m-nav title="购卡意向"></m-nav>',
-    '  <van-tabs v-model:active="tab" color="var(--brand)" sticky offset-top="46" @change="load">',
+    '  <van-tabs v-model:active="tab" color="var(--brand)" sticky :offset-top="H.navTop()" @change="load">',
     '    <van-tab title="待跟进" :name="0"></van-tab>',
     '    <van-tab title="已开卡" :name="1"></van-tab>',
     '    <van-tab title="已关闭" :name="2"></van-tab>',

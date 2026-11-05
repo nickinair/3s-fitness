@@ -170,6 +170,7 @@
     <div class="complete-profile-page" style="min-height:100vh;background:var(--c-bg);padding-bottom:80px">
       <!-- 顶部沉浸式导航栏 -->
       <van-nav-bar
+        class="m-nav"
         title="完善档案 · 领专属积分"
         left-arrow
         @click-left="$router.back()"

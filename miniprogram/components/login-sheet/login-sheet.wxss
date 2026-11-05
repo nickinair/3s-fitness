@@ -1,0 +1,38 @@
+/* 会员登录底部弹层 —— 尺寸/间距按 M Stand 登录弹层截图等比还原 */
+.ls-root { position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: 1000; pointer-events: none; }
+.ls-root.show { pointer-events: auto; }
+.ls-mask { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,.35); opacity: 0; transition: opacity .3s ease; }
+.ls-root.show .ls-mask { opacity: 1; }
+.ls-sheet { position: absolute; left: 0; right: 0; bottom: 0; min-height: 80vh; box-sizing: border-box;
+  padding: 80px 20px calc(28px + env(safe-area-inset-bottom)); background: #fff; border-radius: 16px 16px 0 0;
+  display: flex; flex-direction: column; align-items: center;
+  transform: translateY(100%); transition: transform .32s cubic-bezier(.2,.8,.2,1); }
+.ls-root.show .ls-sheet { transform: translateY(0); }
+
+.ls-logo { width: 132px; margin-bottom: 52px; }
+.ls-title { font-size: 20px; font-weight: 600; color: #111; line-height: 1.55; letter-spacing: .5px; text-align: center; }
+
+.ls-perks { width: 100%; display: flex; justify-content: space-around; margin-top: 64px; }
+.ls-perk { width: 25%; display: flex; flex-direction: column; align-items: center; }
+.ls-perk-c { width: 42px; height: 42px; border-radius: 50%; background: #f2f2f2; display: flex; align-items: center; justify-content: center; }
+.ls-perk-i { width: 21px; height: 21px; }
+.ls-perk-t { margin-top: 12px; font-size: 13px; color: #111; }
+
+.ls-agree { margin-top: auto; padding-top: 56px; display: flex; align-items: center; font-size: 12.5px; color: #7c7c7c; }
+.ls-radio { width: 15px; height: 15px; border-radius: 50%; border: 1px solid #b4b4b4; margin-right: 8px; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center; }
+.ls-radio.on { border-color: #000; background: #000; }
+.ls-radio-dot { width: 5px; height: 5px; border-radius: 50%; background: #fff; }
+.ls-link { color: #111; }
+.ls-agree.shake { animation: ls-shake .45s ease; }
+@keyframes ls-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+.ls-btn { width: 100% !important; height: 50px; line-height: 50px; margin: 0; padding: 0; border: none; border-radius: 999px;
+  background: #000; color: #fff; font-size: 17px; font-weight: 400; letter-spacing: .5px; }
+.ls-btn::after { border: none; }
+.ls-agree + .ls-btn { margin-top: 16px; }
+.ls-btn + .ls-btn { margin-top: 22px; }
+.ls-btn-hover { background: #333; }
+.ls-btn[disabled] { background: #333 !important; color: #fff !important; }
+.ls-pwd { margin-top: 18px; font-size: 12.5px; color: #b4b4b4; padding: 4px 12px; }
+

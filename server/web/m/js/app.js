@@ -91,15 +91,20 @@
     routes,
   });
 
+  // 地址栏 ?token= 只在首次导航时接管一次; 否则退出登录 / 401 后每次跳转都会把旧 token 写回去
+  let searchTokenUsed = false;
   router.beforeEach((to) => {
+    const sp = new URLSearchParams(window.location.search);
+    const urlToken = (to.query && to.query.token) || (!searchTokenUsed && sp.get('token'));
+    searchTokenUsed = true;
+    if (urlToken) {
+      const urlType = (to.query && to.query.type) || sp.get('type') || 'member';
+      Store.token = urlToken;
+      Store.type = urlType;
+    }
+    // 小程序里会员回到「首页」= 切回原生首页(沉浸式视频); ?edit=1 是原生首页「管理」进来的常用功能编辑, 留在 H5
+    if (to.path === '/' && Store.token && Store.type !== 'staff' && !(to.query && to.query.edit) && MP.is() && MP.homeWithToken()) return false;
     if (to.path === '/complete-profile') {
-      const urlToken = (to.query && to.query.token) || (new URLSearchParams(window.location.search).get('token'));
-      if (urlToken) {
-        localStorage.setItem('m_token', urlToken);
-        localStorage.setItem('m_type', 'member');
-        Store.token = urlToken;
-        Store.type = 'member';
-      }
       if (Store.token) return true;
       return '/login';
     }

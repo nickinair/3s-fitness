@@ -1,0 +1,6 @@
+<!-- 独立登录页(从 H5 登录页「微信手机号快捷登录」进入): 背景是品牌实景图, 登录层从底部弹出, 与首页弹层完全一致 -->
+<view class="bg">
+  <image class="bg-img" src="{{poster}}" mode="aspectFill"></image>
+  <view class="bg-shade"></view>
+</view>
+<login-sheet show="{{show}}" bind:success="onLoginOk" bind:skip="onSkip" bind:password="onPassword"></login-sheet>

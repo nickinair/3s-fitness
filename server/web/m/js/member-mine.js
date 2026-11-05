@@ -48,6 +48,7 @@ window.Pages.MemberMine = {
     async logout() {
       try { await vant.showConfirmDialog({ title: '退出登录', message: '确定退出当前账号吗？', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
       Store.logout();
+      if (MP.is() && MP.home('?logout=1')) return;
       this.$router.replace('/login');
     },
   },

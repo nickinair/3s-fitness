@@ -1,10 +1,39 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { ok, BizError, logAction } = require('../util');
 const { sign, staffAuth, memberAuth, parseToken } = require('../middleware/auth');
 
 const r = express.Router();
+
+function getWxConfig() {
+  let s = {};
+  try { s = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'secrets.json'), 'utf8')); } catch (e) {}
+  return {
+    appid: process.env.WX_APPID || s.wx_appid || 'wxc8f451cab5ffa843',
+    secret: process.env.WX_SECRET || s.wx_secret || '',
+  };
+}
+
+let wxTokenCache = { token: '', expireAt: 0 };
+async function getWxAccessToken() {
+  const { appid, secret } = getWxConfig();
+  if (!secret) throw new BizError('服务端尚未配置小程序 AppSecret (wx_secret)');
+  if (wxTokenCache.token && Date.now() < wxTokenCache.expireAt) return wxTokenCache.token;
+  const url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${encodeURIComponent(appid)}&secret=${encodeURIComponent(secret)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!data || !data.access_token) {
+    throw new BizError('获取微信 access_token 失败: ' + (data && data.errmsg ? data.errmsg : 'unknown'));
+  }
+  wxTokenCache = {
+    token: data.access_token,
+    expireAt: Date.now() + ((data.expires_in || 7200) - 300) * 1000,
+  };
+  return wxTokenCache.token;
+}
 
 // 员工/管理端登录
 r.post('/login', async (req, res, next) => {
@@ -77,6 +106,40 @@ function memberProfile(v) {
     expire_time: v.expire_time, is_black: v.is_black,
   };
 }
+
+// 微信小程序手机号一键快捷登录（自动绑定已有会员档案或注册新档案）
+r.post('/member/wx-phone-login', async (req, res, next) => {
+  try {
+    const { code } = req.body;
+    if (!code) throw new BizError('缺少微信手机号授权 code');
+    const accessToken = await getWxAccessToken();
+    const wxRes = await fetch(`https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${encodeURIComponent(accessToken)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const wxData = await wxRes.json();
+    if (!wxData || wxData.errcode !== 0 || !wxData.phone_info || !wxData.phone_info.purePhoneNumber) {
+      throw new BizError('微信手机号授权解析失败: ' + ((wxData && wxData.errmsg) || '请重试'));
+    }
+    const phone = wxData.phone_info.purePhoneNumber;
+    let v = await db.queryOne('SELECT * FROM biz_vip_user WHERE merchant_id=1 AND phone=?', [phone]);
+    if (!v) {
+      const defaultPwd = await bcrypt.hash(phone.slice(-6), 10);
+      const id = await db.insert(
+        `INSERT INTO biz_vip_user (merchant_id, phone, password, realname, nickname, gender, source_id, source_name)
+         VALUES (1,?,?,?,?,0,0,'小程序注册')`,
+        [phone, defaultPwd, '微信会员' + phone.slice(-4), '微信会员' + phone.slice(-4)]
+      );
+      await db.exec('INSERT IGNORE INTO biz_user_club (vip_user_id, club_id) VALUES (?,1)', [id]);
+      v = await db.queryOne('SELECT * FROM biz_vip_user WHERE id=?', [id]);
+    } else if (v.status !== 1) {
+      throw new BizError('该会员账号已被停用，请联系门店');
+    }
+    const token = sign({ type: 'member', vip: v.id, name: v.realname, mid: v.merchant_id });
+    res.json(ok({ token, user: memberProfile(v) }));
+  } catch (e) { next(e); }
+});
 
 // 当前登录信息
 r.get('/me', (req, res) => {

@@ -49,6 +49,19 @@
     return j.data;
   }
 
+  /* 小程序桥: 首页是原生页(web-view 去不掉原生导航栏, 做不了沉浸式视频), 会员回首页 / 登录 / 退出时切回原生首页 */
+  const MP = {
+    is() {
+      try { if (sessionStorage.getItem('mp') === '1') return true; } catch (e) { /* ignore */ }
+      return window.__wxjs_environment === 'miniprogram' || /miniProgram/i.test(navigator.userAgent || '');
+    },
+    ready() { return !!(window.wx && wx.miniProgram && wx.miniProgram.reLaunch); },
+    // extra: 例如 '?logout=1' 或 '?token=xxx&type=member'
+    home(extra) { if (this.ready()) { wx.miniProgram.reLaunch({ url: '/pages/home/home' + (extra || '') }); return true; } return false; },
+    homeWithToken() { return this.home(Store.token ? '?type=' + (Store.type || 'member') + '&token=' + encodeURIComponent(Store.token) : ''); },
+  };
+  window.MP = MP;
+
   const API = {
     get: (u, o) => request('GET', u, null, o),
     post: (u, d, o) => request('POST', u, d == null ? {} : d, o),
@@ -97,6 +110,13 @@
   const H = {
     // 读取 theme.css 里的配色变量实际值, 给 canvas/二维码这类不认 var() 的地方用
     color(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); },
+    // 吸顶导航的实际高度(状态栏 + 导航内容区), 给 van-tabs sticky 的 offset-top 用; 小程序沉浸式下状态栏高度由外壳传入
+    navTop() {
+      const cs = getComputedStyle(document.documentElement);
+      const sb = parseFloat(cs.getPropertyValue('--safe-top')) || 0;
+      const nh = parseFloat(cs.getPropertyValue('--nav-h')) || 46;
+      return sb + nh;
+    },
     num(v) { const n = Number(v || 0); return Math.abs(n % 1) > 0.004 ? n.toFixed(2) : String(Math.round(n)); },
     money(v) { return '¥' + H.num(v); },
     dateOf(s) { return s ? String(s).slice(0, 10) : ''; },

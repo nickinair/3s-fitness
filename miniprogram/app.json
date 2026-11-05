@@ -1,10 +1,15 @@
 {
-  "pages": ["pages/index/index"],
+  "pages": [
+    "pages/home/home",
+    "pages/index/index",
+    "pages/wx-login/wx-login",
+    "pages/agreement/agreement"
+  ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
-    "navigationBarTitleText": "3S健身",
+    "navigationBarTitleText": "3S运动中心",
     "navigationBarTextStyle": "black",
-    "navigationStyle": "custom"
+    "backgroundColor": "#F4F4F4"
   },
   "sitemapLocation": "sitemap.json"
 }

@@ -911,3 +911,95 @@ body:has(.login-page) { background: var(--c-card); }
 }
 
 
+
+/* ===== 会员首页 v2: 沉浸式视频首屏 + 双入口卡 + 黑色会员条(版式对标 M Stand 小程序首页) ===== */
+.mh-page { background: var(--c-bg); }
+.mh-hero { position: relative; height: clamp(280px, calc(100vh - 360px), 760px); overflow: hidden; background: #0b0b0b; }
+.mh-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .9s ease;
+  filter: saturate(.85) contrast(1.05); pointer-events: none; }
+.mh-video.on { opacity: 1; }
+.mh-video::-webkit-media-controls, .mh-video::-webkit-media-controls-start-playback-button { display: none !important; -webkit-appearance: none; }
+/* 三层遮罩: 顶部压暗托住问候语 / 中间柔光压暗托住 Logo / 底部渐隐到页面底色, 让白色卡片自然压在视频上 */
+.mh-shade { position: absolute; inset: 0; pointer-events: none; background:
+  linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 24%),
+  radial-gradient(ellipse 75% 32% at 50% 42%, rgba(0,0,0,.38), rgba(0,0,0,0) 72%),
+  linear-gradient(180deg, rgba(244,244,244,0) 66%, rgba(244,244,244,.5) 86%, var(--c-bg) 100%); }
+.mh-top { position: absolute; left: 16px; right: 16px; top: calc(var(--safe-top) + 14px); z-index: 2; display: flex; align-items: center; color: #fff; }
+.mh-top .m-avatar { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.5); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.mh-hello { font-size: 15px; font-weight: 700; text-shadow: 0 1px 6px rgba(0,0,0,.35); }
+.mh-next { font-size: 11.5px; opacity: .88; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.mh-vip { flex-shrink: 0; margin-left: 10px; font-size: 11px; font-weight: 600; padding: 3px 11px; border-radius: 999px; background: rgba(255,255,255,.94); color: var(--c-title); }
+.mh-brand { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); z-index: 2; text-align: center; color: #fff; }
+.mh-brand img { display: block; width: min(46%, 176px); margin: 0 auto; filter: drop-shadow(0 4px 18px rgba(0,0,0,.45)); }
+.mh-slogan { margin-top: 12px; font-size: 12px; letter-spacing: 4px; padding-left: 4px; opacity: .92; text-shadow: 0 1px 6px rgba(0,0,0,.45); }
+.mh-vdots { position: absolute; left: 0; right: 0; top: calc(50% + 72px); z-index: 2; display: flex; justify-content: center; gap: 5px; }
+.mh-vdots i { width: 5px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.45); transition: width .3s, background .3s; }
+.mh-vdots i.on { width: 14px; background: #fff; }
+
+/* 双入口卡: 英文小字 + 中文大字 + 灰色说明, 中间细竖线(参考图「门店自取 | 外送上门」) */
+.mh-entry { position: relative; z-index: 3; margin: -58px 12px 0; display: flex; align-items: center; padding: 18px 0 16px;
+  background: var(--c-card); border-radius: 16px; box-shadow: 0 6px 24px rgba(0,0,0,.06); }
+.mh-entry-item { flex: 1; min-width: 0; text-align: center; cursor: pointer; }
+.mh-entry-item:active { opacity: .6; }
+.mh-entry-item .en { font-size: 11px; letter-spacing: 1px; color: var(--c-text-2); font-weight: 500; }
+.mh-entry-item .cn { font-size: 23px; font-weight: 700; letter-spacing: 1px; color: var(--c-title); margin-top: 4px; }
+.mh-entry-item .sub { font-size: 11px; color: var(--c-text-4); margin-top: 5px; }
+.mh-entry-split { width: 1px; height: 52px; background: var(--c-line); flex-shrink: 0; }
+
+/* 黑色会员条 + 白卡 + 灰色面板里的横滑图标(参考图「加入场牌会员赠新人好礼券」) */
+.mh-club { margin: 12px 12px 0; border-radius: 14px; overflow: hidden; background: var(--c-card); }
+.mh-club-bar { display: flex; align-items: center; padding: 11px 14px; background: var(--brand); color: #fff; font-size: 13.5px; cursor: pointer; }
+.mh-club-txt { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mh-club-act { flex-shrink: 0; margin-left: 10px; font-size: 12.5px; }
+.mh-club-body { padding: 10px 10px 12px; }
+.mh-icons { display: flex; overflow-x: auto; padding: 16px 2px 12px; border-radius: 12px; background: var(--c-panel);
+  scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.mh-icons::-webkit-scrollbar { display: none; }
+.mh-ic { flex: 0 0 25%; min-width: 74px; text-align: center; cursor: pointer; }
+.mh-ic:active { opacity: .6; }
+.mh-ic-circle { position: relative; width: 44px; height: 44px; margin: 0 auto; border-radius: 50%; background: var(--c-card); color: var(--c-title);
+  display: flex; align-items: center; justify-content: center; }
+.mh-ic-tag { position: absolute; top: -8px; left: 28px; white-space: nowrap; font-size: 9.5px; line-height: 15px; padding: 0 5px; font-weight: 600;
+  border-radius: 8px 8px 8px 2px; background: var(--badge); color: #fff; }
+.mh-ic .t { font-size: 13px; font-weight: 500; color: var(--c-title); margin-top: 8px; }
+.mh-ic .s { font-size: 10.5px; color: var(--c-text-4); margin-top: 3px; white-space: nowrap; }
+.mh-track { width: 36px; height: 3px; margin: 10px auto 0; border-radius: 2px; background: var(--c-line); overflow: hidden; }
+.mh-track i { display: block; height: 100%; border-radius: 2px; background: var(--c-title); }
+.mh-more { text-align: center; font-size: 12px; letter-spacing: 1px; color: var(--c-text-4); padding: 16px 0 6px; cursor: pointer; }
+.mh-banners { position: relative; margin: 0 12px; }
+@media (prefers-reduced-motion: reduce) { .mh-video { transition: none; } }
+
+/* ===== 会员卡面 & 活动 Banner 质感升级(参考 M Stand「潮流周边」按钮):
+   左侧纯色托住文字, 右侧实景照片渐显 + 3S Logo 水印若隐若现。照片复用首页视频的封面图, 无额外下载 ===== */
+.vip-face { --k-rgb: 20, 20, 20; --k-img: none; isolation: isolate;
+  background:
+    linear-gradient(160deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 38%),
+    linear-gradient(90deg, rgb(var(--k-rgb)) 32%, rgba(var(--k-rgb), .62) 62%, rgba(var(--k-rgb), .12) 100%),
+    var(--k-img) right center / auto 100% no-repeat,
+    rgb(var(--k-rgb)); }
+.vip-face::after { content: ''; position: absolute; z-index: -1; right: -16px; bottom: -14px; width: 128px; height: 72px;
+  background: url(/static/logo-white.png) center / contain no-repeat; opacity: .13; transform: rotate(-10deg); pointer-events: none; }
+.vip-face.block::after { width: 168px; height: 95px; right: -18px; bottom: -16px; }
+.vip-face .name, .vip-face .left { text-shadow: 0 1px 6px rgba(0,0,0,.45); }
+.vip-face .kind { background: rgba(0,0,0,.25); }
+.vip-face.face-k4 { --k-rgb: 18, 18, 18;  --k-img: url(/static/videos/dumbbell-poster.jpg); }   /* 私教卡 */
+.vip-face.face-k1 { --k-rgb: 30, 34, 38;  --k-img: url(/static/videos/hanteln2-poster.jpg); }   /* 次卡 */
+.vip-face.face-k2 { --k-rgb: 10, 10, 10;  --k-img: url(/static/videos/21Run01-poster.jpg); }    /* 时间卡 */
+.vip-face.face-k3 { --k-rgb: 34, 30, 27;  --k-img: url(/static/videos/MR8_8170-poster.jpg); }   /* 储值卡 */
+.vip-face.face-dead { --k-rgb: 168, 168, 168; --k-img: none; }                                    /* 过期/停用/退卡: 纯灰, 一眼区分 */
+.vip-face.face-dead::after { opacity: .22; }
+
+/* 活动 Banner(未上传图片的默认样式): 替换原来的 3D 插画为实景照片渐显 + 右上角 Logo 水印 */
+.banner-item:not(.has-img) { isolation: isolate; }
+.banner-item:not(.has-img)::after { z-index: 0; background-size: auto 100%, auto 100%; background-position: 0 0, right center; background-repeat: no-repeat; }
+.banner-g0::after { background-image: linear-gradient(90deg, #000 30%, rgba(0,0,0,.6) 58%, rgba(0,0,0,.08) 100%), url(/static/videos/dumbbell-poster.jpg) !important; background-size: 100% 100%, auto 100% !important; }
+.banner-g1::after { background-image: linear-gradient(90deg, #15181b 30%, rgba(21,24,27,.6) 58%, rgba(21,24,27,.08) 100%), url(/static/videos/hanteln2-poster.jpg) !important; background-size: 100% 100%, auto 100% !important; }
+.banner-g2::after { background-image: linear-gradient(90deg, #0a0a0a 30%, rgba(10,10,10,.6) 58%, rgba(10,10,10,.08) 100%), url(/static/videos/21Run01-poster.jpg) !important; background-size: 100% 100%, auto 100% !important; }
+.banner-item:not(.has-img)::before { content: ''; position: absolute; z-index: 1; right: 14px; top: 12px; width: 64px; height: 36px;
+  background: url(/static/logo-white.png) center / contain no-repeat; opacity: .32; pointer-events: none; }
+.banner-item:not(.has-img) .banner-mask { display: none; }
+
+/* ===== 导航栏高度变量化(默认 46px); 标题/右侧按钮给右上角胶囊让位(--cap-w 默认 0, 不影响现有布局) ===== */
+:root { --van-nav-bar-height: var(--nav-h, 46px); }
+.m-nav .van-nav-bar__title { max-width: min(60%, calc(100% - 2 * var(--cap-w, 0px) - 16px)); }
+.m-nav .van-nav-bar__right { right: var(--cap-w, 0px); }

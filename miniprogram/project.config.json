@@ -1,5 +1,5 @@
 {
-  "description": "3S健身 员工端/会员端 小程序（WebView 壳）",
+  "description": "3S运动中心 微信小程序（员工端/会员端）",
   "packOptions": { "ignore": [], "include": [] },
   "setting": {
     "urlCheck": false,
@@ -10,9 +10,9 @@
     "babelSetting": { "ignore": [], "disablePlugins": [], "outputPath": "" }
   },
   "compileType": "miniprogram",
-  "libVersion": "3.5.0",
-  "appid": "touristappid",
-  "projectname": "3s-fitness-app",
+  "libVersion": "3.16.1",
+  "appid": "wxc8f451cab5ffa843",
+  "projectname": "3s-fitness",
   "condition": {},
   "editorSetting": { "tabIndent": "insertSpaces", "tabSize": 2 }
 }

@@ -115,7 +115,7 @@ window.Pages.StaffTodayBookings = {
     '<div class="page">',
     '  <m-nav title="今日预约"></m-nav>',
     '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
-    '  <van-tabs v-else v-model:active="tab" color="var(--brand)" sticky offset-top="46">',
+    '  <van-tabs v-else v-model:active="tab" color="var(--brand)" sticky :offset-top="H.navTop()">',
     '    <van-tab :title="\'私教(\'+pt.length+\')\'">',
     '      <van-empty v-if="!pt.length" description="今日暂无私教预约"/>',
     '      <div v-for="b in pt" :key="b.id" class="rec-item">',

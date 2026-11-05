@@ -151,6 +151,7 @@
     <div class="page training-photos-page" style="min-height:100vh;background:var(--c-bg);padding-bottom:50px">
       <!-- 顶部导航 -->
       <van-nav-bar
+        class="m-nav"
         title="训练风采"
         left-arrow
         @click-left="$router.back()"

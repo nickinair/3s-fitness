@@ -11,7 +11,7 @@ window.Pages.MemberBookings = {
   template: [
     '<div class="page">',
     '  <m-nav title="我的预约"></m-nav>',
-    '  <van-tabs v-model:active="tab" color="var(--brand)" sticky offset-top="46">',
+    '  <van-tabs v-model:active="tab" color="var(--brand)" sticky :offset-top="H.navTop()">',
     '    <van-tab :title="\'私教(\'+pt.length+\')\'">',
     '      <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '      <template v-else>',

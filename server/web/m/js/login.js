@@ -1,6 +1,8 @@
 /* 登录 / 注册 (会员) + 员工登录 */
 window.Pages.Login = {
   data() {
+    const ua = navigator.userAgent || '';
+    const isMp = window.__wxjs_environment === 'miniprogram' || /miniProgram/i.test(ua);
     return {
       mode: 'member',            // member | staff
       tab: 'login',              // login | register
@@ -8,6 +10,7 @@ window.Pages.Login = {
       username: '', spassword: '',
       reg: { phone: '', realname: '', password: '', gender: 1 },
       loading: false,
+      isMp,
     };
   },
   template: [
@@ -29,6 +32,7 @@ window.Pages.Login = {
     '            <van-field v-model="password" type="password" label="密码" placeholder="请输入密码" clearable @keyup.enter="doMemberLogin" />',
     '            <div style="padding:20px 16px 0">',
     '              <van-button type="primary" block round :loading="loading" @click="doMemberLogin">登 录</van-button>',
+    '              <van-button v-if="isMp" plain type="primary" block round style="margin-top:10px" @click="goWxPhoneLogin">微信手机号快捷登录</van-button>',
     '            </div>',
     '          </template>',
     '          <template v-else>',
@@ -92,10 +96,19 @@ window.Pages.Login = {
         this.enter(data, 'staff');
       } finally { this.loading = false; }
     },
+    goWxPhoneLogin() {
+      if (window.wx && wx.miniProgram && wx.miniProgram.navigateTo) {
+        wx.miniProgram.navigateTo({ url: '/pages/wx-login/wx-login' });
+      } else {
+        vant.showToast('当前环境不支持微信快捷登录');
+      }
+    },
     enter(data, type) {
       Store.token = data.token;
       Store.user = data.user;
       Store.type = type;
+      // 小程序里: 登录态交给原生首页保存(会员看沉浸式首页, 员工由原生页转进 H5 工作台)
+      if (MP.is() && MP.homeWithToken()) return;
       this.$router.replace(type === 'member' ? '/' : '/staff');
     },
   },

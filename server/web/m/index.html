@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff"><!-- 浏览器顶栏色, 不支持 var(); 改配色时同步改这里 -->
 <title>3S运动中心</title>
+<script>
+/* 小程序 web-view 打开时会带 mp=1: 记到 sessionStorage, 站内跳转/刷新后仍能识别(回首页/登录/退出要切回原生首页) */
+(function () { try { if (new URLSearchParams(location.search).get('mp') === '1') sessionStorage.setItem('mp', '1'); } catch (e) {} })();
+</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@4.9.4/lib/index.css">
 <link rel="stylesheet" href="/static/theme.css">
 <link rel="stylesheet" href="css/app.css?v=20261028_1">
@@ -15,6 +19,7 @@
 <script src="https://cdn.jsdelivr.net/npm/vue-router@4.4.3/dist/vue-router.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vant@4.9.4/lib/vant.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js"></script>
+<script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
 <script src="js/qrcode.min.js"></script>
 <script src="js/api.js?v=20261102_1"></script>
   <script src="js/recorder.js"></script>
