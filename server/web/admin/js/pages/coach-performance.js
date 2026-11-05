@@ -23,7 +23,7 @@ window.AppPages.CoachPerformance = {
         grid: { left: 60, right: 30, top: 30, bottom: 30 },
         xAxis: { type: 'value', minInterval: 1 },
         yAxis: { type: 'category', data: rows.map(x => x.realname).reverse() },
-        series: [{ name: '消课课时', type: 'bar', color: '#0d5e56', barMaxWidth: 22,
+        series: [{ name: '消课课时', type: 'bar', color: themeColor('--brand'), barMaxWidth: 22,
           label: { show: true, position: 'right' },
           data: rows.map(x => Number(x.lessons || 0)).reverse() }],
       };

@@ -10,7 +10,7 @@ window.Pages.MemberCoaches = {
   template: [
     '<div class="page has-tabbar">',
     '  <m-nav title="私教教练" :back="false"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!sorted.length" description="暂无教练" />',
     '    <div v-for="c in sorted" :key="c.id" class="coach-row" @click="$router.push(\'/coach/\'+c.id)">',
@@ -27,7 +27,7 @@ window.Pages.MemberCoaches = {
     '          <span v-if="Number(c.lesson_price)>0" class="cr-price">{{ H.money(c.lesson_price) }}/节</span>',
     '        </div>',
     '      </div>',
-    '      <van-icon name="arrow" color="#c8c9cc"/>',
+    '      <van-icon name="arrow" color="var(--c-text-4)"/>',
     '    </div>',
     '  </template>',
     '</div>',
@@ -48,12 +48,16 @@ window.Pages.MemberCoachDetail = {
       coach: null, courses: [], loading: true, clubs: [], clubId: null,
       show: false, course: null,
       days: H.monthDays(), date: H.today(),
+      calShow: false,
+      minDate: dayjs().subtract(1, 'year').toDate(),
+      maxDate: dayjs().add(3, 'month').toDate(),
       busy: [], myBusy: [], slotLoading: false, from: null,
       cards: null, cardId: null,
       submitting: false,
     };
   },
   computed: {
+    calDefaultDate() { return dayjs(this.date).toDate(); },
     openTime() { const c = this.clubs.find(x => x.id === this.clubId); return c ? c.open_time : '08:00-21:00'; },
     usableCards() { return (this.cards || []).filter(c => c.usable); },
     blockedCards() { return (this.cards || []).filter(c => !c.usable); },
@@ -61,12 +65,12 @@ window.Pages.MemberCoachDetail = {
   template: [
     '<div class="page">',
     '  <m-nav title="教练主页"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else-if="coach">',
-    '    <div class="home-hero coach-hero" :class="{cover: coach.cover}" :style="coach.cover ? {backgroundImage:\'linear-gradient(180deg,rgba(6,20,18,.35),rgba(6,20,18,.82)),url(\'+coach.cover+\')\'} : {}">',
+    '    <div class="home-hero coach-hero" :class="{cover: coach.cover}" :style="coach.cover ? {backgroundImage:\'linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.82)),url(\'+coach.cover+\')\'} : {}">',
     '      <div class="flex">',
     '        <img v-if="coach.avatar" class="coach-face" :src="coach.avatar" alt=""/>',
-    '        <m-avatar v-else :name="coach.realname" :size="58" style="background:rgba(255,255,255,.25)"></m-avatar>',
+    '        <m-avatar v-else :name="coach.realname" :size="58"></m-avatar>',
     '        <div class="flex1" style="margin-left:14px">',
     '          <div style="font-size:19px;font-weight:700">{{ coach.realname }}</div>',
     '          <div style="font-size:12px;opacity:.85;margin-top:4px">{{ coach.good_at }}</div>',
@@ -77,7 +81,7 @@ window.Pages.MemberCoachDetail = {
     '    </div>',
     '    <div class="card-box" v-if="coach.detail">',
     '      <div style="font-size:14px;font-weight:600;margin-bottom:6px">教练简介</div>',
-    '      <div style="font-size:13px;color:#555;line-height:1.8">{{ coach.detail }}</div>',
+    '      <div style="font-size:13px;color:var(--c-text-2);line-height:1.8">{{ coach.detail }}</div>',
     '    </div>',
     '    <div class="sec-title">可约课程</div>',
     '    <van-empty v-if="!courses.length" description="该教练暂无可约课程" image-size="70"/>',
@@ -105,15 +109,21 @@ window.Pages.MemberCoachDetail = {
     '        </div>',
     '      </div>',
     '      </template>',
-    '      <div class="sec-title" style="margin:14px 0 6px">选择日期</div>',
+    '      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 6px">',
+    '        <div class="sec-title" style="margin:0">选择日期 ({{ H.day(date) }})</div>',
+    '        <div style="display:flex;gap:6px">',
+    '          <van-button v-if="date!==H.today()" size="mini" round plain type="primary" @click="goToday">回今天</van-button>',
+    '          <van-button size="mini" round plain icon="calendar-o" @click="calShow=true">日历选择</van-button>',
+    '        </div>',
+    '      </div>',
     '      <div class="day-strip" ref="strip" style="padding:4px 0;background:transparent">',
     '        <div v-for="d in days" :key="d.date" class="day-item" :class="{on:d.date===date, past:d.past}" @click="pickDate(d.date)">',
     '          <div class="w">{{ d.w }}</div><div class="d">{{ d.d }}</div>',
     '        </div>',
     '      </div>',
     '      <div class="sec-title" style="margin:12px 0 6px">选择上课时间</div>',
-    '      <div v-if="slotLoading" style="text-align:center;padding:14px"><van-loading size="20" color="#0d5e56"/></div>',
-    '      <m-time-picker v-else v-model="from" :date="date" :open-time="openTime" :busy="busy" :mine="myBusy" :duration="course.duration || 60"></m-time-picker>',
+    '      <div v-if="slotLoading" style="text-align:center;padding:14px"><van-loading size="20" color="var(--brand)"/></div>',
+    '      <m-time-picker v-else v-model="from" :date="date" :open-time="openTime" :busy="busy" :mine="myBusy" :duration="course.duration || 60" :allow-past="true"></m-time-picker>',
     '      <div class="sec-title" style="margin:14px 0 6px">选择支付卡</div>',
     '      <template v-if="cards">',
     '        <van-radio-group v-model="cardId">',
@@ -122,13 +132,13 @@ window.Pages.MemberCoachDetail = {
     '              <div style="font-size:14px;font-weight:600">{{ c.card_type_name }}</div>',
     '              <div class="muted mt4">{{ cardDesc(c) }}<template v-if="c.expire_time"> · {{ H.dateOf(c.expire_time) }}到期</template></div>',
     '            </div>',
-    '            <van-radio :name="c.id" checked-color="#0d5e56"/>',
+    '            <van-radio :name="c.id" checked-color="var(--brand)"/>',
     '          </div>',
     '        </van-radio-group>',
     '        <div v-for="c in blockedCards" :key="c.id" class="cat-pick flex dis">',
     '          <div class="flex1">',
     '            <div style="font-size:14px;font-weight:600">{{ c.card_type_name }}</div>',
-    '            <div class="mt4" style="font-size:12px;color:#e08a3c">{{ c.reason }}</div>',
+    '            <div class="mt4" style="font-size:12px;color:var(--danger)">{{ c.reason }}</div>',
     '          </div>',
     '        </div>',
     '        <div v-if="!usableCards.length" style="text-align:center;padding:8px 0 2px">',
@@ -141,6 +151,7 @@ window.Pages.MemberCoachDetail = {
     '      </div>',
     '    </div>',
     '  </van-popup>',
+    '  <van-calendar v-model:show="calShow" :min-date="minDate" :max-date="maxDate" :default-date="calDefaultDate" color="var(--brand)" @confirm="onDateConfirm"/>',
     '</div>',
   ].join('\n'),
   methods: {
@@ -162,7 +173,12 @@ window.Pages.MemberCoachDetail = {
       this.date = H.today();
       this.loadBusy(); this.loadCards();
     },
-    pickDate(d) { this.date = d; this.from = null; this.loadBusy(); this.scrollDay(); },
+    goToday() { this.pickDate(H.today()); },
+    onDateConfirm(d) {
+      this.calShow = false;
+      this.pickDate(dayjs(d).format('YYYY-MM-DD'));
+    },
+    pickDate(d) { this.date = d; this.from = null; this.loadBusy(); this.loadCards(); this.scrollDay(); },
     scrollDay() {
       this.$nextTick(() => {
         const strip = this.$refs.strip; if (!strip) return;
@@ -178,7 +194,7 @@ window.Pages.MemberCoachDetail = {
       } finally { this.slotLoading = false; }
     },
     async loadCards() {
-      this.cards = await API.get('/member/my-pt-cards?course_id=' + this.course.id);
+      this.cards = await API.get('/member/my-pt-cards?course_id=' + this.course.id + '&date=' + this.date);
       const usable = this.usableCards;
       if (usable.length) this.cardId = usable[0].id;
     },
@@ -191,7 +207,7 @@ window.Pages.MemberCoachDetail = {
         });
         this.show = false;
         await vant.showDialog({
-          title: '预约已提交', confirmButtonColor: '#0d5e56', confirmButtonText: '查看我的预约',
+          title: '预约已提交', confirmButtonColor: 'var(--brand)', confirmButtonText: '查看我的预约',
           message: H.day(this.date) + ' ' + this.from + ' · ' + this.course.title + '\n已提交给 ' + this.coach.realname + ' 教练，确认后生效',
         });
         this.$router.push('/my-bookings');

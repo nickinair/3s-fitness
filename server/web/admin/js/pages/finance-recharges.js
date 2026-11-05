@@ -46,7 +46,7 @@ window.AppPages.FinanceRecharges = {
         <el-table-column prop="card_type_name" label="卡类型" min-width="130" show-overflow-tooltip />
         <el-table-column label="类型" width="76"><template #default="{ row }"><dict-tag dict="rechargeType" :value="row.type" /></template></el-table-column>
         <el-table-column label="金额" width="110">
-          <template #default="{ row }"><span class="money" :style="Number(row.actual_money) < 0 ? 'color:#17a26b' : ''">{{ Fmt.money(row.actual_money) }}</span></template>
+          <template #default="{ row }"><span class="money" :style="Number(row.actual_money) < 0 ? 'color:var(--danger)' : ''">{{ Fmt.money(row.actual_money) }}</span></template>
         </el-table-column>
         <el-table-column label="支付方式" width="90"><template #default="{ row }"><dict-tag dict="payMethod" :value="row.pay_method" /></template></el-table-column>
         <el-table-column prop="membership_name" label="业绩归属" width="96" />

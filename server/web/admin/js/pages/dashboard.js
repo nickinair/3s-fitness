@@ -1,8 +1,8 @@
 /* 数据看板 - 更新包含小程序报表功能 */
 
-const RatioList = {
+const DashRatioList = {   // 不能叫 RatioList: report.js 也在全局声明了同名常量, 重名会让后加载的 report.js 整个文件报错
   props: { list: { type: Array, default: () => [] }, unit: String, money: Boolean },
-  data() { return { palette: ['#4f6bed', '#3aa5d8', '#3cb371', '#8bc34a', '#e0b93c', '#e08a3c', '#e05a5a'] }; },
+  data() { return { palette: ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'] }; },
   methods: {
     colorOf(i) { return this.palette[i % this.palette.length]; },
     fmtVal(it) { return this.money ? '¥' + window.Fmt.num(it.money || it.value) : (window.Fmt.num(it.cnt || it.value) + (this.unit || '')); },
@@ -30,7 +30,7 @@ const RatioList = {
 
 window.AppPages.Dashboard = {
   name: 'DashboardPage',
-  components: { RatioList },
+  components: { RatioList: DashRatioList },
 
   data() {
     return {
@@ -47,6 +47,7 @@ window.AppPages.Dashboard = {
       
       // 报表相关
       rmonth: dayjs().format('YYYY-MM'),
+      isAdmin: (Auth.getUser() || {}).role === 'admin',
       membersData: null,
       financeData: null,
       loadingMembers: false,
@@ -102,9 +103,9 @@ window.AppPages.Dashboard = {
         yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
         series: [
           { name: '预收流水', type: 'line', smooth: true, data: pick(this.monthly.revenueTrend),
-            itemStyle: { color: '#0d5e56' }, areaStyle: { opacity: 0.12 } },
+            itemStyle: { color: themeColor('--brand') }, areaStyle: { opacity: 0.12 } },
           { name: '耗卡金额', type: 'line', smooth: true, data: pick(this.monthly.spendTrend),
-            itemStyle: { color: '#c98a2d' }, areaStyle: { opacity: 0.1 } },
+            itemStyle: { color: themeColor('--chart-3') }, areaStyle: { opacity: 0.1 } },
         ],
       };
     },
@@ -114,7 +115,7 @@ window.AppPages.Dashboard = {
       return {
         tooltip: { trigger: 'item', valueFormatter: v => '¥' + Number(v).toFixed(2) },
         legend: { bottom: 0 },
-        color: ['#0d5e56', '#3a7bd5', '#c98a2d'],
+        color: [themeColor('--chart-1'), themeColor('--chart-3'), themeColor('--chart-4')],
         series: [{
           type: 'pie', radius: ['48%', '72%'], center: ['50%', '44%'],
           label: { formatter: '{b}\n¥{c}' },
@@ -134,7 +135,7 @@ window.AppPages.Dashboard = {
         grid: { left: 40, right: 20, top: 20, bottom: 20 },
         xAxis: { type: 'category', data: this.membersData.trend.map(x => x.label), boundaryGap: false },
         yAxis: { type: 'value', minInterval: 1 },
-        series: [{ type: 'line', smooth: true, data: this.membersData.trend.map(x => x.value), itemStyle: { color: '#0d5e56' }, areaStyle: { opacity: 0.1 } }]
+        series: [{ type: 'line', smooth: true, data: this.membersData.trend.map(x => x.value), itemStyle: { color: themeColor('--brand') }, areaStyle: { opacity: 0.1 } }]
       };
     },
     financeTrendOption() {
@@ -144,7 +145,7 @@ window.AppPages.Dashboard = {
         grid: { left: 60, right: 20, top: 20, bottom: 20 },
         xAxis: { type: 'category', data: this.financeData.trend.map(x => x.label), boundaryGap: false },
         yAxis: { type: 'value' },
-        series: [{ type: 'line', smooth: true, data: this.financeData.trend.map(x => x.value), itemStyle: { color: '#e6a23c' }, areaStyle: { opacity: 0.1 } }]
+        series: [{ type: 'line', smooth: true, data: this.financeData.trend.map(x => x.value), itemStyle: { color: themeColor('--brand') }, areaStyle: { opacity: 0.1 } }]
       };
     }
   },
@@ -261,14 +262,18 @@ window.AppPages.Dashboard = {
 
     <!-- 用户数据 Tab -->
     <div v-show="activeTab === 'members'" v-loading="loadingMembers">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:15px">
-        <el-date-picker v-model="rmonth" type="month" value-format="YYYY-MM" :clearable="false" @change="loadMembers" style="width:160px" />
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:15px">
+        <el-date-picker v-model="rmonth" type="month" value-format="YYYY-MM" :clearable="false" @change="onReportMonth" style="width:160px" />
       </div>
       <template v-if="membersData">
         <div class="metric-grid">
           <div class="metric-card"><div class="m-label">累计会员</div><div class="m-value">{{ Fmt.num(membersData.summary.total_members) }}</div><div class="m-diff" :class="pctCls(membersData.summary.total_pct)">较上月 {{ pctText(membersData.summary.total_pct) }}</div></div>
           <div class="metric-card"><div class="m-label">在籍会员</div><div class="m-value">{{ Fmt.num(membersData.summary.active_members) }}</div><div class="m-diff" :class="pctCls(membersData.summary.active_pct)">较上月 {{ pctText(membersData.summary.active_pct) }}</div></div>
           <div class="metric-card"><div class="m-label">新会员</div><div class="m-value">{{ Fmt.num(membersData.summary.new_members) }}</div><div class="m-diff" :class="pctCls(membersData.summary.new_pct)">较上月 {{ pctText(membersData.summary.new_pct) }}</div></div>
+          <div class="metric-card"><div class="m-label">复购会员
+            <el-tooltip content="复购会员 = 当月老会员续卡/再次购卡/充值的去重人数" placement="top">
+              <el-icon style="cursor:help;vertical-align:-2px;margin-left:2px;color:var(--el-text-color-secondary)" size="13"><InfoFilled /></el-icon>
+            </el-tooltip></div><div class="m-value">{{ Fmt.num(membersData.summary.repeat_members) }}</div><div class="m-diff" :class="pctCls(membersData.summary.repeat_pct)">较上月 {{ pctText(membersData.summary.repeat_pct) }}</div></div>
         </div>
         
         <div class="card-box">
@@ -279,29 +284,29 @@ window.AppPages.Dashboard = {
         <div class="three-col" style="grid-template-columns: 1fr 1fr; gap:20px">
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
-                <span>新开会员卡 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共{{membersData.newCards.sum}}人</span></span>
-                <el-button link type="primary" @click="previewDetail('members', 'new_cards')">导出预览</el-button>
+                <span>新开会员卡 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共计{{membersData.newCards.sum}}人</span></span>
+                <el-button link type="primary" @click="previewDetail('members', 'new_cards')">导出明细</el-button>
               </div>
               <ratio-list :list="membersData.newCards.list" unit="人" />
            </div>
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
-                <span>教练有效课时 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共{{membersData.coachHours.sum}}节</span></span>
-                <el-button link type="primary" @click="previewDetail('members', 'coach_hours')">导出预览</el-button>
+                <span>教练有效课时 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共计{{membersData.coachHours.sum}}节</span></span>
+                <el-button link type="primary" @click="previewDetail('members', 'coach_hours')">导出明细</el-button>
               </div>
               <ratio-list :list="membersData.coachHours.list" unit="节" />
            </div>
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
-                <span>销售成单 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共{{membersData.salesOrders.sum}}单</span></span>
-                <el-button link type="primary" @click="previewDetail('members', 'sales_orders')">导出预览</el-button>
+                <span>销售成单 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共计{{membersData.salesOrders.sum}}单</span></span>
+                <el-button link type="primary" @click="previewDetail('members', 'sales_orders')">导出明细</el-button>
               </div>
               <ratio-list :list="membersData.salesOrders.list" unit="单" />
            </div>
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
-                <span>预约排行Top20 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共{{membersData.bookingTop.sum}}次</span></span>
-                <el-button link type="primary" @click="previewDetail('members', 'booking_top')">导出预览</el-button>
+                <span>预约排行Top20 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">共计{{membersData.bookingTop.sum}}次</span></span>
+                <el-button link type="primary" @click="previewDetail('members', 'booking_top')">导出明细</el-button>
               </div>
               <ratio-list :list="membersData.bookingTop.list" unit="次" />
            </div>
@@ -311,14 +316,14 @@ window.AppPages.Dashboard = {
 
     <!-- 财务数据 Tab -->
     <div v-show="activeTab === 'finance'" v-loading="loadingFinance">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:15px">
-        <el-date-picker v-model="rmonth" type="month" value-format="YYYY-MM" :clearable="false" @change="loadFinance" style="width:160px" />
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:15px">
+        <el-date-picker v-model="rmonth" type="month" value-format="YYYY-MM" :clearable="false" @change="onReportMonth" style="width:160px" />
       </div>
       <template v-if="financeData">
         <div class="metric-grid">
-          <div class="metric-card"><div class="m-label">月度营收</div><div class="m-value" style="color:#c98a2d">¥{{ Fmt.num(financeData.summary.revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.revenue_pct)">较上月 {{ pctText(financeData.summary.revenue_pct) }}</div></div>
-          <div class="metric-card"><div class="m-label">复购营收</div><div class="m-value" style="color:#c98a2d">¥{{ Fmt.num(financeData.summary.repeat_revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.repeat_pct)">较上月 {{ pctText(financeData.summary.repeat_pct) }}</div></div>
-          <div class="metric-card"><div class="m-label">新用户营收</div><div class="m-value" style="color:#c98a2d">¥{{ Fmt.num(financeData.summary.new_user_revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.new_user_pct)">较上月 {{ pctText(financeData.summary.new_user_pct) }}</div></div>
+          <div class="metric-card"><div class="m-label">月度营收</div><div class="m-value" style="color:var(--money)">¥{{ Fmt.num(financeData.summary.revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.revenue_pct)">较上月 {{ pctText(financeData.summary.revenue_pct) }}</div></div>
+          <div class="metric-card"><div class="m-label">复购营收</div><div class="m-value" style="color:var(--money)">¥{{ Fmt.num(financeData.summary.repeat_revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.repeat_pct)">较上月 {{ pctText(financeData.summary.repeat_pct) }}</div></div>
+          <div class="metric-card"><div class="m-label">新用户营收</div><div class="m-value" style="color:var(--money)">¥{{ Fmt.num(financeData.summary.new_user_revenue) }}</div><div class="m-diff" :class="pctCls(financeData.summary.new_user_pct)">较上月 {{ pctText(financeData.summary.new_user_pct) }}</div></div>
         </div>
         
         <div class="card-box">
@@ -330,22 +335,23 @@ window.AppPages.Dashboard = {
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
                 <span>会员卡营收</span>
-                <el-button link type="primary" @click="previewDetail('finance', 'by_card')">导出预览</el-button>
+                <el-button link type="primary" @click="previewDetail('finance', 'by_card')">导出明细</el-button>
               </div>
               <ratio-list :list="financeData.byCard.list" money />
            </div>
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
                 <span>销售业绩</span>
-                <el-button link type="primary" @click="previewDetail('finance', 'sales')">导出预览</el-button>
+                <el-button link type="primary" @click="previewDetail('finance', 'sales')">导出明细</el-button>
               </div>
               <ratio-list :list="financeData.sales.list" money />
            </div>
            <div class="card-box">
               <div class="box-title" style="display:flex;justify-content:space-between">
-                <span>人效 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">权责发生制营收: ¥{{Fmt.num(financeData.accrual)}}</span></span>
-                <el-button link type="primary" @click="previewDetail('finance', 'staff_value')">导出预览</el-button>
+                <span>人效 <span class="text-muted" style="font-weight:normal;font-size:12px;margin-left:4px">营收(权责发生制): ¥{{Fmt.num(financeData.accrual)}}</span></span>
+                <el-button link type="primary" @click="previewDetail('finance', 'staff_value')">导出明细</el-button>
               </div>
+              <div class="text-muted" style="font-size:12px">(教练所有课程价值总和，团课价值取决于约课人数)</div>
               <ratio-list :list="financeData.staffValue.list" money />
            </div>
         </div>
@@ -368,7 +374,7 @@ window.AppPages.Dashboard = {
         <el-table-column prop="sub" label="说明" min-width="120" show-overflow-tooltip />
         <el-table-column label="金额/数量" width="100" align="right">
            <template #default="{row}">
-             <span v-if="row.money != null && preview.src === 'finance'" style="color:#c98a2d;font-weight:bold">¥{{ Fmt.num(row.money) }}</span>
+             <span v-if="row.money != null && preview.src === 'finance'" style="color:var(--money);font-weight:bold">¥{{ Fmt.num(row.money) }}</span>
              <span v-else-if="row.money != null">{{ row.money }}</span>
            </template>
         </el-table-column>
@@ -404,14 +410,22 @@ window.AppPages.Dashboard = {
     },
     pctCls(v) { v = Number(v) || 0; return v > 0 ? 'up' : (v < 0 ? 'down' : ''); },
     pctText(v) { v = Number(v) || 0; let a = v > 0 ? '▲ ' : (v < 0 ? '▼ ' : ''); return a + Fmt.num(Math.abs(v)) + '%'; },
+    // 门店口径跟随顶部门店切换; 显式传 club_id, 让 CSV 下载(无请求头)与页面数据一致. 非管理员后端固定本店, 忽略该参数
+    reportParams(extra) {
+      const p = { month: this.rmonth };
+      if (this.isAdmin) p.club_id = Auth.getClubId() || 'all';
+      return Object.assign(p, extra);
+    },
+    // 切换月份后两个标签页的数据都失效, 只重载当前页
+    onReportMonth() { this.membersData = null; this.financeData = null; this.onTabChange(); },
     async loadMembers() {
       this.loadingMembers = true;
-      try { this.membersData = await api.get('/report/members?month=' + this.rmonth); }
+      try { this.membersData = await api.get('/report/members', this.reportParams()); }
       finally { this.loadingMembers = false; }
     },
     async loadFinance() {
       this.loadingFinance = true;
-      try { this.financeData = await api.get('/report/finance?month=' + this.rmonth); }
+      try { this.financeData = await api.get('/report/finance', this.reportParams()); }
       finally { this.loadingFinance = false; }
     },
     async previewDetail(src, section) {
@@ -421,7 +435,7 @@ window.AppPages.Dashboard = {
       this.preview.visible = true;
       this.preview.loading = true;
       try {
-        const d = await api.get('/report/' + src + '?month=' + this.rmonth + '&detail=' + section);
+        const d = await api.get('/report/' + src, this.reportParams({ detail: section }));
         this.preview.data = d;
         this.preview.title = d.title;
         const items = [];
@@ -436,7 +450,7 @@ window.AppPages.Dashboard = {
       }
     },
     exportDetailCsv() {
-      const url = api.exportUrl('/report/' + this.preview.src, { month: this.rmonth, export: 'csv', section: this.preview.section });
+      const url = api.exportUrl('/report/' + this.preview.src, this.reportParams({ section: this.preview.section }));
       window.open(url);
     }
   },

@@ -7,7 +7,11 @@ TARGET="$1"
 PORT="${2:-22}"
 [ -z "$TARGET" ] && { echo "用法: ./deploy/deploy.sh user@服务器IP [ssh端口]"; exit 1; }
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -d "$(dirname "$0")/server" ]; then
+  ROOT="$(cd "$(dirname "$0")" && pwd)"
+else
+  ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+fi
 SSHOPTS="-p $PORT -o StrictHostKeyChecking=accept-new"
 if [ -n "$SSHPASS" ]; then SSH="sshpass -e ssh $SSHOPTS"; SCP="sshpass -e scp -P $PORT"; else SSH="ssh $SSHOPTS"; SCP="scp -P $PORT"; fi
 

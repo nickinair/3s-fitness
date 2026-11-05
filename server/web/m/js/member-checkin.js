@@ -12,7 +12,7 @@ window.Pages.MemberCheckin = {
     '    <div class="muted">模拟扫门店二维码 · 自动选卡扣费</div>',
     '  </div>',
     '  <div class="sec-title">签到记录</div>',
-    '  <div v-if="loading" style="text-align:center;padding:30px 0"><van-loading color="#0d5e56"/></div>',
+    '  <div v-if="loading" style="text-align:center;padding:30px 0"><van-loading color="var(--brand)"/></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="暂无签到记录" image-size="70"/>',
     '    <div class="card-box" v-else style="padding:2px 8px">',
@@ -33,7 +33,7 @@ window.Pages.MemberCheckin = {
       try {
         const r = await API.post('/member/checkin', {});
         vant.showDialog({
-          title: '签到成功', confirmButtonColor: '#0d5e56',
+          title: '签到成功', confirmButtonColor: 'var(--brand)',
           message: (r.realname || '') + '，欢迎回来！\n' + r.card_type_name + '\n' + (r.deduct_info || ''),
         });
         this.load();

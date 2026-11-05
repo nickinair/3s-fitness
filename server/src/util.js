@@ -35,6 +35,8 @@ async function lifecycleTick(force = false) {
   const n = now();
   // 使用中 -> 已过期
   await db.exec('UPDATE biz_member_card SET status=2 WHERE status=1 AND expire_time IS NOT NULL AND expire_time < ?', [n]);
+  // 已过期但到期时间被改到未来(改卡延期) -> 恢复使用中
+  await db.exec('UPDATE biz_member_card SET status=1 WHERE status=2 AND expire_time IS NOT NULL AND expire_time >= ?', [n]);
   // 暂停到期 -> 恢复使用
   await db.exec('UPDATE biz_member_card SET status=1, suspend_start_time=NULL, suspend_end_time=NULL WHERE status=3 AND suspend_end_time IS NOT NULL AND suspend_end_time < ?', [n]);
   // 待开卡超过最晚开卡日期 -> 自动激活
@@ -87,10 +89,18 @@ function sendCsv(res, filename, headers, rows) {
 const COUNT_KINDS = [1, 4];
 const cardDeduct = (kind, num = 1) => (COUNT_KINDS.includes(Number(kind)) ? (Number(num) || 0) : 0);
 // 返回 '' 表示可用于约课, 否则返回不可用的原因(给会员看)
-function cardBlockReason(c) {
+function cardBlockReason(c, targetDate) {
   if (!c) return '卡不存在';
-  if (c.status === 2) return '已于 ' + dayjs(c.expire_time).format('YYYY-MM-DD') + ' 到期';
-  if (![0, 1].includes(c.status)) return (CARD_STATUS[c.status] || '不可用') + '，暂不能约课';
+  if (c.status === 2) {
+    // 补录历史课程: 若课程日期在到期日之前且在1年内，视为该课发生时卡仍有效
+    if (targetDate && dayjs(targetDate).isBefore(dayjs(c.expire_time).endOf('day')) && dayjs(targetDate).isAfter(dayjs().subtract(1, 'year'))) {
+      // 允许使用
+    } else {
+      return '已于 ' + dayjs(c.expire_time).format('YYYY-MM-DD') + ' 到期';
+    }
+  }
+  if (![0, 1, 2].includes(c.status)) return (CARD_STATUS[c.status] || '不可用') + '，暂不能约课';
+  if (c.status !== 2 && ![0, 1].includes(c.status)) return (CARD_STATUS[c.status] || '不可用') + '，暂不能约课';
   if (COUNT_KINDS.includes(Number(c.card_kind)) && Number(c.left_counts) < 1) return '剩余次数为 0';
   if (Number(c.card_kind) === 3 && Number(c.left_money) <= 0) return '储值余额为 0';
   return '';

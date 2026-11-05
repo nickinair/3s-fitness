@@ -94,7 +94,7 @@ window.AppPages.Schedule = {
     <!-- 课程详情抽屉 -->
     <el-drawer v-model="drawer" :title="detail ? detail.syllabus.title : '课程详情'" size="560px" destroy-on-close>
       <div v-loading="detailLoading" v-if="detail">
-        <div class="card-box" style="background:#f7faf9;box-shadow:none">
+        <div class="card-box" style="background:var(--bg-sunken);box-shadow:none">
           <div class="profile-grid" style="grid-template-columns:repeat(2,1fr)">
             <div><span class="lab">时间</span>{{ Fmt.time(detail.syllabus.start_time) }} ~ {{ dayjs(detail.syllabus.end_time).format('HH:mm') }}</div>
             <div><span class="lab">状态</span><dict-tag dict="syllabusStatus" :value="detail.syllabus.status" /></div>

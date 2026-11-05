@@ -8,12 +8,12 @@
     template: `
       <div class="login-wrap">
         <div class="login-card">
-          <div class="logo"><div class="badge">3S</div><h1>3S运动中心 · 平台总台</h1></div>
+          <div class="logo"><img src="/static/logo-black.png" alt="3S运动中心"><h1>平台总台</h1></div>
           <div class="sub">商户开通 · 经营总览 · 通知与监控</div>
           <el-form @keyup.enter="doLogin">
             <el-form-item><el-input v-model="form.username" placeholder="平台账号" size="large" /></el-form-item>
             <el-form-item><el-input v-model="form.password" type="password" show-password placeholder="密码" size="large" /></el-form-item>
-            <el-button type="primary" size="large" style="width:100%;background:#4338ca;border-color:#4338ca" :loading="loading" @click="doLogin">登 录</el-button>
+            <el-button type="primary" size="large" style="width:100%" :loading="loading" @click="doLogin">登 录</el-button>
           </el-form>
         </div>
       </div>`,
@@ -71,7 +71,7 @@
           grid: { left: 60, right: 30, top: 30, bottom: 30 },
           xAxis: { type: 'category', data: data.trend.map(x => x.m) },
           yAxis: { type: 'value' },
-          series: [{ type: 'line', smooth: true, data: data.trend.map(x => Number(x.money)), areaStyle: { opacity: .12 }, itemStyle: { color: '#4338ca' } }],
+          series: [{ type: 'line', smooth: true, data: data.trend.map(x => Number(x.money)), areaStyle: { opacity: .12 }, itemStyle: { color: getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() } }],
         });
       });
       return { s, byMerchant, fmtMoney };
@@ -85,7 +85,7 @@
         <div class="card">
           <div class="toolbar">
             <div class="card-title" style="margin:0">商户列表</div>
-            <el-button type="primary" style="background:#4338ca;border-color:#4338ca" @click="openCreate">+ 开通商户</el-button>
+            <el-button type="primary" @click="openCreate">+ 开通商户</el-button>
           </div>
           <el-table :data="list" stripe>
             <el-table-column type="expand">
@@ -136,7 +136,7 @@
           </el-form>
           <template #footer>
             <el-button @click="createVisible=false">取消</el-button>
-            <el-button type="primary" style="background:#4338ca;border-color:#4338ca" :loading="saving" @click="doCreate">开通</el-button>
+            <el-button type="primary" :loading="saving" @click="doCreate">开通</el-button>
           </template>
         </el-dialog>
 
@@ -150,7 +150,7 @@
           </el-form>
           <template #footer>
             <el-button @click="editVisible=false">取消</el-button>
-            <el-button type="primary" style="background:#4338ca;border-color:#4338ca" @click="doEdit">保存</el-button>
+            <el-button type="primary" @click="doEdit">保存</el-button>
           </template>
         </el-dialog>
 
@@ -162,7 +162,7 @@
           </el-form>
           <template #footer>
             <el-button @click="clubVisible=false">取消</el-button>
-            <el-button type="primary" style="background:#4338ca;border-color:#4338ca" @click="doAddClub">保存</el-button>
+            <el-button type="primary" @click="doAddClub">保存</el-button>
           </template>
         </el-dialog>
       </div>`,
@@ -219,7 +219,7 @@
       <div class="card">
         <div class="toolbar">
           <div class="card-title" style="margin:0">平台公告</div>
-          <el-button type="primary" style="background:#4338ca;border-color:#4338ca" @click="visible=true">+ 发布公告</el-button>
+          <el-button type="primary" @click="visible=true">+ 发布公告</el-button>
         </div>
         <el-table :data="list" stripe>
           <el-table-column prop="id" label="ID" width="60" />
@@ -246,7 +246,7 @@
           </el-form>
           <template #footer>
             <el-button @click="visible=false">取消</el-button>
-            <el-button type="primary" style="background:#4338ca;border-color:#4338ca" @click="publish">发布</el-button>
+            <el-button type="primary" @click="publish">发布</el-button>
           </template>
         </el-dialog>
       </div>`,

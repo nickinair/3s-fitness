@@ -191,7 +191,7 @@
       <aside class="sidebar">
         <div class="brand"><div class="badge">3S</div><span>3S运动中心</span><i class="brand-tag">管理后台</i></div>
         <div class="menu-scroll">
-          <el-menu :default-active="activeMenu" router background-color="transparent" text-color="#b6cfc9" active-text-color="#4be3c9" :default-openeds="openeds">
+          <el-menu :default-active="activeMenu" router background-color="transparent" :default-openeds="openeds">
             <template v-for="(m, i) in menus" :key="m.title">
               <el-menu-item v-if="!m.children" :index="m.path">
                 <el-icon><component :is="m.icon" /></el-icon><span>{{ m.title }}</span>

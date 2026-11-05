@@ -4,7 +4,7 @@ window.Pages.MemberCards = {
   template: [
     '<div class="page">',
     '  <m-nav title="我的会员卡"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="暂无会员卡"><van-button type="primary" round size="small" to="/buy" style="min-width:120px">去买卡</van-button></van-empty>',
     '    <div v-for="c in list" :key="c.id" class="vip-face block" :class="H.faceCls(c)" @click="$router.push(\'/card/\'+c.id)">',
@@ -31,7 +31,7 @@ window.Pages.MemberCardDetail = {
   template: [
     '<div class="page">',
     '  <m-nav title="会员卡详情"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else-if="card">',
     '    <div class="vip-face block" :class="H.faceCls(card)">',
     '      <div class="flex">',
@@ -52,7 +52,7 @@ window.Pages.MemberCardDetail = {
     '      <van-cell title="实收金额" :value="H.money(card.actual_money)" :border="false"/>',
     '    </div>',
     '    <div class="card-box" style="padding:6px 4px 10px">',
-    '      <van-tabs v-model:active="tab" color="#0d5e56">',
+    '      <van-tabs v-model:active="tab" color="var(--brand)">',
     '        <van-tab :title="\'收款流水(\'+recharges.length+\')\'">',
     '          <van-empty v-if="!recharges.length" description="暂无收款流水" image-size="60"/>',
     '          <van-cell v-for="rr in recharges" :key="rr.id" :title="DICT.rechargeType[rr.type] || \'流水\'" :label="H.full(rr.insert_time) + \' · \' + (DICT.payMethod[rr.pay_method]||rr.pay_method)">',

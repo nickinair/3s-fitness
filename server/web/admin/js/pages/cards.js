@@ -18,6 +18,7 @@ window.AppPages.Cards = {
   },
   computed: {
     canManage() { return ['admin', 'manager'].includes(this.role); },
+    canAdmin() { return ['admin', 'platform'].includes(this.role); },
   },
   template: `
   <div>
@@ -161,6 +162,10 @@ window.AppPages.Cards = {
         <el-form-item label="到期时间">
           <el-date-picker v-model="editForm.expire_time" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width:220px" />
         </el-form-item>
+        <el-form-item label="制卡总次数" v-if="cur && is300PtCard(cur) && canAdmin">
+          <el-input-number v-model="editForm.counts" :min="1" style="width:180px" />
+          <div class="text-muted" style="font-size:12px;margin-top:2px">仅 300 元/节私教次卡支持修改制卡次数（管理员权限）</div>
+        </el-form-item>
         <el-form-item label="剩余次数" v-if="cur && [1,4].includes(cur.card_kind)">
           <el-input-number v-model="editForm.left_counts" :min="0" style="width:180px" />
         </el-form-item>
@@ -186,12 +191,25 @@ window.AppPages.Cards = {
     </el-dialog>
   </div>`,
   methods: {
-    async load() {
-      this.loading = true;
+    is300PtCard(c) {
+      if (!c || c.card_kind !== 4) return false;
+      const unit = Math.round(Number(c.unit_price || 0));
+      return unit === 300 || (c.card_type_name && c.card_type_name.includes('300'));
+    },
+    async load(silent = false) {
+      if (!silent) this.loading = true;
+      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
       try {
         const d = await api.get('/cards', this.query);
         this.list = d.list; this.total = d.total;
-      } finally { this.loading = false; }
+      } finally {
+        if (!silent) this.loading = false;
+        if (silent) {
+          this.$nextTick(() => {
+            window.scrollTo({ top: scrollY, behavior: 'instant' });
+          });
+        }
+      }
     },
     search() { this.query.page = 1; this.load(); },
     reset() { this.query = { keyword: '', status: '', kind: '', card_type_id: '', expire_within: '', page: 1, size: 20 }; this.load(); },
@@ -217,7 +235,7 @@ window.AppPages.Cards = {
         }));
         ElementPlus.ElMessage.success('续卡成功');
         this.renewDlg = false;
-        this.load();
+        this.load(true);
       } finally { this.saving = false; }
     },
     openPause(row) { this.cur = row; this.pauseForm = { days: 7 }; this.pauseDlg = true; },
@@ -227,7 +245,7 @@ window.AppPages.Cards = {
         await api.post('/cards/' + this.cur.id + '/pause', { days: this.pauseForm.days });
         ElementPlus.ElMessage.success('已暂停');
         this.pauseDlg = false;
-        this.load();
+        this.load(true);
       } finally { this.saving = false; }
     },
     resume(row) {
@@ -235,7 +253,7 @@ window.AppPages.Cards = {
         .then(async () => {
           await api.post('/cards/' + row.id + '/resume');
           ElementPlus.ElMessage.success('已恢复');
-          this.load();
+          this.load(true);
         }).catch(() => {});
     },
     stop(row) {
@@ -244,7 +262,7 @@ window.AppPages.Cards = {
       }).then(async ({ value }) => {
         await api.post('/cards/' + row.id + '/stop', { reason: value || '' });
         ElementPlus.ElMessage.success('已停卡');
-        this.load();
+        this.load(true);
       }).catch(() => {});
     },
     enable(row) {
@@ -252,7 +270,7 @@ window.AppPages.Cards = {
         .then(async () => {
           await api.post('/cards/' + row.id + '/enable');
           ElementPlus.ElMessage.success('已启用');
-          this.load();
+          this.load(true);
         }).catch(() => {});
     },
     openRefund(row) {
@@ -267,23 +285,27 @@ window.AppPages.Cards = {
         await api.post('/cards/' + this.cur.id + '/refund', this.refundForm);
         ElementPlus.ElMessage.success('退卡完成');
         this.refundDlg = false;
-        this.load();
+        this.load(true);
       } finally { this.saving = false; }
     },
     openEdit(row) {
       this.cur = row;
       this.editForm = {
-        expire_time: row.expire_time, left_counts: row.left_counts, left_money: Number(row.left_money || 0),
+        expire_time: row.expire_time, counts: row.counts, left_counts: row.left_counts, left_money: Number(row.left_money || 0),
         membership_id: row.membership_id || null, coach_id: row.coach_id || null, reason: '',
       };
       this.editDlg = true;
     },
     async doEdit() {
-      if (!this.editForm.reason) return ElementPlus.ElMessage.warning('请填写改卡原因');
+      const is300 = this.is300PtCard(this.cur);
+      if (!this.editForm.reason && !(is300 && this.editForm.counts !== this.cur.counts)) {
+        return ElementPlus.ElMessage.warning('请填写改卡原因');
+      }
       const f = this.editForm;
       const sale = this.staffSales.find(x => x.id === f.membership_id);
       const coach = this.coaches.find(x => x.id === f.coach_id);
-      const body = { expire_time: f.expire_time, reason: f.reason };
+      const body = { expire_time: f.expire_time, reason: f.reason || '修改300元私教卡次数' };
+      if (is300 && f.counts != null) body.counts = f.counts;
       if ([1, 4].includes(this.cur.card_kind)) body.left_counts = f.left_counts;
       if (this.cur.card_kind === 3) body.left_money = f.left_money;
       if (f.membership_id != null) { body.membership_id = f.membership_id; body.membership_name = sale ? sale.realname : ''; }
@@ -293,7 +315,7 @@ window.AppPages.Cards = {
         await api.put('/cards/' + this.cur.id, body);
         ElementPlus.ElMessage.success('改卡成功');
         this.editDlg = false;
-        this.load();
+        this.load(true);
       } finally { this.saving = false; }
     },
   },

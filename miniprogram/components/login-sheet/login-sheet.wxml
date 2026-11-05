@@ -1,0 +1,29 @@
+<!-- 会员登录底部弹层(版式对标 M Stand 小程序登录弹层) -->
+<view class="ls-root {{show ? 'show' : ''}}" catchtouchmove="noop">
+  <view class="ls-mask" bindtap="onMask"></view>
+  <view class="ls-sheet">
+    <image class="ls-logo" src="/assets/logo-black.png" mode="widthFix"></image>
+    <view class="ls-title">欢迎加入3S运动中心会员</view>
+    <view class="ls-title">开启自我蜕变之旅</view>
+
+    <view class="ls-perks">
+      <view class="ls-perk" wx:for="{{perks}}" wx:key="t">
+        <view class="ls-perk-c"><image class="ls-perk-i" src="/assets/icons/{{item.icon}}.png"></image></view>
+        <view class="ls-perk-t">{{item.t}}</view>
+      </view>
+    </view>
+
+    <view class="ls-agree {{shake ? 'shake' : ''}}" bindtap="toggleAgree">
+      <view class="ls-radio {{agreed ? 'on' : ''}}"><view class="ls-radio-dot" wx:if="{{agreed}}"></view></view>
+      <text>我已阅读并同意</text><text class="ls-link" catchtap="openAgreement">会员协议</text>
+    </view>
+
+    <button wx:if="{{agreed}}" class="ls-btn" hover-class="ls-btn-hover" open-type="getPhoneNumber"
+      bindgetphonenumber="onPhone" loading="{{loading}}" disabled="{{loading}}">手机号快捷登录</button>
+    <button wx:else class="ls-btn" hover-class="ls-btn-hover" bindtap="needAgree">手机号快捷登录</button>
+    <button class="ls-btn" hover-class="ls-btn-hover" bindtap="onSkip">放弃权益，暂不注册</button>
+
+    <view class="ls-pwd" bindtap="onPassword">账号密码登录 / 员工登录</view>
+  </view>
+</view>
+

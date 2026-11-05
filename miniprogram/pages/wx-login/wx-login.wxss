@@ -1,0 +1,4 @@
+page { background: #000; }
+.bg { position: fixed; left: 0; top: 0; right: 0; bottom: 0; }
+.bg-img { width: 100%; height: 100%; }
+.bg-shade { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,.25); }

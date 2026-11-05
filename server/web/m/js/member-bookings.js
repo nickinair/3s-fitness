@@ -11,9 +11,9 @@ window.Pages.MemberBookings = {
   template: [
     '<div class="page">',
     '  <m-nav title="我的预约"></m-nav>',
-    '  <van-tabs v-model:active="tab" color="#0d5e56" sticky offset-top="46">',
+    '  <van-tabs v-model:active="tab" color="var(--brand)" sticky :offset-top="H.navTop()">',
     '    <van-tab :title="\'私教(\'+pt.length+\')\'">',
-    '      <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '      <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '      <template v-else>',
     '        <van-empty v-if="!pt.length" description="暂无私教预约"/>',
     '        <div v-if="ptUpcoming.length" class="sec-title">即将到来</div>',
@@ -25,6 +25,7 @@ window.Pages.MemberBookings = {
     '          </div>',
     '          <div class="muted mt8">{{ H.day(b.date) }}（{{ H.week(b.date) }}）{{ b.from_time }}-{{ b.to_time }} · {{ b.coach_name }} 教练</div>',
     '          <div class="muted mt4">{{ b.card_type_name }} · 扣 {{ b.card_deduct_num }} 课时</div>',
+    '          <lesson-plan-card :plan="b.lesson_plan" :booking="b" :can-edit="false"/>',
     '          <div class="foot" v-if="canCancelPt(b) || (b.status===1 && b.confirm_status===1)">',
     '            <van-button v-if="b.status===1 && b.confirm_status===1" size="small" round type="warning" @click="$router.push(\'/pending-confirms\')">去确认消课</van-button>',
     '            <van-button v-if="canCancelPt(b)" size="small" round plain type="danger" @click="cancelPt(b)">取消预约</van-button>',
@@ -37,11 +38,12 @@ window.Pages.MemberBookings = {
     '            <d-tag dict="ptStatus" :v="b.status"></d-tag>',
     '          </div>',
     '          <div class="muted mt8">{{ H.day(b.date) }}（{{ H.week(b.date) }}）{{ b.from_time }}-{{ b.to_time }} · {{ b.coach_name }} 教练</div>',
+    '          <lesson-plan-card :plan="b.lesson_plan" :booking="b" :can-edit="false"/>',
     '        </div>',
     '      </template>',
     '    </van-tab>',
     '    <van-tab :title="\'团课(\'+group.length+\')\'">',
-    '      <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '      <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '      <template v-else>',
     '        <van-empty v-if="!group.length" description="暂无团课预约"/>',
     '        <div v-if="groupUpcoming.length" class="sec-title">即将到来</div>',
@@ -81,15 +83,15 @@ window.Pages.MemberBookings = {
       } finally { this.loading = false; }
     },
     async cancelPt(b) {
-      try { await vant.showConfirmDialog({ title: '取消私教预约', message: '确定取消 ' + H.day(b.date) + ' ' + b.from_time + ' 的「' + b.course_title + '」吗？', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+      try { await vant.showConfirmDialog({ title: '取消私教预约', message: '确定取消 ' + H.day(b.date) + ' ' + b.from_time + ' 的「' + b.course_title + '」吗？', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
       await API.post('/member/pt-bookings/' + b.id + '/cancel');
       vant.showToast('已取消');
       this.load();
     },
     async cancelGroup(b) {
-      try { await vant.showConfirmDialog({ title: '取消团课预约', message: '确定取消「' + b.syllabus_title + '」吗？临近开课取消可能按规则扣次。', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+      try { await vant.showConfirmDialog({ title: '取消团课预约', message: '确定取消「' + b.syllabus_title + '」吗？临近开课取消可能按规则扣次。', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
       const r = await API.post('/member/group-bookings/' + b.id + '/cancel');
-      if (r && r.penalty) vant.showDialog({ title: '已取消', message: r.penalty, confirmButtonColor: '#0d5e56' });
+      if (r && r.penalty) vant.showDialog({ title: '已取消', message: r.penalty, confirmButtonColor: 'var(--brand)' });
       else vant.showToast('已取消');
       this.load();
     },
@@ -102,7 +104,7 @@ window.Pages.MemberPending = {
   template: [
     '<div class="page">',
     '  <m-nav title="待确认消课"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="没有待确认的消课"/>',
     '    <div v-else class="muted" style="padding:10px 16px 0">教练已发起消课，请确认课程完成情况，确认后将扣除课时。</div>',
@@ -127,7 +129,7 @@ window.Pages.MemberPending = {
       finally { this.loading = false; }
     },
     async confirm(b) {
-      try { await vant.showConfirmDialog({ title: '确认消课', message: '确认本节课已完成？将从「' + b.card_type_name + '」扣除 ' + b.card_deduct_num + ' 课时。', confirmButtonColor: '#0d5e56' }); } catch (e) { return; }
+      try { await vant.showConfirmDialog({ title: '确认消课', message: '确认本节课已完成？将从「' + b.card_type_name + '」扣除 ' + b.card_deduct_num + ' 课时。', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
       this.doing = b.id;
       try {
         const r = await API.post('/member/pt-bookings/' + b.id + '/confirm-finish');

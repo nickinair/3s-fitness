@@ -4,6 +4,9 @@ window.Pages.MemberSchedule = {
     return {
       tab: this.$route.query.tab === 'group' ? 'group' : 'pt',
       days: H.monthDays(), date: H.today(),
+      calShow: false,
+      minDate: dayjs().subtract(1, 'year').toDate(),
+      maxDate: dayjs().add(3, 'month').toDate(),
       list: [], loading: true,
       pt: { coaches: [], mine: [], clubs: [], default_club_id: null },
       ptShow: false, ptCur: null, ptCourseId: null, ptCards: null, ptCardId: null, ptClubId: null, ptFrom: null,
@@ -13,6 +16,7 @@ window.Pages.MemberSchedule = {
     };
   },
   computed: {
+    calDefaultDate() { return dayjs(this.date).toDate(); },
     defaultOpen() { const c = (this.pt.clubs || []).find(x => x.id === this.pt.default_club_id) || (this.pt.clubs || [])[0]; return c ? c.open_time : '08:00-21:00'; },
     ptOpen() { const c = (this.pt.clubs || []).find(x => x.id === this.ptClubId); return c ? c.open_time : this.defaultOpen; },
     ptDuration() { const cs = this.ptCur && this.ptCur.coach.courses.find(x => x.id === this.ptCourseId); return cs ? cs.duration : 60; },
@@ -24,16 +28,25 @@ window.Pages.MemberSchedule = {
   template: [
     '<div class="page has-tabbar">',
     '  <m-nav title="约课" :back="false"></m-nav>',
-    '  <van-tabs v-model:active="tab" color="#0d5e56" title-active-color="#0d5e56" line-width="28" @change="onTab">',
+    '  <van-tabs v-model:active="tab" color="var(--brand)" title-active-color="var(--brand)" line-width="28" @change="onTab">',
     '    <van-tab title="私教课" name="pt"></van-tab>',
     '    <van-tab title="团课" name="group"></van-tab>',
     '  </van-tabs>',
+    '  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px 4px">',
+    '    <div style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer" @click="calShow=true">',
+    '      <span>{{ H.day(date) }}</span><van-icon name="calendar-o" color="var(--brand)" size="16"/>',
+    '    </div>',
+    '    <div style="display:flex;gap:6px">',
+    '      <van-button v-if="date!==H.today()" size="mini" round plain type="primary" @click="goToday">回今天</van-button>',
+    '      <van-button size="mini" round plain icon="calendar-o" @click="calShow=true">选日期</van-button>',
+    '    </div>',
+    '  </div>',
     '  <div class="day-strip" ref="strip">',
     '    <div v-for="d in days" :key="d.date" class="day-item" :class="{on:d.date===date, past:d.past}" :data-date="d.date" @click="pick(d.date)">',
     '      <div class="w">{{ d.w }}</div><div class="d">{{ d.d }}</div>',
     '    </div>',
     '  </div>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
 
     /* ================= 私教课 ================= */
     '  <template v-else-if="tab===\'pt\'">',
@@ -41,11 +54,14 @@ window.Pages.MemberSchedule = {
     '      <div class="sec-title">我当天的私教课</div>',
     '      <div v-for="b in pt.mine" :key="b.id" class="course-item" @click="$router.push(\'/my-bookings\')">',
     '        <div class="course-time"><div class="b">{{ b.from_time }}</div><div class="e">{{ b.to_time }}</div></div>',
-    '        <div class="flex1">',
-    '          <div class="title">{{ b.course_title || \'私教课\' }}</div>',
+    '        <div class="flex1" style="min-width:0">',
+    '          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">',
+    '            <div class="title" style="flex:1;min-width:0">{{ b.course_title || \'私教课\' }}</div>',
+    '            <van-tag round :type="ptTag(b).type" style="flex-shrink:0">{{ ptTag(b).text }}</van-tag>',
+    '          </div>',
     '          <div class="muted mt4">教练 {{ b.coach_name }}<template v-if="b.club_name"> · {{ b.club_name }}</template></div>',
+    '          <div v-if="b.lesson_plan" class="mt4" style="font-size:12px;color:var(--brand);background:var(--brand-soft);padding:2px 8px;border-radius:4px;display:inline-block"><van-icon name="notes-o" style="margin-right:2px"/>计划：{{ planLabel(b.lesson_plan) }}</div>',
     '        </div>',
-    '        <div style="display:flex;align-items:center"><van-tag round :type="ptTag(b).type">{{ ptTag(b).text }}</van-tag></div>',
     '      </div>',
     '    </template>',
     '    <div class="sec-title">选择教练，再选上课时间</div>',
@@ -66,7 +82,7 @@ window.Pages.MemberSchedule = {
     '      </div>',
     '      <m-avail-bar :date="date" :open-time="defaultOpen" :busy="c.busy"></m-avail-bar>',
     '      <div class="pt-coach-foot">',
-    '        <span class="pt-free" :class="{none: !c.free}">{{ c.free ? \'绿色为教练空闲时间\' : slotReason(c) }}</span>',
+    '        <span class="pt-free" :class="{none: !c.free}">{{ c.free ? \'黑色为教练空闲时间\' : slotReason(c) }}</span>',
     '        <van-button size="small" type="primary" round :disabled="!c.free" @click="openPt(c)" style="min-width:86px">选时间约课</van-button>',
     '      </div>',
     '    </div>',
@@ -80,7 +96,7 @@ window.Pages.MemberSchedule = {
     '      <div class="flex1">',
     '        <div class="title">{{ it.title }} <span class="stars">{{ H.stars(it.difficulty) }}</span></div>',
     '        <div class="muted mt4">{{ it.coach_name || \'待定\' }} · {{ it.classroom_name }}<template v-if="it.deduct_num"> · 扣{{ it.deduct_num }}次</template></div>',
-    '        <div class="mt4" v-if="it.club_name"><van-tag plain color="#0d5e56">{{ it.club_name }}</van-tag></div>',
+    '        <div class="mt4" v-if="it.club_name"><van-tag plain color="var(--brand)">{{ it.club_name }}</van-tag></div>',
     '        <div class="mt8">',
     '          <van-tag plain type="primary" v-if="it.my_booked">我已约</van-tag>',
     '          <span class="muted" style="margin-left:4px">已约 {{ it.booked_count }} / 满 {{ it.people_count }}</span>',
@@ -107,7 +123,7 @@ window.Pages.MemberSchedule = {
     '      </div>',
     '      </template>',
     '      <div class="sec-title" style="margin:14px 0 6px">选择上课时间</div>',
-    '      <m-time-picker v-model="ptFrom" :date="date" :open-time="ptOpen" :busy="ptCur.coach.busy" :mine="pt.my_busy || []" :duration="ptDuration"></m-time-picker>',
+    '      <m-time-picker v-model="ptFrom" :date="date" :open-time="ptOpen" :busy="ptCur.coach.busy" :mine="pt.my_busy || []" :duration="ptDuration" :allow-past="true"></m-time-picker>',
     '      <div class="sec-title" style="margin:14px 0 6px">选择课程</div>',
     '      <van-radio-group v-model="ptCourseId">',
     '        <div v-for="cs in ptCur.coach.courses" :key="cs.id" class="cat-pick flex" :class="{on:ptCourseId===cs.id}" @click="pickCourse(cs.id)">',
@@ -115,11 +131,11 @@ window.Pages.MemberSchedule = {
     '            <div style="font-size:14px;font-weight:600">{{ cs.title }}</div>',
     '            <div class="muted mt4">{{ cs.duration }}分钟 · {{ cs.people_count===1 ? \'1对1\' : cs.people_count+\'人小团\' }}</div>',
     '          </div>',
-    '          <van-radio :name="cs.id" checked-color="#0d5e56"/>',
+    '          <van-radio :name="cs.id" checked-color="var(--brand)"/>',
     '        </div>',
     '      </van-radio-group>',
     '      <div class="sec-title" style="margin:14px 0 6px">选择支付卡</div>',
-    '      <div v-if="ptCards===null" style="text-align:center;padding:14px"><van-loading size="20" color="#0d5e56"/></div>',
+    '      <div v-if="ptCards===null" style="text-align:center;padding:14px"><van-loading size="20" color="var(--brand)"/></div>',
     '      <template v-else>',
     '        <van-radio-group v-model="ptCardId">',
     '          <div v-for="c in usablePtCards" :key="c.id" class="cat-pick flex" :class="{on:ptCardId===c.id}" @click="ptCardId=c.id">',
@@ -127,13 +143,13 @@ window.Pages.MemberSchedule = {
     '              <div style="font-size:14px;font-weight:600">{{ c.card_type_name }}</div>',
     '              <div class="muted mt4">{{ cardDesc(c) }}<template v-if="c.expire_time"> · {{ H.dateOf(c.expire_time) }}到期</template></div>',
     '            </div>',
-    '            <van-radio :name="c.id" checked-color="#0d5e56"/>',
+    '            <van-radio :name="c.id" checked-color="var(--brand)"/>',
     '          </div>',
     '        </van-radio-group>',
     '        <div v-for="c in blockedPtCards" :key="c.id" class="cat-pick flex dis">',
     '          <div class="flex1">',
     '            <div style="font-size:14px;font-weight:600">{{ c.card_type_name }}</div>',
-    '            <div class="mt4" style="font-size:12px;color:#e08a3c">{{ c.reason }}</div>',
+    '            <div class="mt4" style="font-size:12px;color:var(--danger)">{{ c.reason }}</div>',
     '          </div>',
     '        </div>',
     '        <div v-if="!usablePtCards.length" style="text-align:center;padding:8px 0 2px">',
@@ -151,12 +167,12 @@ window.Pages.MemberSchedule = {
     '    <div v-if="cur" style="padding:20px 18px 24px">',
     '      <div style="font-size:18px;font-weight:700">{{ cur.title }} <span class="stars">{{ H.stars(cur.difficulty) }}</span></div>',
     '      <div class="muted mt8">{{ H.day(cur.start_time) }} {{ H.time(cur.start_time) }}-{{ H.time(cur.end_time) }} · {{ cur.coach_name || \'待定\' }} · {{ cur.classroom_name }}<template v-if="cur.club_name"> · {{ cur.club_name }}</template></div>',
-    '      <div class="mt8" style="font-size:13px;color:#555" v-if="cur.intro">{{ cur.intro }}</div>',
+    '      <div class="mt8" style="font-size:13px;color:var(--c-text-2)" v-if="cur.intro">{{ cur.intro }}</div>',
     '      <div class="mt8"><van-tag v-for="t in tags(cur)" :key="t" plain type="success" style="margin-right:6px">{{ t }}</van-tag>',
     '        <span class="muted">已约 {{ cur.booked_count }} / 满 {{ cur.people_count }}<template v-if="cur.deduct_num"> · 次卡扣 {{ cur.deduct_num }} 次</template></span></div>',
     '      <template v-if="btn(cur).action===\'book\'">',
     '        <div class="sec-title" style="margin:16px 0 8px">选择支付卡</div>',
-    '        <div v-if="cardLoading" style="text-align:center;padding:14px"><van-loading size="20" color="#0d5e56"/></div>',
+    '        <div v-if="cardLoading" style="text-align:center;padding:14px"><van-loading size="20" color="var(--brand)"/></div>',
     '        <template v-else-if="cards">',
     '          <van-radio-group v-model="cardId">',
     '            <div v-for="c in usableCards" :key="c.id" class="cat-pick flex" :class="{on:cardId===c.id}" @click="cardId=c.id">',
@@ -164,13 +180,13 @@ window.Pages.MemberSchedule = {
     '                <div style="font-size:14px;font-weight:600">{{ c.card_type_name }}</div>',
     '                <div class="muted mt4">{{ cardDesc(c) }}<template v-if="c.expire_time"> · {{ H.dateOf(c.expire_time) }}到期</template></div>',
     '              </div>',
-    '              <van-radio :name="c.id" checked-color="#0d5e56"/>',
+    '              <van-radio :name="c.id" checked-color="var(--brand)"/>',
     '            </div>',
     '          </van-radio-group>',
     '          <div v-for="c in blockedCards" :key="c.id" class="cat-pick flex dis">',
     '            <div class="flex1">',
     '              <div style="font-size:14px;font-weight:600">{{ c.card_type_name }}</div>',
-    '              <div class="mt4" style="font-size:12px;color:#e08a3c">{{ c.reason }}</div>',
+    '              <div class="mt4" style="font-size:12px;color:var(--danger)">{{ c.reason }}</div>',
     '            </div>',
     '          </div>',
     '          <div v-if="!usableCards.length" style="text-align:center;padding:8px 0 2px">',
@@ -186,6 +202,7 @@ window.Pages.MemberSchedule = {
     '      </div>',
     '    </div>',
     '  </van-popup>',
+    '  <van-calendar v-model:show="calShow" :min-date="minDate" :max-date="maxDate" :default-date="calDefaultDate" color="var(--brand)" @confirm="onDateConfirm"/>',
     '</div>',
   ].join('\n'),
   methods: {
@@ -195,6 +212,11 @@ window.Pages.MemberSchedule = {
       if (c.card_kind === 2) return '时间卡不限次';
       if (c.card_kind === 3) return '储值卡余额 ¥' + H.money(c.left_money);
       return '剩余 ' + c.left_counts + ' 次';
+    },
+    goToday() { this.pick(H.today()); },
+    onDateConfirm(d) {
+      this.calShow = false;
+      this.pick(dayjs(d).format('YYYY-MM-DD'));
     },
     pick(d) { this.date = d; this.load(); this.scrollDay(); },
     // 选中的日期滚到可见区域中间
@@ -213,7 +235,13 @@ window.Pages.MemberSchedule = {
         else this.list = await API.get('/member/schedule?date=' + this.date);
       } finally { this.loading = false; }
     },
-    /* ---- 私教课 ---- */
+    planLabel(raw) {
+      const p = window.parseLessonPlan ? window.parseLessonPlan(raw) : null;
+      if (!p) return '';
+      if (p.title) return p.title + (p.items && p.items.length ? ' · ' + p.items.length + '动作' : '');
+      if (p.legacy_text) return p.legacy_text.length > 20 ? p.legacy_text.slice(0, 20) + '...' : p.legacy_text;
+      return '查看计划';
+    },
     ptTag(b) {
       if (b.status === 3) return { text: '已完成', type: 'success' };
       if (b.status === 0) return { text: '待教练确认', type: 'warning' };
@@ -221,8 +249,8 @@ window.Pages.MemberSchedule = {
       return { text: '已确认', type: 'primary' };
     },
     slotReason(c) {
-      if (this.date < H.today()) return '已过去的日期，仅供查看';
       if ((c.busy || []).some(b => b.type === 'rest' && b.from === '00:00')) return '教练当天休息';
+      if (this.date < H.today()) return '当天已约满';
       if (this.date === H.today()) return '今天已没有可约时间';
       return '当天已约满';
     },
@@ -235,7 +263,7 @@ window.Pages.MemberSchedule = {
     },
     async pickCourse(id) {
       this.ptCourseId = id; this.ptCards = null; this.ptCardId = null;
-      this.ptCards = await API.get('/member/my-pt-cards?course_id=' + id);
+      this.ptCards = await API.get('/member/my-pt-cards?course_id=' + id + '&date=' + this.date);
       const usable = this.usablePtCards;
       if (usable.length) this.ptCardId = usable[0].id;
     },
@@ -250,7 +278,7 @@ window.Pages.MemberSchedule = {
         });
         this.ptShow = false;
         vant.showDialog({
-          title: '预约已提交', confirmButtonColor: '#0d5e56',
+          title: '预约已提交', confirmButtonColor: 'var(--brand)',
           message: H.day(this.date) + ' ' + from + ' · ' + (course ? course.title : '私教课') + '\n已提交给 ' + coach.realname + ' 教练，确认后生效',
         });
         this.load();
@@ -259,8 +287,7 @@ window.Pages.MemberSchedule = {
     btn(it) {
       if (it.status === 3) return { text: '已结课', disabled: true };
       if (it.status === 2) return { text: '已取消', disabled: true };
-      if (H.isPast(it.start_time)) return { text: it.my_booked ? '已预约' : '已开课', disabled: true };
-      if (it.my_booked) return { text: '取消预约', type: 'default', action: 'cancel' };
+      if (it.my_booked) return { text: '已预约', type: 'default', disabled: H.isPast(it.start_time), action: 'cancel' };
       if (it.booked_count >= it.people_count) return { text: '排队候补', type: 'warning', action: 'book' };
       return { text: '预约', type: 'primary', action: 'book' };
     },
@@ -288,7 +315,7 @@ window.Pages.MemberSchedule = {
         const r = await API.post('/member/schedule/' + this.cur.id + '/book', { card_id: this.cardId });
         this.show = false;
         if (r && r.waitlist) {
-          vant.showDialog({ title: '已加入候补', message: '当前课程已满员，您已排队候补第 ' + r.queue_no + ' 位，有人取消将自动转正。', confirmButtonColor: '#0d5e56' });
+          vant.showDialog({ title: '已加入候补', message: '当前课程已满员，您已排队候补第 ' + r.queue_no + ' 位，有人取消将自动转正。', confirmButtonColor: 'var(--brand)' });
         } else {
           vant.showToast({ message: '预约成功', icon: 'success' });
         }
@@ -296,7 +323,7 @@ window.Pages.MemberSchedule = {
       } finally { this.submitting = false; }
     },
     async doCancel(it) {
-      try { await vant.showConfirmDialog({ title: '取消预约', message: '确定取消「' + it.title + '」的预约吗？', confirmButtonColor: '#0d5e56' }); }
+      try { await vant.showConfirmDialog({ title: '取消预约', message: '确定取消「' + it.title + '」的预约吗？', confirmButtonColor: 'var(--brand)' }); }
       catch (e) { return; }
       this.submitting = true;
       try {
@@ -305,7 +332,7 @@ window.Pages.MemberSchedule = {
         if (!bk) { vant.showToast('未找到预约记录'); return; }
         const r = await API.post('/member/group-bookings/' + bk.id + '/cancel');
         this.show = false;
-        if (r && r.penalty) vant.showDialog({ title: '已取消', message: r.penalty, confirmButtonColor: '#0d5e56' });
+        if (r && r.penalty) vant.showDialog({ title: '已取消', message: r.penalty, confirmButtonColor: 'var(--brand)' });
         else vant.showToast('已取消预约');
         this.load();
       } finally { this.submitting = false; }

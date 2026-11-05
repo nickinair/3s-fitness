@@ -1,0 +1,153 @@
+<!-- 会员首页(原生页): web-view 页面无法去掉原生导航栏, 所以首页用原生实现, 视频才能铺到状态栏 -->
+<view class="page" wx:if="{{!staff}}">
+
+  <!-- ===== 首屏: 全幅视频 + 居中 Logo ===== -->
+  <view class="hero" id="hero" style="height:{{heroH ? heroH + 'px' : '62vh'}}">
+    <video wx:for="{{[0, 1]}}" wx:key="*this" wx:for-item="k" id="v{{k}}"
+      class="hv {{layer === k ? 'on' : ''}}" src="{{videos[layerIdx[k]].src}}"
+      muted="{{true}}" controls="{{false}}" show-center-play-btn="{{false}}" show-play-btn="{{false}}"
+      show-fullscreen-btn="{{false}}" show-progress="{{false}}" enable-progress-gesture="{{false}}"
+      show-mute-btn="{{false}}" enable-play-gesture="{{false}}" object-fit="cover"
+      data-k="{{k}}" bindtimeupdate="onTime" bindended="onEnded" bindplay="onPlay"></video>
+    <image class="hposter {{played ? 'hide' : ''}}" src="{{videos[0].poster}}" mode="aspectFill"></image>
+    <view class="shade"></view>
+
+    <view class="top" style="top:{{capTop}}px;height:{{capH}}px;right:{{capRight}}px">
+      <view class="avatar">{{initial}}</view>
+      <view class="hi" bindtap="onHiTap">
+        <view class="hello">Hi，{{name}}</view>
+        <view class="next">{{nextText}} ›</view>
+      </view>
+      <view class="vip" wx:if="{{isMember}}">会员</view>
+    </view>
+
+    <view class="brand">
+      <image class="logo" src="/assets/logo-white.png" mode="widthFix"></image>
+      <view class="slogan">享受自我蜕变的快乐健身</view>
+      <view class="vdots">
+        <view wx:for="{{videos}}" wx:key="src" class="d {{index === vIdx ? 'on' : ''}}"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ===== 双入口卡 ===== -->
+  <view class="entry">
+    <view class="entry-item" hover-class="tap" data-path="schedule?tab=group" bindtap="goPath">
+      <view class="en">GROUP CLASS</view>
+      <view class="cn">团课约课</view>
+      <view class="sub">精品团课 · 在线约位</view>
+    </view>
+    <view class="entry-split"></view>
+    <view class="entry-item" hover-class="tap" data-path="schedule" bindtap="goPath">
+      <view class="en">PERSONAL TRAINING</view>
+      <view class="cn">私教预约</view>
+      <view class="sub">一对一 · 专属定制训练</view>
+    </view>
+  </view>
+
+  <!-- ===== 黑色会员条 + 常用功能横滑 ===== -->
+  <view class="club">
+    <view class="club-bar" bindtap="onClubBar">
+      <text class="club-txt">{{clubText}}</text>
+      <text class="club-act">{{clubAct}} ›</text>
+    </view>
+    <view class="club-body">
+      <scroll-view class="icons" id="icons" scroll-x enhanced show-scrollbar="{{false}}" bindscroll="onIconScroll">
+        <view class="icons-row">
+          <view class="ic" hover-class="tap" wx:for="{{quicks}}" wx:key="key" data-path="{{item.to}}" bindtap="goPath">
+            <view class="ic-c">
+              <image class="ic-i" src="/assets/icons/{{item.icon}}.png"></image>
+              <text class="ic-tag" wx:if="{{item.badge}}">{{item.badge}} 待办</text>
+            </view>
+            <view class="t">{{item.t}}</view>
+            <view class="s">{{item.s}}</view>
+          </view>
+          <view class="ic" hover-class="tap" data-path="?edit=1" bindtap="goPath">
+            <view class="ic-c"><image class="ic-i" src="/assets/icons/setting-o.png"></image></view>
+            <view class="t">管理</view>
+            <view class="s">自定义常用</view>
+          </view>
+        </view>
+      </scroll-view>
+      <view class="track" style="visibility:{{icoRatio < 0.999 ? 'visible' : 'hidden'}}">
+        <view class="thumb" style="width:{{thumbW}}%;transform:translateX({{thumbX}}%)"></view>
+      </view>
+    </view>
+  </view>
+
+  <view class="more" id="hint" bindtap="scrollMore">上滑探索更多精彩 ︿</view>
+
+  <!-- ===== 第二屏 ===== -->
+  <view id="more"></view>
+  <block wx:if="{{logged}}">
+    <view class="pending" wx:if="{{home.pendingConfirm > 0}}" data-path="pending-confirms" bindtap="goPath">
+      <image class="pending-i" src="/assets/icons/bell.png"></image>
+      <text class="pending-t">您有 {{home.pendingConfirm}} 节私教课待确认消课，请及时确认</text><text>›</text>
+    </view>
+    <view class="pending" wx:if="{{home.pendingContract > 0}}" data-path="contracts" bindtap="goPath">
+      <image class="pending-i" src="/assets/icons/bell.png"></image>
+      <text class="pending-t">您有 {{home.pendingContract}} 份购卡合同待签署</text><text>›</text>
+    </view>
+    <view class="pending" wx:if="{{home.newPlan > 0}}" data-path="plans" bindtap="goPath">
+      <image class="pending-i" src="/assets/icons/bell.png"></image>
+      <text class="pending-t">教练给您推送了 {{home.newPlan}} 份训练计划</text><text>›</text>
+    </view>
+  </block>
+
+  <block wx:if="{{banners.length}}">
+    <view class="sec-title">精彩活动</view>
+    <swiper class="banners" circular autoplay="{{banners.length > 1}}" interval="5000" indicator-dots="{{banners.length > 1}}"
+      indicator-color="rgba(255,255,255,.4)" indicator-active-color="#ffffff">
+      <swiper-item wx:for="{{banners}}" wx:key="id">
+        <view class="banner" style="{{item.bg}}" data-link="{{item.link}}" bindtap="onBanner">
+          <image class="banner-wm" wx:if="{{!item.hasImg}}" src="/assets/logo-white.png" mode="aspectFit"></image>
+          <view class="banner-txt">
+            <view class="bt" wx:for="{{item.lines}}" wx:for-item="ln" wx:key="*this">{{ln}}</view>
+            <view class="bs"><text class="hl">即刻开练</text><text class="tx">享受自我蜕变的快乐健身~</text></view>
+          </view>
+          <view class="banner-cta" wx:if="{{item.link}}">立即前往 ›</view>
+        </view>
+      </swiper-item>
+    </swiper>
+  </block>
+
+  <view class="notice" wx:if="{{notices.length}}">
+    <view class="notice-row" wx:for="{{notices}}" wx:key="id" data-i="{{index}}" bindtap="onNotice">
+      <text class="notice-t">{{item.title}}</text><text class="notice-d">{{item.day}}</text><text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="sec-title">我的会员卡 <text class="sec-more" data-path="my-cards" bindtap="goPath">全部 ›</text></view>
+  <scroll-view class="cards" scroll-x enhanced show-scrollbar="{{false}}" wx:if="{{cards.length}}">
+    <view class="cards-row">
+      <view class="face {{item.cls}}" wx:for="{{cards}}" wx:key="id" style="{{item.bg}}" data-path="card/{{item.id}}" bindtap="goPath">
+        <image class="face-wm" src="/assets/logo-white.png" mode="aspectFit"></image>
+        <text class="kind">{{item.kindName}}</text>
+        <view class="name">{{item.card_type_name}}</view>
+        <view class="left">{{item.leftText}}</view>
+        <view class="exp">{{item.expText}}</view>
+      </view>
+      <view class="face-add" data-path="buy" bindtap="goPath">
+        <image class="face-add-i" src="/assets/icons/plus.png"></image><text>新增会员卡</text>
+      </view>
+    </view>
+  </scroll-view>
+  <view class="nocard" wx:else data-path="buy" bindtap="goPath">
+    <text class="nocard-t">{{logged ? '还没有会员卡，去挑选一张开启训练吧' : '登录后查看您的会员卡'}}</text>
+    <text class="nocard-btn">{{logged ? '去买卡' : '去登录'}}</text>
+  </view>
+
+  <view class="tab-space"></view>
+
+  <!-- ===== 悬浮底部导航(与 H5 一致) ===== -->
+  <view class="tabbar" id="tabbar">
+    <view class="tab on"><image class="tab-i" src="/assets/icons/tab-home.png"></image><text>首页</text></view>
+    <view class="tab" data-path="schedule" bindtap="goPath"><image class="tab-i" src="/assets/icons/tab-schedule.png"></image><text>约课</text></view>
+    <view class="tab" data-path="coaches" bindtap="goPath"><image class="tab-i" src="/assets/icons/tab-coach.png"></image><text>私教</text></view>
+    <view class="tab" data-path="mine" bindtap="goPath"><image class="tab-i" src="/assets/icons/tab-mine.png"></image><text>我的</text></view>
+  </view>
+
+  <!-- 未登录时点任意会员功能: 底部弹出登录层 -->
+  <login-sheet show="{{loginShow}}" bind:success="onLoginOk" bind:skip="closeLogin" bind:password="goPwdLogin"></login-sheet>
+</view>
+

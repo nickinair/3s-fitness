@@ -7,4 +7,5 @@
  */
 module.exports = {
   H5_URL: 'https://3s-fitness.cn/m/',
+  API_BASE: 'https://3s-fitness.cn/api',
 };

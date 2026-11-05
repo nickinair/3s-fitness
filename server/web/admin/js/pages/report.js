@@ -18,7 +18,7 @@ const RatioList = {
   },
   emits: ['export'],
   data() {
-    return { colors: ['#4f6bed', '#3aa5d8', '#3cb371', '#8bc34a', '#e0b93c', '#e08a3c', '#e05a5a'] };
+    return { colors: ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'] };
   },
   template: `
     <div>
@@ -161,7 +161,7 @@ window.AppPages.ReportCenter = {
         grid: { left: 55, right: 20, top: 20, bottom: 30 },
         xAxis: { type: 'category', data: trend.map(x => x.label) },
         yAxis: { type: 'value' },
-        series: [{ name: this.tab === 'finance' ? '营收' : '新增会员', type: 'line', smooth: true, color: '#0d5e56', areaStyle: { opacity: .12 },
+        series: [{ name: this.tab === 'finance' ? '营收' : '新增会员', type: 'line', smooth: true, color: themeColor('--brand'), areaStyle: { opacity: .12 },
           data: trend.map(x => Number(x.value || 0)) }],
       };
     },

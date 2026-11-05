@@ -1,0 +1,11 @@
+<!-- 会员协议 / 隐私说明。条款内容为通用范本, 正式上线前请门店按实际经营情况审阅修改 -->
+<view class="wrap">
+  <view class="h1">3S运动中心会员服务协议</view>
+  <view class="muted">欢迎使用3S运动中心小程序。注册或登录即表示您已阅读并同意本协议。</view>
+
+  <view class="sec" wx:for="{{sections}}" wx:key="t">
+    <view class="h2">{{index + 1}}. {{item.t}}</view>
+    <view class="p" wx:for="{{item.p}}" wx:for-item="line" wx:key="*this">{{line}}</view>
+  </view>
+</view>
+

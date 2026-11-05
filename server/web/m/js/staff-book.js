@@ -10,6 +10,9 @@ window.Pages.StaffBook = {
       kw: '', results: [], searching: false, rPage: 1, rTotal: 0, kwTimer: null, vip: null,
       // 日期
       days: H.monthDays(), date: H.today(),
+      calShow: false,
+      minDate: dayjs().subtract(1, 'year').toDate(),
+      maxDate: dayjs().add(3, 'month').toDate(),
       // 私教
       loadingPt: false, pt: null, coachId: null, courseId: null, clubId: null, fromTime: null, cardId: null,
       // 团课
@@ -19,6 +22,7 @@ window.Pages.StaffBook = {
   },
   computed: {
     isCoach() { return (Store.user || {}).role === 'coach'; },
+    calDefaultDate() { return dayjs(this.date).toDate(); },
     coach() { return this.pt ? (this.pt.coaches || []).find(c => c.id === this.coachId) : null; },
     courses() { return this.coach ? this.coach.courses : []; },
     course() { return this.courses.find(c => c.id === this.courseId) || null; },
@@ -50,9 +54,9 @@ window.Pages.StaffBook = {
     '        <div v-for="m in results" :key="m.id" class="cat-pick flex" @click="pickVip(m)">',
     '          <div class="flex1"><b>{{ m.realname || \'未命名\' }}</b> <span class="muted">{{ m.phone }}</span>',
     '            <van-tag v-if="m.is_black" type="danger" style="margin-left:4px">黑名单</van-tag></div>',
-    '          <van-icon name="arrow" color="#bbb" size="14"/>',
+    '          <van-icon name="arrow" color="var(--c-text-4)" size="14"/>',
     '        </div>',
-    '        <div v-if="searching" style="text-align:center;padding:8px"><van-loading size="20" color="#0d5e56"/></div>',
+    '        <div v-if="searching" style="text-align:center;padding:8px"><van-loading size="20" color="var(--brand)"/></div>',
     '        <van-empty v-else-if="!results.length" description="没有匹配的会员" image-size="60"/>',
     '        <div v-else-if="results.length < rTotal" style="text-align:center;padding:6px 0 2px" @click="search(false)"><span class="brand-text" style="font-size:13px">加载更多（还有 {{ rTotal - results.length }} 人）</span></div>',
     '      </div>',
@@ -70,12 +74,19 @@ window.Pages.StaffBook = {
     '  <template v-if="vip">',
     '  <div class="sec-title">2. 选择课程类型</div>',
     '  <div class="card-box" style="padding:10px 12px">',
-    '    <van-tabs v-model:active="tab" type="card" color="#0d5e56" @change="onTab">',
+    '    <van-tabs v-model:active="tab" type="card" color="var(--brand)" @change="onTab">',
     '      <van-tab title="私教课" name="pt"></van-tab>',
     '      <van-tab title="团课" name="group"></van-tab>',
     '    </van-tabs>',
     '  </div>',
 
+    '  <div class="flex" style="align-items:center;justify-content:space-between;padding:4px 4px 6px">',
+    '    <span class="muted" style="font-size:13px;font-weight:600">{{ H.day(date) }}</span>',
+    '    <div style="display:flex;gap:6px">',
+    '      <van-button v-if="date!==H.today()" size="mini" round plain type="primary" @click="goToday">回今天</van-button>',
+    '      <van-button size="mini" round plain icon="calendar-o" @click="calShow=true">选日期</van-button>',
+    '    </div>',
+    '  </div>',
     '  <div class="day-strip" ref="strip">',
     '    <div v-for="d in days" :key="d.date" class="day-item" :class="{on:d.date===date, past:d.past}" @click="pickDate(d.date)">',
     '      <div class="w">{{ d.w }}</div><div class="d">{{ d.d }}</div>',
@@ -84,7 +95,7 @@ window.Pages.StaffBook = {
 
     /* ---------- 私教 ---------- */
     '  <template v-if="tab===\'pt\'">',
-    '    <div v-if="loadingPt" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '    <div v-if="loadingPt" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '    <template v-else-if="pt">',
     '      <div v-if="pt.mine && pt.mine.length" class="card-box" style="padding:10px 12px">',
     '        <div class="muted" style="margin-bottom:6px">该会员 {{ H.day(date) }} 已有安排</div>',
@@ -116,7 +127,7 @@ window.Pages.StaffBook = {
     '          <div v-for="cs in courses" :key="cs.id" class="cat-pick flex" :class="{on:courseId===cs.id}" @click="pickCourse(cs.id)">',
     '            <div class="flex1"><div style="font-size:14px;font-weight:600">{{ cs.title }}</div>',
     '              <div class="muted mt4">{{ cs.duration }}分钟 · {{ cs.people_count===1 ? \'1对1\' : cs.people_count+\'人小团\' }}</div></div>',
-    '            <van-icon v-if="courseId===cs.id" name="checked" color="#0d5e56" size="20"/>',
+    '            <van-icon v-if="courseId===cs.id" name="checked" color="var(--brand)" size="20"/>',
     '          </div>',
     '        </div>',
     '        <div class="sec-title">选择时间</div>',
@@ -129,7 +140,7 @@ window.Pages.StaffBook = {
     '          <div v-for="c in ptCards" :key="c.id" class="cat-pick flex" :class="{on:cardId===c.id}" @click="cardId=c.id">',
     '            <div class="flex1"><div style="font-size:14px;font-weight:600">{{ c.card_type_name }}</div>',
     '              <div class="muted mt4">{{ cardDesc(c) }}<template v-if="c.expire_time"> · {{ H.dateOf(c.expire_time) }}到期</template></div></div>',
-    '            <van-icon v-if="cardId===c.id" name="checked" color="#0d5e56" size="20"/>',
+    '            <van-icon v-if="cardId===c.id" name="checked" color="var(--brand)" size="20"/>',
     '          </div>',
     '        </div>',
     '      </template>',
@@ -138,7 +149,7 @@ window.Pages.StaffBook = {
 
     /* ---------- 团课 ---------- */
     '  <template v-else>',
-    '    <div v-if="loadingG" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '    <div v-if="loadingG" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '    <template v-else>',
     '      <van-empty v-if="!glist.length" description="当日暂无排课" />',
     '      <div v-for="it in glist" :key="it.id" class="course-item" @click="openGroup(it)">',
@@ -164,12 +175,12 @@ window.Pages.StaffBook = {
     '      <div class="muted mt8">{{ H.day(gCur.start_time) }} {{ H.time(gCur.start_time) }}-{{ H.time(gCur.end_time) }} · {{ gCur.coach_name || \'待定\' }} · {{ gCur.classroom_name }}</div>',
     '      <div class="muted mt4">代约会员：<b class="brand-text">{{ vip && vip.realname }}</b> {{ vip && vip.phone }}</div>',
     '      <div class="sec-title" style="margin:16px 0 8px">选择扣课卡</div>',
-    '      <div v-if="gCards===null" style="text-align:center;padding:14px"><van-loading size="20" color="#0d5e56"/></div>',
+    '      <div v-if="gCards===null" style="text-align:center;padding:14px"><van-loading size="20" color="var(--brand)"/></div>',
     '      <van-empty v-else-if="!gCards.length" description="该会员无可用会员卡" image-size="60"/>',
     '      <template v-else>',
     '        <div v-for="c in gCards" :key="c.id" class="cat-pick flex" :class="{on:gCardId===c.id}" @click="gCardId=c.id">',
     '          <div class="flex1">{{ c.card_type_name }}<span class="muted" style="margin-left:6px">{{ cardDesc(c) }}</span></div>',
-    '          <van-icon v-if="gCardId===c.id" name="checked" color="#0d5e56" size="20"/>',
+    '          <van-icon v-if="gCardId===c.id" name="checked" color="var(--brand)" size="20"/>',
     '        </div>',
     '      </template>',
     '      <div class="mt12"><van-button type="primary" block round :loading="submitting" :disabled="!gCardId" @click="doBookGroup">',
@@ -185,6 +196,7 @@ window.Pages.StaffBook = {
     '    </div>',
     '    <van-button type="primary" round :loading="submitting" :disabled="!canSubmitPt" @click="doBookPt" style="min-width:120px">确认代约</van-button>',
     '  </div>',
+    '  <van-calendar v-model:show="calShow" :min-date="minDate" :max-date="maxDate" :default-date="calDefaultDate" color="var(--brand)" @confirm="onDateConfirm"/>',
     '</div>',
   ].join('\n'),
   methods: {
@@ -213,6 +225,11 @@ window.Pages.StaffBook = {
     clearVip() { this.vip = null; this.pt = null; this.glist = []; this.resetPt(); this.search(true); },
     /* ---- 通用 ---- */
     onTab() { this.load(); },
+    goToday() { this.pickDate(H.today()); },
+    onDateConfirm(d) {
+      this.calShow = false;
+      this.pickDate(dayjs(d).format('YYYY-MM-DD'));
+    },
     pickDate(d) { this.date = d; this.fromTime = null; this.load(); this.scrollDay('smooth'); },
     scrollDay(behavior) {
       this.$nextTick(() => {
@@ -234,7 +251,11 @@ window.Pages.StaffBook = {
         if (!this.clubId) this.clubId = d.default_club_id || ((d.clubs || [])[0] || {}).id || null;
         const list = d.coaches || [];
         const keep = list.find(c => c.id === keepCoach);
-        this.coachId = keep ? keep.id : (d.locked_coach_id || (list[0] || {}).id || null);
+        // 当前登录教练: 优先使用后端识别的 my_coach_id / locked_coach_id，或本地 Store.user
+        const myCoachId = d.my_coach_id || d.locked_coach_id || (Store.user && Store.user.coach_id) || 0;
+        const myCoach = myCoachId ? list.find(c => c.id === myCoachId) : (Store.user && Store.user.realname ? list.find(c => c.realname === Store.user.realname) : null);
+        const mainCoach = list.find(c => c.is_main);
+        this.coachId = keep ? keep.id : (myCoach ? myCoach.id : (mainCoach ? mainCoach.id : (list[0] || {}).id || null));
         this.fromTime = null;
         const cs = this.courses;
         if (!cs.some(c => c.id === this.courseId)) this.courseId = (cs[0] || {}).id || null;

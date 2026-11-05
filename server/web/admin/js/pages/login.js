@@ -11,8 +11,9 @@ window.AppPages.Login = {
   <div class="login-wrap">
     <div class="login-card">
       <div class="login-logo">
-        <div class="badge">3S</div>
-        <h1>3S运动中心 · 管理后台</h1>
+        <img class="logo-light" src="/static/logo-black.png" alt="3S运动中心">
+        <img class="logo-dark" src="/static/logo-white.png" alt="3S运动中心">
+        <h1>管理后台</h1>
       </div>
       <div class="login-sub">门店运营 · 会员经营 · 教练服务 一站式工作台</div>
       <el-form :model="form" size="large" @keyup.enter="doLogin">

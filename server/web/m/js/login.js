@@ -1,6 +1,8 @@
 /* 登录 / 注册 (会员) + 员工登录 */
 window.Pages.Login = {
   data() {
+    const ua = navigator.userAgent || '';
+    const isMp = window.__wxjs_environment === 'miniprogram' || /miniProgram/i.test(ua);
     return {
       mode: 'member',            // member | staff
       tab: 'login',              // login | register
@@ -8,19 +10,20 @@ window.Pages.Login = {
       username: '', spassword: '',
       reg: { phone: '', realname: '', password: '', gender: 1 },
       loading: false,
+      isMp,
     };
   },
   template: [
     '<div class="page login-page">',
     '  <div class="login-hero">',
-    '    <img class="login-logo" src="/static/logo.png" alt="3S运动中心 FITNESS">',
+    '    <img class="login-logo" src="/static/logo-black.png" alt="3S运动中心 FITNESS">',
     '    <p>这是一场享受自我蜕变的快乐健身</p>',
     '  </div>',
     '  <div class="login-card">',
-    '    <van-tabs v-model:active="mode" color="#0d5e56" title-active-color="#0d5e56">',
+    '    <van-tabs v-model:active="mode" color="var(--brand)" title-active-color="var(--brand)">',
     '      <van-tab title="会员登录" name="member">',
     '        <div style="padding:16px 8px 0">',
-    '          <van-tabs v-model:active="tab" type="card" color="#0d5e56" style="margin-bottom:16px">',
+    '          <van-tabs v-model:active="tab" type="card" color="var(--brand)" style="margin-bottom:16px">',
     '            <van-tab title="登录" name="login"></van-tab>',
     '            <van-tab title="注册 / 绑定" name="register"></van-tab>',
     '          </van-tabs>',
@@ -29,6 +32,7 @@ window.Pages.Login = {
     '            <van-field v-model="password" type="password" label="密码" placeholder="请输入密码" clearable @keyup.enter="doMemberLogin" />',
     '            <div style="padding:20px 16px 0">',
     '              <van-button type="primary" block round :loading="loading" @click="doMemberLogin">登 录</van-button>',
+    '              <van-button v-if="isMp" plain type="primary" block round style="margin-top:10px" @click="goWxPhoneLogin">微信手机号快捷登录</van-button>',
     '            </div>',
     '          </template>',
     '          <template v-else>',
@@ -92,10 +96,19 @@ window.Pages.Login = {
         this.enter(data, 'staff');
       } finally { this.loading = false; }
     },
+    goWxPhoneLogin() {
+      if (window.wx && wx.miniProgram && wx.miniProgram.navigateTo) {
+        wx.miniProgram.navigateTo({ url: '/pages/wx-login/wx-login' });
+      } else {
+        vant.showToast('当前环境不支持微信快捷登录');
+      }
+    },
     enter(data, type) {
       Store.token = data.token;
       Store.user = data.user;
       Store.type = type;
+      // 小程序里: 登录态交给原生首页保存(会员看沉浸式首页, 员工由原生页转进 H5 工作台)
+      if (MP.is() && MP.homeWithToken()) return;
       this.$router.replace(type === 'member' ? '/' : '/staff');
     },
   },

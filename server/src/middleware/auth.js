@@ -16,6 +16,7 @@ function sign(payload) {
    顺带解决角色/教练身份变更后必须重新登录才生效的问题。 */
 async function maybeRenew(req, res, u) {
   try {
+    if (u.type === 'profile_token') return;
     const leftMs = (u.exp || 0) * 1000 - Date.now();
     if (leftMs > RENEW_BEFORE_DAYS * 86400000) return;
     const db = require('../db');
@@ -79,7 +80,7 @@ function staffAuth(...roles) {
 // 会员端鉴权
 function memberAuth(req, res, next) {
   const u = parseToken(req);
-  if (!u || u.type !== 'member') return res.status(401).json(fail('未登录或登录已过期', 401));
+  if (!u || (u.type !== 'member' && u.type !== 'profile_token')) return res.status(401).json(fail('未登录或登录已过期', 401));
   req.user = u;
   maybeRenew(req, res, u);
   const hc = parseInt(req.headers['x-club-id']);

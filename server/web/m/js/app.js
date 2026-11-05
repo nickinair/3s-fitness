@@ -11,6 +11,8 @@
     { path: '/coach/:id', component: P.MemberCoachDetail },
     { path: '/buy', component: P.MemberBuy },
     { path: '/mine', component: P.MemberMine },
+    { path: '/complete-profile', component: P.CompleteProfile },
+    { path: '/training-photos', component: P.MemberTrainingPhotos },
     { path: '/profile', component: P.MemberProfile },
     { path: '/my-cards', component: P.MemberCards },
     { path: '/card/:id', component: P.MemberCardDetail },
@@ -89,7 +91,23 @@
     routes,
   });
 
+  // 地址栏 ?token= 只在首次导航时接管一次; 否则退出登录 / 401 后每次跳转都会把旧 token 写回去
+  let searchTokenUsed = false;
   router.beforeEach((to) => {
+    const sp = new URLSearchParams(window.location.search);
+    const urlToken = (to.query && to.query.token) || (!searchTokenUsed && sp.get('token'));
+    searchTokenUsed = true;
+    if (urlToken) {
+      const urlType = (to.query && to.query.type) || sp.get('type') || 'member';
+      Store.token = urlToken;
+      Store.type = urlType;
+    }
+    // 小程序里会员回到「首页」= 切回原生首页(沉浸式视频); ?edit=1 是原生首页「管理」进来的常用功能编辑, 留在 H5
+    if (to.path === '/' && Store.token && Store.type !== 'staff' && !(to.query && to.query.edit) && MP.is() && MP.homeWithToken()) return false;
+    if (to.path === '/complete-profile') {
+      if (Store.token) return true;
+      return '/login';
+    }
     if (to.path === '/login') {
       if (Store.token) return Store.type === 'staff' ? '/staff' : '/';
       return true;
@@ -115,16 +133,53 @@
       '  <component :is="Component" :key="$route.fullPath"/>',
       '</router-view>',
       '<div class="tabbar-wrap" v-if="tabbar">',
-      '  <van-tabbar :fixed="false" route active-color="#0d5e56" safe-area-inset-bottom>',
+      '  <van-tabbar :fixed="false" route active-color="var(--brand)" safe-area-inset-bottom>',
       '    <template v-if="tabbar===\'member\'">',
-      '      <van-tabbar-item replace to="/" icon="wap-home-o">首页</van-tabbar-item>',
-      '      <van-tabbar-item replace to="/schedule" icon="calendar-o">约课</van-tabbar-item>',
-      '      <van-tabbar-item replace to="/coaches" icon="friends-o">私教</van-tabbar-item>',
-      '      <van-tabbar-item replace to="/mine" icon="user-o">我的</van-tabbar-item>',
+      '      <van-tabbar-item replace to="/">',
+      '        <span>首页</span>',
+      '        <template #icon="props"><van-icon :name="props.active ? \'wap-home\' : \'wap-home-o\'"/></template>',
+      '      </van-tabbar-item>',
+      '      <van-tabbar-item replace to="/schedule">',
+      '        <span>约课</span>',
+      '        <template #icon="props">',
+      '          <svg v-if="props.active" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="vertical-align:middle;display:inline-block">',
+      '            <rect x="3" y="4" width="18" height="17" rx="3.5" style="fill:var(--brand)"/>',
+      '            <path d="M7 2v3.5M17 2v3.5" stroke-width="2.2" stroke-linecap="round" style="stroke:var(--brand)"/>',
+      '            <path d="M4 8.5h16" stroke="#fff" stroke-width="1.8"/>',
+      '            <rect x="7" y="11.5" width="2.5" height="2.5" rx="0.6" fill="#fff"/>',
+      '            <rect x="14.5" y="11.5" width="2.5" height="2.5" rx="0.6" fill="#fff"/>',
+      '            <rect x="7" y="15.5" width="2.5" height="2.5" rx="0.6" fill="#fff"/>',
+      '            <rect x="14.5" y="15.5" width="2.5" height="2.5" rx="0.6" fill="#fff"/>',
+      '          </svg>',
+      '          <van-icon v-else name="calendar-o"/>',
+      '        </template>',
+      '      </van-tabbar-item>',
+      '      <van-tabbar-item replace to="/coaches">',
+      '        <span>私教</span>',
+      '        <template #icon="props"><van-icon :name="props.active ? \'friends\' : \'friends-o\'"/></template>',
+      '      </van-tabbar-item>',
+      '      <van-tabbar-item replace to="/mine">',
+      '        <span>我的</span>',
+      '        <template #icon="props"><van-icon :name="props.active ? \'user\' : \'user-o\'"/></template>',
+      '      </van-tabbar-item>',
       '    </template>',
       '    <template v-else>',
-      '      <van-tabbar-item replace to="/staff" icon="apps-o">工作台</van-tabbar-item>',
-      '      <van-tabbar-item replace to="/staff/mine" icon="user-o">我的</van-tabbar-item>',
+      '      <van-tabbar-item replace to="/staff">',
+      '        <span>工作台</span>',
+      '        <template #icon="props">',
+      '          <svg v-if="props.active" viewBox="0 0 24 24" width="20" height="20" style="fill:var(--brand);vertical-align:middle;display:inline-block">',
+      '            <rect x="3" y="3" width="7.5" height="7.5" rx="2.5"/>',
+      '            <rect x="13.5" y="3" width="7.5" height="7.5" rx="2.5"/>',
+      '            <rect x="3" y="13.5" width="7.5" height="7.5" rx="2.5"/>',
+      '            <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2.5"/>',
+      '          </svg>',
+      '          <van-icon v-else name="apps-o"/>',
+      '        </template>',
+      '      </van-tabbar-item>',
+      '      <van-tabbar-item replace to="/staff/mine">',
+      '        <span>我的</span>',
+      '        <template #icon="props"><van-icon :name="props.active ? \'user\' : \'user-o\'"/></template>',
+      '      </van-tabbar-item>',
       '    </template>',
       '  </van-tabbar>',
       '</div>',

@@ -1,0 +1,10 @@
+{
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#F4F4F4",
+  "backgroundColorTop": "#000000",
+  "backgroundTextStyle": "light",
+  "usingComponents": {
+    "login-sheet": "/components/login-sheet/login-sheet"
+  }
+}

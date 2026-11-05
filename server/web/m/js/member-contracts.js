@@ -18,7 +18,7 @@ window.SignPadMixin = {
       const ctx = cv.getContext('2d');
       ctx.scale(dpr, dpr);
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = '#111'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       this._ctx = ctx; this._cw = w; this._ch = h;
       let drawing = false;
       const pos = (e) => {
@@ -50,17 +50,17 @@ window.Pages.MemberContracts = {
   template: [
     '<div class="page">',
     '  <m-nav title="我的合同"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="暂无合同"/>',
     '    <div v-for="c in list" :key="c.id" class="rec-item flex" @click="$router.push(\'/contract/\'+c.id)">',
-    '      <van-icon name="notes-o" size="26" color="#0d5e56"/>',
+    '      <van-icon name="notes-o" size="26" color="var(--brand)"/>',
     '      <div class="flex1" style="margin-left:12px">',
     '        <div class="name">{{ c.title }}</div>',
     '        <div class="muted mt4">{{ c.contract_num }} · {{ H.day(c.insert_time) }}</div>',
     '      </div>',
     '      <d-tag dict="signStatus" :v="c.sign_status"></d-tag>',
-    '      <van-icon name="arrow" color="#c8c9cc" style="margin-left:4px"/>',
+    '      <van-icon name="arrow" color="var(--c-text-4)" style="margin-left:4px"/>',
     '    </div>',
     '  </template>',
     '</div>',
@@ -77,7 +77,7 @@ window.Pages.MemberContractDetail = {
   template: [
     '<div class="page" style="padding-bottom:90px">',
     '  <m-nav title="合同详情"></m-nav>',
-    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+    '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else-if="c">',
     '    <div class="card-box">',
     '      <div class="flex">',

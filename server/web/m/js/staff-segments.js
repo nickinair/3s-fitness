@@ -15,8 +15,9 @@
       metric() {
         return {
           low_lesson: m => ({ v: m.left_total, u: '节', label: '剩余' }),
-          trained_10: m => ({ v: m.trained, u: '次', label: '累计训练' }),
-          trained_20: m => ({ v: m.trained, u: '次', label: '累计训练' }),
+          trained_10: m => ({ v: m.trained_month, u: '次', label: '当月训练' }),
+          trained_50: m => ({ v: m.trained_half_year, u: '次', label: '半年训练' }),
+          trained_20: m => ({ v: m.trained_half_year, u: '次', label: '半年训练' }),
           birthday_week: m => ({ v: H.date ? H.date(m.birthday).slice(5) : String(m.birthday || '').slice(5, 10), u: '', label: '生日' }),
           timecard_active: m => ({ v: m.tc_active, u: '张', label: '有效期卡' }),
           timecard_expired: m => ({ v: m.tc_expired, u: '张', label: '已过期' }),
@@ -44,7 +45,7 @@
       '      <van-icon :name="sort===\'desc\' ? \'sort\' : \'sort\'" size="14"/> {{ sortText }}',
       '    </div>',
       '  </div>',
-      '  <div v-if="first && loading" style="text-align:center;padding:50px 0"><van-loading color="#0d5e56">加载中...</van-loading></div>',
+      '  <div v-if="first && loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
       '  <van-empty v-else-if="!list.length" description="暂无符合条件的会员"/>',
       '  <van-list v-else v-model:loading="loading" :finished="finished" finished-text="没有更多了" @load="load">',
       '    <div class="card-box" style="padding:2px 8px">',

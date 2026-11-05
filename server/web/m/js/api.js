@@ -37,7 +37,9 @@
     let j = null;
     try { j = await res.json(); } catch (e) { /* ignore */ }
     if (!j || typeof j.code === 'undefined') {
-      vant.showToast('服务异常');
+      // 非 JSON 响应: 多为后端进程未启动/重启中, nginx 返回 502/504 页面; 带上状态码便于排查
+      const busy = [502, 503, 504].includes(res.status);
+      vant.showToast(busy ? '服务器正在重启或无响应，请稍后刷新(' + res.status + ')' : '服务异常(' + res.status + ')');
       const e = new Error('服务异常'); e.handled = true; throw e;
     }
     if (j.code !== 0) {
@@ -47,21 +49,51 @@
     return j.data;
   }
 
+  /* 小程序桥: 首页是原生页(web-view 去不掉原生导航栏, 做不了沉浸式视频), 会员回首页 / 登录 / 退出时切回原生首页 */
+  const MP = {
+    is() {
+      try { if (sessionStorage.getItem('mp') === '1') return true; } catch (e) { /* ignore */ }
+      return window.__wxjs_environment === 'miniprogram' || /miniProgram/i.test(navigator.userAgent || '');
+    },
+    ready() { return !!(window.wx && wx.miniProgram && wx.miniProgram.reLaunch); },
+    // extra: 例如 '?logout=1' 或 '?token=xxx&type=member'
+    home(extra) { if (this.ready()) { wx.miniProgram.reLaunch({ url: '/pages/home/home' + (extra || '') }); return true; } return false; },
+    homeWithToken() { return this.home(Store.token ? '?type=' + (Store.type || 'member') + '&token=' + encodeURIComponent(Store.token) : ''); },
+  };
+  window.MP = MP;
+
   const API = {
     get: (u, o) => request('GET', u, null, o),
     post: (u, d, o) => request('POST', u, d == null ? {} : d, o),
     put: (u, d, o) => request('PUT', u, d == null ? {} : d, o),
     del: (u, o) => request('DELETE', u, null, o),
+    delete: (u, o) => request('DELETE', u, null, o),
+    upload: async (file) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: Store.token ? { Authorization: 'Bearer ' + Store.token } : {},
+        body: fd,
+      });
+      let j = null;
+      try { j = await res.json(); } catch (e) {}
+      if (!res.ok || !j || j.code !== 0) {
+        throw new Error((j && j.msg) || ('上传失败(' + res.status + ')'));
+      }
+      return j.data && j.data.url;
+    },
   };
 
   /* 字典: [文案, van-tag type] */
   const DICT = {
     cardKind: { 1: '次卡', 2: '时间卡', 3: '储值卡', 4: '私教卡' },
-    cardStatus: { 0: ['待开卡', 'primary'], 1: ['使用中', 'success'], 2: ['已过期', 'default'], 3: ['已暂停', 'warning'], 4: ['已停用', 'danger'], 5: ['已退卡', 'default'] },
+    // 标签类型 = 四种形态: primary/success 黑底白字, warning 黑框(待处理), default 灰底(已结束), danger 红框(风险)
+    cardStatus: { 0: ['待开卡', 'warning'], 1: ['使用中', 'success'], 2: ['已过期', 'default'], 3: ['已暂停', 'warning'], 4: ['已停用', 'danger'], 5: ['已退卡', 'danger'] },
     ptStatus: { 0: ['待确认', 'warning'], 1: ['已确认', 'primary'], 2: ['已取消', 'default'], 3: ['已完成', 'success'], 4: ['已爽约', 'danger'] },
     groupStatus: { 0: ['候补中', 'warning'], 1: ['已预约', 'primary'], 2: ['已核销', 'success'], 3: ['已取消', 'default'], 4: ['已爽约', 'danger'] },
     signStatus: { 0: ['待签署', 'warning'], 1: ['已签署', 'success'] },
-    expireStatus: { 0: ['无卡', 'default'], 1: ['在籍', 'success'], 2: ['已过期', 'danger'] },
+    expireStatus: { 0: ['无卡', 'default'], 1: ['在籍', 'success'], 2: ['已过期', 'default'] },
     syllabusStatus: { 1: ['正常', 'primary'], 2: ['已取消', 'default'], 3: ['已结课', 'success'] },
     payMethod: { wechat: '微信支付', alipay: '支付宝', cash: '现金', pos: 'POS刷卡', transfer: '转账', store: '储值抵扣', meituan: '美团/大众', other: '其他', import: '历史导入' },
     rechargeType: { 1: '开卡', 2: '续卡', 3: '充值', 4: '退卡' },
@@ -76,6 +108,15 @@
 
   const WEEK = '日一二三四五六';
   const H = {
+    // 读取 theme.css 里的配色变量实际值, 给 canvas/二维码这类不认 var() 的地方用
+    color(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); },
+    // 吸顶导航的实际高度(状态栏 + 导航内容区), 给 van-tabs sticky 的 offset-top 用; 小程序沉浸式下状态栏高度由外壳传入
+    navTop() {
+      const cs = getComputedStyle(document.documentElement);
+      const sb = parseFloat(cs.getPropertyValue('--safe-top')) || 0;
+      const nh = parseFloat(cs.getPropertyValue('--nav-h')) || 46;
+      return sb + nh;
+    },
     num(v) { const n = Number(v || 0); return Math.abs(n % 1) > 0.004 ? n.toFixed(2) : String(Math.round(n)); },
     money(v) { return '¥' + H.num(v); },
     dateOf(s) { return s ? String(s).slice(0, 10) : ''; },
@@ -96,8 +137,8 @@
     full(s) { return s ? String(s).slice(0, 16) : ''; },
     isPast(s) { return s ? dayjs(String(s)).isBefore(dayjs()) : false; },
     today() { return dayjs().format('YYYY-MM-DD'); },
-    // 日期条: 前后各一个月(今天居中), 过去的日期带 past 标记
-    monthDays() { return H.days(61, -30); },
+    // 日期条: 过去1年到未来30天, 过去的日期带 past 标记
+    monthDays() { return H.days(365 + 30, -365); },
     days(n, offset) { /* 日期条 */
       const arr = [];
       for (let i = 0; i < (n || 7); i++) {
