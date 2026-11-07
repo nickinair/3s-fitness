@@ -516,12 +516,40 @@ r.post('/ptrain-bookings/:id/start-finish', staffAuth(), async (req, res, next) 
   } catch (e) { next(e); }
 });
 
-// 更新「本节课训练计划」（教练填写，会员可见）
+// 更新「本节课训练计划」（教练填写，会员可见，并自动同步至 biz_training_plan 供会员在「我的-训练计划」查看）
 r.put('/ptrain-bookings/:id/lesson-plan', staffAuth(), async (req, res, next) => {
   try {
     const bk = await db.queryOne('SELECT * FROM biz_ptrain_bespeak_record WHERE id=? AND merchant_id=?', [req.params.id, req.user.mid]);
     if (!bk) throw new BizError('预约不存在');
-    const lessonPlan = (req.body.lesson_plan || '').trim();
+    let lessonPlan = (req.body.lesson_plan || '').trim();
+    let parsed = null;
+    if (lessonPlan.startsWith('{') && lessonPlan.endsWith('}')) {
+      try { parsed = JSON.parse(lessonPlan); } catch { parsed = null; }
+    }
+    if (parsed && typeof parsed === 'object') {
+      if (bk.realname && (!parsed.title || /^学员\s*(私教训练|训练计划)$/.test(String(parsed.title).trim()))) {
+        parsed.title = `${bk.realname} 私教训练`;
+        lessonPlan = JSON.stringify(parsed);
+      }
+      if (bk.vip_id && Array.isArray(parsed.items) && parsed.items.length) {
+        const planDate = dayjs(bk.date).format('YYYY-MM-DD');
+        const title = parsed.title || `${bk.realname || '学员'} 私教训练`;
+        const note = parsed.note || '';
+        const itemsJson = JSON.stringify(parsed.items);
+        const exist = await db.queryOne(
+          'SELECT id FROM biz_training_plan WHERE vip_id=? AND coach_id=? AND plan_date=? AND status=1 ORDER BY id DESC LIMIT 1',
+          [bk.vip_id, bk.coach_id || 0, planDate]);
+        if (exist) {
+          await db.exec('UPDATE biz_training_plan SET title=?, items=?, note=?, pushed=1 WHERE id=?',
+            [title, itemsJson, note, exist.id]);
+        } else {
+          await db.insert(
+            `INSERT INTO biz_training_plan (merchant_id,club_id,coach_id,coach_name,vip_id,realname,title,plan_date,items,note,is_template,pushed)
+             VALUES (?,?,?,?,?,?,?,?,?,?,0,1)`,
+            [bk.merchant_id, bk.club_id || 0, bk.coach_id || 0, bk.coach_name || '', bk.vip_id, bk.realname || '', title, planDate, itemsJson, note]);
+        }
+      }
+    }
     await db.exec('UPDATE biz_ptrain_bespeak_record SET lesson_plan=? WHERE id=?', [lessonPlan, bk.id]);
     res.json(ok({ lesson_plan: lessonPlan }));
   } catch (e) { next(e); }

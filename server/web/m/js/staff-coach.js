@@ -94,7 +94,9 @@
         if (!this.d) return [];
         const arr = [];
         (this.d.bookings || []).forEach(b => arr.push({
-          id: b.id, rawBooking: b, vipId: b.vip_id, key: 'pt' + b.id, time: b.from_time, timeEnd: b.to_time, kind: 'pt',
+          id: b.id, rawBooking: b, vipId: b.vip_id, vip_id: b.vip_id, realname: b.realname,
+          coach_id: b.coach_id, coach_name: b.coach_name, date: H.dateOf(b.date),
+          key: 'pt' + b.id, time: b.from_time, timeEnd: b.to_time, kind: 'pt',
           title: b.course_title || '私教课', sub: '学员 ' + b.realname, studentName: b.realname, phone: b.phone,
           status: b.status, confirm: b.confirm_status, lesson_plan: b.lesson_plan,
         }));
@@ -169,6 +171,11 @@
               id: b.id,
               rawBooking: b,
               vipId: b.vip_id,
+              vip_id: b.vip_id,
+              realname: b.realname,
+              coach_id: b.coach_id,
+              coach_name: b.coach_name,
+              date: dStr,
               key: 'pt' + b.id,
               kind: 'pt',
               title: b.course_title || '私教课',

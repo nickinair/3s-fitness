@@ -1,6 +1,33 @@
 /* 会员端-训练计划列表/详情 + 共享: 计划长图生成(canvas) */
 (function () {
 
+  /* 长图素材: 首页视频首帧(同源, 不污染 canvas) + 白色 Logo。脚本加载即预热, 生成前 await PlanImage.ready
+     每张首帧配一个低饱和色调: [图片名, 压暗用的 rgb, 序号/点缀色(前景), 序号底色] */
+  const PLAN_POSTERS = [
+    ['hanteln2', '18,34,46', '#4F6B80', '#E3EAF0'],   // 钢蓝
+    ['dumbbell', '26,34,32', '#5F7566', '#E5ECE6'],   // 灰绿
+    ['21Run01', '34,30,46', '#66678A', '#E8E7EF'],    // 灰紫
+    ['21Run01', '46,32,26', '#8A6A55', '#F0E7E0'],    // 暖陶(同一素材换色调; MR8 首帧近乎全黑, 不用于长图)
+  ];
+  const planImgs = {};
+  const loadImg = (k, src) => new Promise((resolve) => {
+    const im = new Image();
+    im.onload = () => { planImgs[k] = im; resolve(); };
+    im.onerror = () => resolve();
+    im.src = src;
+  });
+  const planReady = Promise.race([
+    Promise.all(PLAN_POSTERS.map(p => loadImg(p[0], '/static/videos/' + p[0] + '-poster.jpg')).concat(loadImg('logo', '/static/logo-white.png'))),
+    new Promise(r => setTimeout(r, 2500)), // 弱网兜底: 最多等 2.5s, 没加载完就退回纯色渐变
+  ]);
+  // 同一份计划(标题+日期)每次生成用同一张图, 不同计划自动错开
+  const planTone = (seed) => {
+    let h = 2166136261; const s = String(seed || '');
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13; // FNV-1a + 末尾扰动, 相似标题也能均匀分到 4 种色调
+    return PLAN_POSTERS[(h >>> 0) % PLAN_POSTERS.length];
+  };
+
   /* 生成品牌风格计划长图, 返回 dataURL
      opt: {title, member, coach, date, note, items:[{action_name,sets,reps,unit,weight,rest,remark}]} */
   window.PlanImage = function (opt) {
@@ -30,34 +57,68 @@
     };
     const F = (s, w) => (w || '') + ' ' + s + 'px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif';
 
-    // 背景
-    ctx.fillStyle = H.color('--c-bg-2'); ctx.fillRect(0, 0, W, HT);
+    // 背景: 极浅暖灰, 比纯灰更柔和
+    ctx.fillStyle = '#F3F2EF'; ctx.fillRect(0, 0, W, HT);
 
-    // 顶部品牌渐变
-    const g = ctx.createLinearGradient(0, 0, W, headH);
-    g.addColorStop(0, H.color('--brand')); g.addColorStop(1, H.color('--brand-light'));
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, headH);
-    // 装饰圆
-    ctx.fillStyle = 'rgba(255,255,255,.10)';
-    ctx.beginPath(); ctx.arc(W - 60, 40, 110, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(80, headH - 10, 70, 0, 7); ctx.fill();
+    // 顶部 Banner: 视频首帧(cover 裁切) + 低饱和色调压暗 + 斜向高光; 素材未就绪时退回品牌渐变
+    const tone = planTone((opt.title || '') + '|' + (opt.date || ''));
+    const poster = planImgs[tone[0]];
+    if (poster) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, W, headH); ctx.clip();
+      const s = Math.max(W / poster.width, headH / poster.height);
+      const dw = poster.width * s, dh = poster.height * s;
+      ctx.drawImage(poster, (W - dw) / 2, (headH - dh) / 2, dw, dh);
+      ctx.restore();
+      const ov = ctx.createLinearGradient(0, 0, W, 0);
+      ov.addColorStop(0, 'rgba(' + tone[1] + ',.82)');
+      ov.addColorStop(0.55, 'rgba(' + tone[1] + ',.58)');
+      ov.addColorStop(1, 'rgba(' + tone[1] + ',.30)');
+      ctx.fillStyle = ov; ctx.fillRect(0, 0, W, headH);
+      const shine = ctx.createLinearGradient(0, 0, W * 0.6, headH);
+      shine.addColorStop(0, 'rgba(255,255,255,.14)'); shine.addColorStop(0.5, 'rgba(255,255,255,0)');
+      ctx.fillStyle = shine; ctx.fillRect(0, 0, W, headH);
+      const btm = ctx.createLinearGradient(0, headH * 0.55, 0, headH);
+      btm.addColorStop(0, 'rgba(0,0,0,0)'); btm.addColorStop(1, 'rgba(0,0,0,.28)');
+      ctx.fillStyle = btm; ctx.fillRect(0, 0, W, headH);
+    } else {
+      const g = ctx.createLinearGradient(0, 0, W, headH);
+      g.addColorStop(0, 'rgb(' + tone[1] + ')'); g.addColorStop(1, tone[2]);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, headH);
+      ctx.fillStyle = 'rgba(255,255,255,.10)';
+      ctx.beginPath(); ctx.arc(W - 60, 40, 110, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(80, headH - 10, 70, 0, 7); ctx.fill();
+    }
 
-    // logo 色块
-    ctx.fillStyle = '#fff'; rr(PAD, 40, 64, 64, 14); ctx.fill();
-    ctx.fillStyle = H.color('--brand'); ctx.font = F(30, '800'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('3S', PAD + 32, 74);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#fff'; ctx.font = F(30, '700');
-    ctx.fillText('3S健身', PAD + 80, 62);
-    ctx.font = F(20); ctx.fillStyle = 'rgba(255,255,255,.85)';
-    ctx.fillText('私教训练计划', PAD + 80, 92);
+    // 品牌: 白色 Logo + 右上角磨砂胶囊「私教训练计划」
+    const logo = planImgs.logo;
+    if (logo) {
+      const lh = 74, lw = lh * logo.width / logo.height;
+      ctx.drawImage(logo, PAD - 8, 26, lw, lh);
+    } else {
+      ctx.fillStyle = '#fff'; rr(PAD, 40, 64, 64, 14); ctx.fill();
+      ctx.fillStyle = 'rgb(' + tone[1] + ')'; ctx.font = F(30, '800'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('3S', PAD + 32, 74);
+      ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = F(30, '700');
+      ctx.fillText('3S运动', PAD + 80, 74);
+    }
+    ctx.font = F(20, '600'); ctx.textBaseline = 'middle';
+    const tagTxt = '私教训练计划', tagW = ctx.measureText(tagTxt).width + 36;
+    ctx.fillStyle = 'rgba(255,255,255,.16)'; rr(W - PAD - tagW, 46, tagW, 36, 18); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.32)'; ctx.lineWidth = 1.5; rr(W - PAD - tagW, 46, tagW, 36, 18); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    ctx.fillText(tagTxt, W - PAD - tagW / 2, 64);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 
     // 标题
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 2;
     ctx.fillStyle = '#fff'; ctx.font = F(40, '800');
     ctx.fillText(opt.title || '训练计划', PAD, 168);
     ctx.font = F(24); ctx.fillStyle = 'rgba(255,255,255,.9)';
     const sub = [opt.member, opt.coach ? opt.coach + ' 教练' : '', opt.date].filter(Boolean).join(' · ');
     ctx.fillText(sub, PAD, 214);
+    ctx.restore();
 
     // 动作列表
     let y = headH + 24;
@@ -65,10 +126,10 @@
     items.forEach((it, i) => {
       const h = itemHeights[i];
       ctx.fillStyle = '#fff'; rr(24, y, W - 48, h, 16); ctx.fill();
-      // 序号圆
-      ctx.fillStyle = H.color('--brand-soft');
+      // 序号圆: 与 Banner 同色调的低饱和底色
+      ctx.fillStyle = tone[3];
       ctx.beginPath(); ctx.arc(24 + 46, y + 48, 24, 0, 7); ctx.fill();
-      ctx.fillStyle = H.color('--brand'); ctx.font = F(24, '700'); ctx.textAlign = 'center';
+      ctx.fillStyle = tone[2]; ctx.font = F(24, '700'); ctx.textAlign = 'center';
       ctx.fillText(String(i + 1), 24 + 46, y + 57);
       ctx.textAlign = 'left';
       // 动作名
@@ -90,7 +151,8 @@
 
     // 教练叮嘱
     if (opt.note) {
-      ctx.fillStyle = H.color('--warn-soft'); rr(24, y, W - 48, 70, 14); ctx.fill();
+      ctx.fillStyle = tone[3]; rr(24, y, W - 48, 70, 14); ctx.fill();
+      ctx.fillStyle = tone[2]; rr(24, y, 6, 70, 3); ctx.fill();
       ctx.fillStyle = H.color('--c-text-2'); ctx.font = F(22);
       ctx.fillText('📣 教练叮嘱：' + opt.note, 48, y + 43);
       y += noteH;
@@ -98,10 +160,11 @@
 
     // 底部 slogan
     ctx.fillStyle = H.color('--c-text-3'); ctx.font = F(22); ctx.textAlign = 'center';
-    ctx.fillText('—— 3S健身 · 与更好的自己相遇 ——', W / 2, HT - 40);
+    ctx.fillText('—— 3S运动 · 与更好的自己相遇 ——', W / 2, HT - 40);
 
-    return cv.toDataURL('image/png');
+    return cv.toDataURL('image/jpeg', 0.86);
   };
+  window.PlanImage.ready = planReady;
 
   /* 解析 items (JSON 字符串) */
   window.parsePlanItems = function (s) {
@@ -261,14 +324,30 @@
         this.recBars = [];
         this.recSec = 0;
       },
+      bkMeta() {
+        const bk = this.booking || {};
+        const raw = bk.rawBooking || {};
+        return {
+          id: bk.id || raw.id,
+          vip_id: bk.vip_id || bk.vipId || raw.vip_id || 0,
+          realname: bk.realname || bk.studentName || raw.realname || '',
+          coach_id: bk.coach_id || raw.coach_id || ((Store.user && Store.user.coach_id) || 0),
+          coach_name: bk.coach_name || raw.coach_name || (Store.user && Store.user.realname) || '',
+          date: H.dateOf(bk.date || bk.dateStr || raw.date) || H.today(),
+          lesson_plan: bk.lesson_plan || raw.lesson_plan || '',
+        };
+      },
       initData() {
         this.cleanup();
-        const bk = this.booking || {};
-        const parsed = window.parseLessonPlan(bk.lesson_plan);
+        const m = this.bkMeta();
+        const mName = m.realname || '学员';
+        const parsed = window.parseLessonPlan(m.lesson_plan);
         if (parsed && Array.isArray(parsed.items) && parsed.items.length) {
+          let t = parsed.title || (mName + ' 私教训练');
+          if (m.realname && /^学员\s*(私教训练|训练计划)$/.test(String(t).trim())) t = m.realname + ' 私教训练';
           this.form = {
-            title: parsed.title || ((bk.realname || '学员') + ' 私教训练'),
-            plan_date: bk.date || H.today(),
+            title: t,
+            plan_date: m.date,
             note: parsed.note || '',
           };
           this.items = parsed.items.map(it => ({
@@ -284,16 +363,16 @@
           this.aiText = '';
         } else if (parsed && parsed.legacy_text) {
           this.form = {
-            title: (bk.realname || '学员') + ' 训练计划',
-            plan_date: bk.date || H.today(),
+            title: mName + ' 训练计划',
+            plan_date: m.date,
             note: parsed.legacy_text,
           };
           this.items = [];
           this.aiText = parsed.legacy_text;
         } else {
           this.form = {
-            title: (bk.realname || '学员') + ' 私教训练',
-            plan_date: bk.date || H.today(),
+            title: mName + ' 私教训练',
+            plan_date: m.date,
             note: '',
           };
           this.items = [];
@@ -422,6 +501,7 @@
         if (this.items.some(it => !String(it.action_name || '').trim())) return vant.showToast('有动作未填写名称');
 
         const bk = this.booking;
+        const m = this.bkMeta();
         const t = vant.showLoadingToast({ message: '生成图片并保存中...', duration: 0, forbidClick: true });
         this.saving = true;
         try {
@@ -436,19 +516,20 @@
             part: it.part || '',
           }));
 
-          // 1. 调用已有能力生成品牌长图
+          // 1. 调用已有能力生成品牌长图(先等 Banner 素材就绪)
+          await window.PlanImage.ready;
           const dataUrl = window.PlanImage({
             title: this.form.title.trim(),
-            member: bk.realname || '',
-            coach: bk.coach_name || (Store.user && Store.user.realname) || '',
-            date: this.form.plan_date || bk.date || H.today(),
+            member: m.realname || '',
+            coach: m.coach_name || '',
+            date: this.form.plan_date || m.date || H.today(),
             note: this.form.note ? this.form.note.trim() : '',
             items: itemsClean,
           });
 
           // 2. 转成 Blob 上传获取永久图片 URL
           const blob = window.dataURLtoBlob(dataUrl);
-          const file = new File([blob], 'plan-' + bk.id + '-' + Date.now() + '.png', { type: 'image/png' });
+          const file = new File([blob], 'plan-' + bk.id + '-' + Date.now() + '.jpg', { type: 'image/jpeg' });
           const imgUrl = await API.upload(file);
 
           // 3. 构建存入 lesson_plan 的结构化数据 (带图片缩略图及原始结构)
@@ -461,27 +542,15 @@
           };
           const rawStr = JSON.stringify(planPayload);
 
-          // 4. 保存到本节课
-          await API.put('/ptrain-bookings/' + bk.id + '/lesson-plan', {
+          // 4. 保存到本节课 (后端会自动同步/更新至 biz_training_plan 表)
+          const savedRes = await API.put('/ptrain-bookings/' + bk.id + '/lesson-plan', {
             lesson_plan: rawStr,
           });
-
-          // 5. 同时保存一份到训练计划表 (biz_training_plan), 方便学员与教练在「训练计划」列表中查看
-          if (bk.vip_id) {
-            API.post('/training-plans', {
-              title: this.form.title.trim(),
-              vip_id: bk.vip_id,
-              coach_id: bk.coach_id || ((Store.user && Store.user.coach_id) || 0),
-              plan_date: this.form.plan_date || bk.date || H.today(),
-              note: this.form.note || '',
-              is_template: 0,
-              items: itemsClean,
-            }, { silent: true }).catch(() => {});
-          }
+          const finalRaw = (savedRes && savedRes.lesson_plan) || rawStr;
 
           t.close();
           vant.showToast({ message: '计划已生成并保存', icon: 'success' });
-          this.$emit('saved', { booking: bk, plan: planPayload, raw: rawStr });
+          this.$emit('saved', { booking: bk, plan: planPayload, raw: finalRaw });
           this.close();
         } catch (e) {
           t.close();
@@ -525,7 +594,7 @@
       /* 基本信息卡片 */
       '    <div class="card-box" style="margin:0 0 12px;padding:6px 0">',
       '      <van-field v-model="form.title" label="计划标题" placeholder="如：胸背超级组 / 核心强化" />',
-      '      <van-field :model-value="(booking && booking.realname) || \'学员\'" label="学员" readonly />',
+      '      <van-field :model-value="bkMeta().realname || \'学员\'" label="学员" readonly />',
       '      <van-field label="上课日期">',
       '        <template #input><input type="date" v-model="form.plan_date" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--c-text)"/></template>',
       '      </van-field>',
@@ -576,7 +645,7 @@
       '      <van-icon name="notes-o" size="26" color="var(--brand)"/>',
       '      <div class="flex1" style="margin-left:12px">',
       '        <div class="name">{{ p.title }}</div>',
-      '        <div class="muted mt4">{{ p.coach_name }} 教练 · {{ H.day(p.plan_date) }}（{{ H.week(p.plan_date) }}）<template v-if="p._count!=null"> · {{ p._count }} 个动作</template></div>',
+      '        <div class="muted mt4">{{ p.coach_name }} 教练 · {{ H.day(p.plan_date) }}（{{ H.week(p.plan_date) }}）<template v-if="p.item_count!=null"> · {{ p.item_count }} 个动作</template></div>',
       '      </div>',
       '      <van-icon name="arrow" color="var(--c-text-4)"/>',
       '    </div>',
@@ -587,13 +656,6 @@
       try {
         const list = await API.get('/member/training-plans');
         this.list = list || [];
-        // 列表接口无 items, 并发取详情补动作数
-        await Promise.all(this.list.map(async p => {
-          try {
-            const d = await API.get('/member/training-plans/' + p.id, { silent: true });
-            p._count = window.parsePlanItems(d.items).length;
-          } catch (e) { /* ignore */ }
-        }));
       } finally { this.loading = false; }
     },
   };
@@ -635,7 +697,8 @@
       '</div>',
     ].join('\n'),
     methods: {
-      genImage() {
+      async genImage() {
+        await window.PlanImage.ready;
         this.img = window.PlanImage({
           title: this.p.title, member: this.p.realname || (Store.user && Store.user.realname) || '',
           coach: this.p.coach_name, date: H.dateOf(this.p.plan_date), note: this.p.note, items: this.items,

@@ -115,7 +115,7 @@ r.get('/training-plans', async (req, res, next) => {
     const rows = await db.query(
       `SELECT id,coach_name,title,plan_date,note,pushed,insert_time,
               COALESCE(JSON_LENGTH(items),0) item_count
-       FROM biz_training_plan WHERE vip_id=? AND status=1 ORDER BY id DESC LIMIT 50`, [req.user.vip]);
+       FROM biz_training_plan WHERE vip_id=? AND status=1 ORDER BY plan_date DESC, id DESC LIMIT 50`, [req.user.vip]);
     res.json(ok(rows));
   } catch (e) { next(e); }
 });
