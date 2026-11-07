@@ -1,7 +1,7 @@
 const express = require('express');
 const dayjs = require('dayjs');
 const db = require('../db');
-const { ok, BizError, now, lifecycleTick, activateCard, PAY_METHODS, cardBlockReason } = require('../util');
+const { ok, BizError, now, lifecycleTick, activateCard, PAY_METHODS, cardBlockReason, logAction } = require('../util');
 const { memberAuth } = require('../middleware/auth');
 const { createPtBooking, finishPtBooking, getCoachSlots, getCoachBusy, getMemberBusy, checkTimeRange, parseOpen } = require('./coaches');
 const { createGroupBooking, cancelGroupBooking } = require('./group');
@@ -36,14 +36,14 @@ r.get('/home', async (req, res, next) => {
             + (SELECT COUNT(*) FROM biz_syllabus_subscribe_record WHERE vip_id=? AND status IN (0,1)
                  AND class_start_time >= NOW() AND class_start_time < DATE_ADD(CURDATE(), INTERVAL 7 DAY)) n`,
       [req.user.vip, req.user.vip]);
-    // 下一节课(私教/团课取更早的一节)
+    // 下一节课(私教/团课取更早的一节, 含结束时间与状态供首页预约提示条展示)
     const nextRows = await db.query(
-      `(SELECT CONCAT(\`date\`,' ',from_time) AS start_time, course_title AS title, coach_name, 'pt' AS kind
+      `(SELECT CONCAT(\`date\`,' ',from_time) AS start_time, to_time, course_title AS title, coach_name, status, 'pt' AS kind
           FROM biz_ptrain_bespeak_record
          WHERE vip_id=? AND status IN (0,1) AND CONCAT(\`date\`,' ',from_time) >= NOW()
          ORDER BY start_time LIMIT 1)
        UNION ALL
-       (SELECT class_start_time AS start_time, syllabus_title AS title, '' AS coach_name, 'group' AS kind
+       (SELECT class_start_time AS start_time, DATE_FORMAT(class_end_time,'%H:%i') AS to_time, syllabus_title AS title, '' AS coach_name, status, 'group' AS kind
           FROM biz_syllabus_subscribe_record
          WHERE vip_id=? AND status IN (0,1) AND class_start_time >= NOW()
          ORDER BY class_start_time LIMIT 1)
@@ -88,6 +88,7 @@ r.post('/card-intents', async (req, res, next) => {
       vipId: vip.id, realname: vip.realname, phone: vip.phone, scene: 'intent',
       params: { name: vip.realname || vip.nickname, card: cat.title },
     });
+    await logAction(req, '会员购卡意向', `${cat.title} ¥${cat.price}`);
     res.json(ok({ id, msg: '意向已提交，工作人员将尽快与您联系，也可直接到店办理' }));
   } catch (e) { next(e); }
 });
@@ -123,7 +124,10 @@ r.get('/training-plans/:id', async (req, res, next) => {
     const plan = await db.queryOne('SELECT * FROM biz_training_plan WHERE id=? AND vip_id=? AND status=1', [req.params.id, req.user.vip]);
     if (!plan) throw new BizError('计划不存在');
     // 首次打开即标记已读, 首页入口的红点随之消掉
-    if (!plan.viewed_time) await db.exec('UPDATE biz_training_plan SET viewed_time=NOW() WHERE id=?', [plan.id]);
+    if (!plan.viewed_time) {
+      await db.exec('UPDATE biz_training_plan SET viewed_time=NOW() WHERE id=?', [plan.id]);
+      await logAction(req, '会员查看计划', `计划#${plan.id} ${plan.title || ''} (${plan.coach_name || ''}教练)`);
+    }
     res.json(ok(plan));
   } catch (e) { next(e); }
 });
@@ -188,6 +192,7 @@ r.post('/schedule/:id/book', async (req, res, next) => {
       mid: req.user.mid, clubId: req.clubId, syllabusId: req.params.id,
       vipId: req.user.vip, cardId: req.body.card_id, userType: 1,
     });
+    await logAction(req, '会员约团课', `排课#${req.params.id} 预约#${result.id}`);
     res.json(ok(result));
   } catch (e) { next(e); }
 });
@@ -198,7 +203,7 @@ r.get('/coaches', async (req, res, next) => {
     const rows = await db.query(
       `SELECT id,realname,nickname,avatar,cover,good_at,\`desc\`,detail,lesson_price,
         (SELECT COUNT(*) FROM biz_ptrain_record p WHERE p.coach_id=biz_club_coach.id) lesson_total
-       FROM biz_club_coach WHERE merchant_id=? AND status=1 ORDER BY sort`, [req.user.mid]);
+       FROM biz_club_coach WHERE merchant_id=? AND status=1 AND NOT EXISTS (SELECT 1 FROM sys_user u WHERE u.id=biz_club_coach.user_id AND u.status=0) ORDER BY sort`, [req.user.mid]);
     const vip = await db.queryOne('SELECT coach_id, sub_coach_id FROM biz_vip_user WHERE id=?', [req.user.vip]);
     res.json(ok({ list: rows, my_coach_id: vip ? vip.coach_id : 0, my_sub_coach_id: vip ? vip.sub_coach_id : 0 }));
   } catch (e) { next(e); }
@@ -213,8 +218,8 @@ r.get('/body-records', async (req, res, next) => {
 
 r.get('/coaches/:id', async (req, res, next) => {
   try {
-    const coach = await db.queryOne('SELECT * FROM biz_club_coach WHERE id=? AND merchant_id=?', [req.params.id, req.user.mid]);
-    if (!coach) throw new BizError('教练不存在');
+    const coach = await db.queryOne('SELECT * FROM biz_club_coach WHERE id=? AND merchant_id=? AND status=1 AND NOT EXISTS (SELECT 1 FROM sys_user u WHERE u.id=biz_club_coach.user_id AND u.status=0)', [req.params.id, req.user.mid]);
+    if (!coach) throw new BizError('教练不存在或已禁用');
     const courses = await db.query('SELECT * FROM biz_ptrain_course WHERE merchant_id=? AND status=1 ORDER BY sort', [req.user.mid]);
     const filtered = courses.filter(c => {
       const ids = JSON.parse(c.coach_ids || '[]');
@@ -228,28 +233,29 @@ r.get('/coaches/:id', async (req, res, next) => {
 r.get('/pt-schedule', async (req, res, next) => {
   try {
     const date = req.query.date || dayjs().format('YYYY-MM-DD');
-    const vip = await db.queryOne('SELECT coach_id, sub_coach_id FROM biz_vip_user WHERE id=?', [req.user.vip]);
-    const coaches = await db.query(
-      `SELECT id, realname, good_at, lesson_price FROM biz_club_coach WHERE merchant_id=? AND status=1 ORDER BY sort, id`, [req.user.mid]);
-    const courses = await db.query(
-      'SELECT id, title, duration, people_count, coach_ids, intro FROM biz_ptrain_course WHERE merchant_id=? AND status=1 ORDER BY sort, id', [req.user.mid]);
-    const list = [];
-    for (const c of coaches) {
+    const [vip, coaches, courses, mine, opts, myBusy] = await Promise.all([
+      db.queryOne('SELECT coach_id, sub_coach_id FROM biz_vip_user WHERE id=?', [req.user.vip]),
+      db.query(`SELECT id, realname, good_at, lesson_price FROM biz_club_coach WHERE merchant_id=? AND status=1 AND NOT EXISTS (SELECT 1 FROM sys_user u WHERE u.id=biz_club_coach.user_id AND u.status=0) ORDER BY sort, id`, [req.user.mid]),
+      db.query('SELECT id, title, duration, people_count, coach_ids, intro FROM biz_ptrain_course WHERE merchant_id=? AND status=1 ORDER BY sort, id', [req.user.mid]),
+      db.query(
+        `SELECT b.id, b.coach_id, b.coach_name, b.course_title, b.from_time, b.to_time, b.status, b.confirm_status, b.lesson_plan, c.name club_name
+         FROM biz_ptrain_bespeak_record b LEFT JOIN biz_club c ON c.id=b.club_id
+         WHERE b.vip_id=? AND b.\`date\`=? AND b.status IN (0,1,3) ORDER BY b.from_time`, [req.user.vip, date]),
+      clubOptions(req.user.mid, req.user.vip),
+      getMemberBusy(req.user.vip, date),
+    ]);
+    const activeCoaches = coaches.map(c => {
       const cs = courses.filter(x => { const ids = JSON.parse(x.coach_ids || '[]'); return !ids.length || ids.includes(c.id); });
-      if (!cs.length) continue; // 不授任何私教课的教练不展示
+      return { c, cs };
+    }).filter(x => x.cs.length > 0);
+    const list = await Promise.all(activeCoaches.map(async ({ c, cs }) => {
       const busy = await getCoachBusy(c.id, date);
-      list.push({
+      return {
         ...c, is_main: vip && vip.coach_id === c.id, is_sub: vip && vip.sub_coach_id === c.id,
         courses: cs.map(({ coach_ids, ...rest }) => rest), busy,
-      });
-    }
+      };
+    }));
     list.sort((a, b) => (b.is_main - a.is_main) || (b.is_sub - a.is_sub));
-    const mine = await db.query(
-      `SELECT b.id, b.coach_id, b.coach_name, b.course_title, b.from_time, b.to_time, b.status, b.confirm_status, b.lesson_plan, c.name club_name
-       FROM biz_ptrain_bespeak_record b LEFT JOIN biz_club c ON c.id=b.club_id
-       WHERE b.vip_id=? AND b.\`date\`=? AND b.status IN (0,1,3) ORDER BY b.from_time`, [req.user.vip, date]);
-    const opts = await clubOptions(req.user.mid, req.user.vip);
-    const myBusy = await getMemberBusy(req.user.vip, date);
     // 每位教练在默认门店营业时间内还能约的起始时刻数(15分钟刻度, 60分钟课)
     const defClub = opts.clubs.find(x => x.id === opts.default_club_id) || opts.clubs[0] || {};
     const { open, close } = parseOpen(defClub.open_time);
@@ -313,6 +319,8 @@ r.post('/pt-bookings', async (req, res, next) => {
       date: b.date, fromTime: b.from_time, cardId: b.card_id, recordType: 1, remark: '', autoConfirm: false,
       allowPast: true,
     });
+    const coach = b.coach_id ? await db.queryOne('SELECT realname FROM biz_club_coach WHERE id=?', [b.coach_id]) : null;
+    await logAction(req, '会员约私教', `预约#${result.id} 教练:${(coach && coach.realname) || b.coach_id} ${b.date} ${b.from_time}`);
     res.json(ok(result));
   } catch (e) { next(e); }
 });
@@ -341,6 +349,7 @@ r.post('/pt-bookings/:id/cancel', async (req, res, next) => {
       throw new BizError(`开课前${deadline}小时内不可自行取消，请联系教练`);
     }
     await db.exec("UPDATE biz_ptrain_bespeak_record SET status=2, cancel_reason='会员取消' WHERE id=?", [bk.id]);
+    await logAction(req, '会员取消私教', `预约#${bk.id} 教练:${bk.coach_name || ''} ${dayjs(bk.date).format('YYYY-MM-DD')} ${String(bk.from_time).slice(0, 5)}`);
     res.json(ok());
   } catch (e) { next(e); }
 });
@@ -348,9 +357,11 @@ r.post('/pt-bookings/:id/cancel', async (req, res, next) => {
 // 取消团课预约
 r.post('/group-bookings/:id/cancel', async (req, res, next) => {
   try {
-    const bk = await db.queryOne('SELECT id,vip_id FROM biz_syllabus_subscribe_record WHERE id=? AND vip_id=?', [req.params.id, req.user.vip]);
+    const bk = await db.queryOne('SELECT id,vip_id,syllabus_title FROM biz_syllabus_subscribe_record WHERE id=? AND vip_id=?', [req.params.id, req.user.vip]);
     if (!bk) throw new BizError('预约不存在');
-    res.json(ok(await cancelGroupBooking(bk.id, { byMember: true, reason: '会员取消' })));
+    const rst = await cancelGroupBooking(bk.id, { byMember: true, reason: '会员取消' });
+    await logAction(req, '会员取消团课', `团课预约#${bk.id} ${bk.syllabus_title || ''}`);
+    res.json(ok(rst));
   } catch (e) { next(e); }
 });
 
@@ -368,6 +379,7 @@ r.post('/pt-bookings/:id/confirm-finish', async (req, res, next) => {
     if (!bk) throw new BizError('预约不存在');
     if (bk.confirm_status !== 1) throw new BizError('该课程未发起消课');
     const result = await finishPtBooking(bk.id, { receptionId: 0, receptionRemark: '学员确认' });
+    await logAction(req, '会员确认消课', `预约#${bk.id} 教练:${bk.coach_name || ''} ${dayjs(bk.date).format('YYYY-MM-DD')} ${String(bk.from_time).slice(0, 5)}`);
     res.json(ok(result));
   } catch (e) { next(e); }
 });
@@ -379,6 +391,7 @@ r.post('/checkin', async (req, res, next) => {
       mid: req.user.mid, clubId: req.clubId, vipId: req.user.vip, cardId: req.body.card_id || null,
       opeUserId: 0, opeUsername: '会员自助', port: 2, storeFee: 30,
     });
+    await logAction(req, '会员签到', '自助扫码签到');
     res.json(ok(result));
   } catch (e) { next(e); }
 });
@@ -411,6 +424,7 @@ r.post('/my-contracts/:id/sign', async (req, res, next) => {
     if (c.sign_status === 1) throw new BizError('合同已签署');
     if (!req.body.sign_img) throw new BizError('请先手写签名');
     await db.exec('UPDATE biz_club_contract SET sign_status=1, sign_img=?, sign_time=NOW(), sign_source=1 WHERE id=?', [req.body.sign_img, c.id]);
+    await logAction(req, '会员签署合同', `${c.contract_num || ('#' + c.id)} ${c.title || ''}`);
     res.json(ok());
   } catch (e) { next(e); }
 });
@@ -679,6 +693,8 @@ r.post('/complete-profile-submit', async (req, res, next) => {
       }
     });
 
+    await logAction(req, '会员完善资料', pointsGained > 0 ? `完善资料获得 +${pointsGained} 积分` : '更新个人档案资料');
+
     res.json(ok({
       points_gained: pointsGained,
       total_points: newTotalPoints,
@@ -765,6 +781,7 @@ r.post('/training-photos', async (req, res, next) => {
       [mid, vipId, b.photo_url, photoDate, currentMonth, remark]);
 
     const newPhoto = await db.queryOne('SELECT * FROM biz_member_training_photo WHERE id=?', [result.insertId]);
+    await logAction(req, '会员上传风采', `照片#${result.insertId} (${photoDate})`);
 
     res.json(ok({
       photo: newPhoto,

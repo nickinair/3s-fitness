@@ -30,7 +30,7 @@
         this.needPick = !selfId();
         if (!this.needPick) return true;
         if (!this.coachList.length) {
-          const d = await API.get('/coaches');
+          const d = await API.get('/coaches', { status: 1 });
           this.coachList = (d && d.list) || d || [];
         }
         if (!picked && this.coachList.length) picked = this.coachList[0].id;

@@ -50,7 +50,7 @@ window.Pages.StaffSchedule = {
   template: [
     '<div class="page">',
     '  <m-nav title="排课表"></m-nav>',
-    '  <div class="flex" style="justify-content:space-between;padding:10px 14px 0">',
+    '  <div class="flex" style="justify-content:space-between;padding:10px 14px 4px;background:#fff">',
     '    <van-icon name="arrow-left" size="18" @click="shiftWeek(-1)"/>',
     '    <span style="font-size:14px;font-weight:600;color:var(--c-title)" @click="goToday">{{ weekLabel }}</span>',
     '    <van-icon name="arrow" size="18" @click="shiftWeek(1)"/>',
@@ -213,7 +213,7 @@ window.Pages.StaffSchedule = {
     async loadDicts() {
       try {
         const [coaches, courses, rooms] = await Promise.all([
-          API.get('/coaches', { silent: true }), API.get('/group-courses', { silent: true }), API.get('/classrooms', { silent: true }),
+          API.get('/coaches', { status: 1, silent: true }), API.get('/group-courses', { silent: true }), API.get('/classrooms', { silent: true }),
         ]);
         this.coaches = coaches || []; this.courses = courses || []; this.classrooms = rooms || [];
       } catch (e) { /* ignore */ }
@@ -604,7 +604,7 @@ window.Pages.StaffPtCourses = {
     },
     async loadDicts() {
       try {
-        const [coaches, cards] = await Promise.all([API.get('/coaches', { silent: true }), API.get('/card-categories', { silent: true })]);
+        const [coaches, cards] = await Promise.all([API.get('/coaches', { status: 1, silent: true }), API.get('/card-categories', { silent: true })]);
         this.coaches = coaches || []; this.ptCards = cards || [];
       } catch (e) { /* ignore */ }
     },

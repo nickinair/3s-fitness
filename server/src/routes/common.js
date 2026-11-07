@@ -66,11 +66,13 @@ r.delete('/sources/:id', staffAuth('admin', 'manager'), async (req, res, next) =
   } catch (e) { next(e); }
 });
 
-// ============ 图片上传（banner/头像/卡面图）============
+// ============ 图片上传（banner/头像/卡面图/训练风采/计划长图 -> 腾讯云 COS 挂载目录 /data/uploads）============
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const uploadDir = path.join(__dirname, '..', '..', 'web', 'uploads');
+const cosUploadDir = '/data/uploads';
+const localUploadDir = path.join(__dirname, '..', '..', 'web', 'uploads');
+const uploadDir = fs.existsSync('/data') ? cosUploadDir : localUploadDir;
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 const upload = multer({
   storage: multer.diskStorage({
@@ -80,9 +82,9 @@ const upload = multer({
       cb(null, `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
     },
   }),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    cb(null, /image\/(jpeg|png|gif|webp)/.test(file.mimetype));
+    cb(null, /image\/(jpeg|jpg|png|gif|webp|heic|heif)/.test(file.mimetype));
   },
 });
 r.post('/upload', (req, res, next) => {
@@ -160,6 +162,10 @@ r.put('/staff/:id', staffAuth('admin', 'manager'), async (req, res, next) => {
     const { realname, phone, role, club_id, status, base_salary, sales_rate, course_rate } = req.body;
     await db.exec('UPDATE sys_user SET realname=?,phone=?,role=?,club_id=?,status=?,base_salary=?,sales_rate=?,course_rate=? WHERE id=? AND merchant_id=?',
       [realname, phone, role, club_id, status, Number(base_salary) || 0, Number(sales_rate) || 0, Number(course_rate) || 0, req.params.id, req.user.mid]);
+    if (status != null) {
+      await db.exec('UPDATE biz_club_coach SET status=?, realname=COALESCE(?,realname) WHERE user_id=? AND merchant_id=?',
+        [status, realname || null, req.params.id, req.user.mid]);
+    }
     await logAction(req, '更新员工', realname);
     res.json(ok());
   } catch (e) { next(e); }
@@ -200,19 +206,21 @@ r.delete('/notices/:id', staffAuth('admin', 'manager'), async (req, res, next) =
 // 操作日志
 r.get('/logs', staffAuth('admin', 'manager'), async (req, res, next) => {
   try {
+    const cond = ['l.merchant_id=?']; const params = [req.user.mid];
+    if (req.query.role_type === 'member') cond.push("l.action LIKE '会员%'");
+    else if (req.query.role_type === 'staff') cond.push("l.action NOT LIKE '会员%'");
+    if (req.query.action) { cond.push('l.action=?'); params.push(req.query.action); }
+    if (req.query.from) { cond.push('l.insert_time>=?'); params.push(req.query.from + ' 00:00:00'); }
+    if (req.query.to) { cond.push('l.insert_time<=?'); params.push(req.query.to + ' 23:59:59'); }
+    if (req.query.keyword && String(req.query.keyword).trim()) {
+      cond.push('(l.username LIKE ? OR l.action LIKE ? OR l.detail LIKE ?)');
+      const k = `%${String(req.query.keyword).trim()}%`; params.push(k, k, k);
+    }
     if (req.query.export === 'csv') {
-      // 导出走全量(不截断200条), 并带出门店名
-      // 与前端筛选保持一致: from/to/keyword(操作人/动作/详情)
-      const cond = ['l.merchant_id=?']; const params = [req.user.mid];
-      if (req.query.from) { cond.push('l.insert_time>=?'); params.push(req.query.from + ' 00:00:00'); }
-      if (req.query.to) { cond.push('l.insert_time<=?'); params.push(req.query.to + ' 23:59:59'); }
-      if (req.query.keyword) {
-        cond.push('(l.username LIKE ? OR l.action LIKE ? OR l.detail LIKE ?)');
-        const k = `%${req.query.keyword}%`; params.push(k, k, k);
-      }
+      // 导出走全量(不截断300条), 并带出门店名
       const all = await db.query(
         `SELECT l.*, c.name club_name FROM sys_log l LEFT JOIN biz_club c ON c.id=l.club_id
-         WHERE ${cond.join(' AND ')} ORDER BY l.id DESC`, params);
+         WHERE ${cond.join(' AND ')} ORDER BY l.insert_time DESC, l.id DESC`, params);
       all.forEach(x => {
         x.insert_time_label = x.insert_time ? dayjs(x.insert_time).format('YYYY-MM-DD HH:mm') : '';
         x.club_name = x.club_name || '全部门店';
@@ -221,7 +229,7 @@ r.get('/logs', staffAuth('admin', 'manager'), async (req, res, next) => {
         ['insert_time_label', '时间'], ['username', '操作人'], ['action', '动作'], ['detail', '详情'], ['club_name', '门店'],
       ], all);
     }
-    const rows = await db.query('SELECT * FROM sys_log WHERE merchant_id=? ORDER BY id DESC LIMIT 200', [req.user.mid]);
+    const rows = await db.query(`SELECT * FROM sys_log l WHERE ${cond.join(' AND ')} ORDER BY l.insert_time DESC, l.id DESC LIMIT 300`, params);
     res.json(ok(rows));
   } catch (e) { next(e); }
 });

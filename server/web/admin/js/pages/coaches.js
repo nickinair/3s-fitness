@@ -105,14 +105,10 @@ window.AppPages.Coaches = {
       this.drawer = true;
     },
     async upImg(file, field) {
-      if (file.size > 5 * 1024 * 1024) { ElementPlus.ElMessage.warning('图片不能超过 5MB'); return false; }
+      if (file.size > 20 * 1024 * 1024) { ElementPlus.ElMessage.warning('图片不能超过 20MB'); return false; }
       this.uploading = field;
       try {
-        const fd = new FormData(); fd.append('file', file);
-        const resp = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + Auth.getToken() }, body: fd });
-        const j = await resp.json();
-        if (j.code !== 0) throw new Error(j.msg || '上传失败');
-        this.form[field] = j.data.url;
+        this.form[field] = await api.upload(file);
         ElementPlus.ElMessage.success('已上传');
       } catch (e) { ElementPlus.ElMessage.error(e.message || '上传失败'); }
       finally { this.uploading = ''; }
@@ -217,7 +213,7 @@ window.AppPages.PtCourses = {
       finally { this.loading = false; }
     },
     async loadDicts() {
-      const [coaches, cards] = await Promise.all([api.get('/coaches'), api.get('/card-categories')]);
+      const [coaches, cards] = await Promise.all([api.get('/coaches', { status: 1 }), api.get('/card-categories')]);
       this.coaches = coaches;
       this.ptCards = cards;
     },
@@ -351,7 +347,7 @@ window.AppPages.CoachRests = {
     },
   },
   async mounted() {
-    this.coaches = await api.get('/coaches');
+    this.coaches = await api.get('/coaches', { status: 1 });
     this.load();
   },
 };

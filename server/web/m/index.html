@@ -6,61 +6,117 @@
 <meta name="theme-color" content="#ffffff"><!-- 浏览器顶栏色, 不支持 var(); 改配色时同步改这里 -->
 <title>3S运动中心</title>
 <script>
-/* 小程序 web-view 打开时会带 mp=1: 记到 sessionStorage, 站内跳转/刷新后仍能识别(回首页/登录/退出要切回原生首页) */
-(function () { try { if (new URLSearchParams(location.search).get('mp') === '1') sessionStorage.setItem('mp', '1'); } catch (e) {} })();
+/* 1) 小程序 web-view 打开时会带 mp=1: 记到 sessionStorage 并给 <html> 挂 is-mp 类, 消除顶部安全区/导航栏空白
+   2) 在 <head> 同步解析 hash 设置 document.title, 防止 CDN 脚本加载期间 web-view 先读到默认标题「3S运动中心」 */
+(function () {
+  var isMp = false;
+  try {
+    if (new URLSearchParams(location.search).get('mp') === '1') {
+      sessionStorage.setItem('mp', '1');
+      isMp = true;
+    } else if (sessionStorage.getItem('mp') === '1') {
+      isMp = true;
+    }
+  } catch (e) {}
+  if (isMp || /miniProgram/i.test(navigator.userAgent || '')) {
+    document.documentElement.classList.add('is-mp');
+  }
+  var h = String(location.hash || '').replace(/^#/, '');
+  if (!h) return;
+  if (h.indexOf('edit=1') !== -1) { document.title = '常用功能管理'; return; }
+  var p = h.split('?')[0];
+  var M = {
+    '/login': '登录', '/schedule': '约课', '/coaches': '私教教练', '/buy': '购卡', '/mine': '我的',
+    '/complete-profile': '完善档案 · 领专属积分', '/training-photos': '训练风采', '/profile': '编辑资料',
+    '/my-cards': '我的会员卡', '/my-bookings': '我的预约', '/pending-confirms': '待确认消课',
+    '/checkin': '到店签到', '/contracts': '我的合同', '/milestones': '我的里程碑', '/plans': '训练计划',
+    '/security': '账号与安全', '/guide': '使用引导', '/staff': '工作台', '/staff/mine': '我的',
+    '/staff/checkin': '快速签到', '/staff/opencard': '快速开卡', '/staff/book': '代约课',
+    '/staff/members': '会员查询', '/staff/potential': '录入潜客', '/staff/sales': '顾问业绩',
+    '/staff/schedule': '我的课表', '/staff/bookings': '预约管理', '/staff/students': '我的学员',
+    '/staff/perf': '教练业绩', '/staff/rests': '休息设置', '/staff/profile': '我的主页',
+    '/staff/dashboard': '数据看板', '/staff/report': '报表', '/staff/report-detail': '导出明细',
+    '/staff/my-perf': '我的业绩', '/staff/group-today': '今日团课核销', '/staff/today': '今日预约',
+    '/staff/plans': '训练计划', '/staff/plan-edit': '训练计划', '/staff/milestones': '里程碑总结',
+    '/staff/intents': '购卡意向', '/staff/cards': '会员卡列表', '/staff/contracts': '合同管理',
+    '/staff/members-overview': '会员概况', '/staff/finance-monthly': '月度经营报表',
+    '/staff/recharges': '收款明细', '/staff/spends': '耗卡明细', '/staff/card-balance': '剩余卡价值',
+    '/staff/coach-consume': '教练消耗统计', '/staff/pt-records': '消课记录',
+    '/staff/checkin-records': '签到记录', '/staff/checkin-report': '签到报表',
+    '/staff/sms-logs': '短信记录', '/staff/op-logs': '操作日志', '/staff/schedule-admin': '排课表',
+    '/staff/group-courses': '团课课程库', '/staff/classrooms': '教室管理', '/staff/pt-courses': '私教课程',
+    '/staff/card-categories': '卡类型配置', '/staff/training-actions': '动作库', '/staff/coaches': '教练档案',
+    '/staff/sources': '来源渠道', '/staff/settings-club': '门店信息', '/staff/settings-staff': '员工与角色',
+    '/staff/notices': '公告', '/staff/banners': '首页 Banner',
+    '/staff/segment/low_lesson': '课时不足', '/staff/segment/birthday_week': '会员生日',
+    '/staff/segment/trained_10': '当月满10次', '/staff/segment/trained_50': '半年满50次',
+    '/staff/segment/trained_20': '半年满50次', '/staff/segment/timecard_active': '有效期卡',
+    '/staff/segment/timecard_expired': '过期期卡'
+  };
+  var t = M[p]
+    || (p.indexOf('/coach/') === 0 ? '教练主页' : '')
+    || (p.indexOf('/card/') === 0 ? '会员卡详情' : '')
+    || (p.indexOf('/contract/') === 0 ? '合同详情' : '')
+    || (p.indexOf('/plan/') === 0 ? '计划详情' : '')
+    || (p.indexOf('/staff/member/') === 0 ? '会员详情' : '')
+    || (p.indexOf('/staff/segment/') === 0 ? '会员名单' : '')
+    || (p.indexOf('/staff/group/') === 0 ? '预约名单' : '')
+    || (p.indexOf('/staff/card/') === 0 ? '会员卡详情' : '');
+  if (t) document.title = t;
+})();
 </script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@4.9.4/lib/index.css">
+<link rel="stylesheet" href="/static/vendor/vant.min.css">
 <link rel="stylesheet" href="/static/theme.css">
-<link rel="stylesheet" href="css/app.css?v=20261028_1">
+<link rel="stylesheet" href="css/app.css?v=20261106_15">
 </head>
 <body>
 <div id="app"></div>
-<script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vue-router@4.4.3/dist/vue-router.global.prod.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vant@4.9.4/lib/vant.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js"></script>
+<script src="/static/vendor/vue.global.prod.js"></script>
+<script src="/static/vendor/vue-router.global.prod.js"></script>
+<script src="/static/vendor/vant.min.js"></script>
+<script src="/static/vendor/dayjs.min.js"></script>
 <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
 <script src="js/qrcode.min.js"></script>
-<script src="js/api.js?v=20261102_1"></script>
+<script src="js/api.js?v=20261106_20"></script>
   <script src="js/recorder.js"></script>
 <script src="js/login.js"></script>
-<script src="js/wb-edit.js"></script>
-<script src="js/member-home.js"></script>
-<script src="js/member-schedule.js?v=20261102_1"></script>
+<script src="js/wb-edit.js?v=20261106_11"></script>
+<script src="js/member-home.js?v=20261106_17"></script>
+<script src="js/member-schedule.js?v=20261106_5"></script>
 <script src="js/member-coaches.js?v=20261102_1"></script>
-<script src="js/member-buy.js"></script>
-<script src="js/member-mine.js"></script>
-<script src="js/member-profile-complete.js"></script>
-<script src="js/member-training-photos.js?v=20261022_1"></script>
-<script src="js/member-cards.js"></script>
-<script src="js/member-bookings.js"></script>
+<script src="js/member-buy.js?v=20261106_5"></script>
+<script src="js/member-mine.js?v=20261106_5"></script>
+<script src="js/member-profile-complete.js?v=20261106_9"></script>
+<script src="js/member-training-photos.js?v=20261106_9"></script>
+<script src="js/member-cards.js?v=20261106_14"></script>
+<script src="js/member-bookings.js?v=20261106_3"></script>
 <script src="js/member-checkin.js"></script>
 <script src="js/member-contracts.js"></script>
 <script src="js/member-milestones.js"></script>
-<script src="js/member-plans.js?v=20261021_4"></script>
-<script src="js/member-security.js"></script>
+<script src="js/member-plans.js?v=20261106_13"></script>
+<script src="js/member-security.js?v=20261106_3"></script>
 <script src="js/member-guide.js"></script>
-<script src="js/staff-workbench.js"></script>
+<script src="js/staff-workbench.js?v=20261106_11"></script>
 <script src="js/staff-checkin.js"></script>
 <script src="js/staff-opencard.js"></script>
-<script src="js/staff-book.js?v=20261103_1"></script>
-<script src="js/staff-members.js?v=20261022_1"></script>
-<script src="js/staff-coach.js?v=20261022_1"></script>
-<script src="js/staff-profile.js"></script>
-<script src="js/staff-group.js"></script>
+<script src="js/staff-book.js?v=20261106_5"></script>
+<script src="js/staff-members.js?v=20261106_9"></script>
+<script src="js/staff-coach.js?v=20261106_22"></script>
+<script src="js/staff-profile.js?v=20261106_9"></script>
+<script src="js/staff-group.js?v=20261106_3"></script>
 <script src="js/staff-dashboard.js"></script>
 <script src="js/staff-report.js?v=20261028_1"></script>
-<script src="js/staff-plans.js"></script>
-<script src="js/staff-milestones.js"></script>
-<script src="js/staff-intents.js"></script>
-<script src="js/staff-cards.js"></script>
+<script src="js/staff-plans.js?v=20261106_11"></script>
+<script src="js/staff-milestones.js?v=20261106_3"></script>
+<script src="js/staff-intents.js?v=20261106_3"></script>
+<script src="js/staff-cards.js?v=20261106_22"></script>
 <script src="js/staff-finance.js"></script>
-<script src="js/staff-records.js"></script>
-<script src="js/staff-courses.js"></script>
+<script src="js/staff-records.js?v=20261106_21"></script>
+<script src="js/staff-courses.js?v=20261106_22"></script>
 <script src="js/staff-config.js"></script>
-<script src="js/staff-settings.js"></script>
+<script src="js/staff-settings.js?v=20261106_9"></script>
 <script src="js/staff-segments.js"></script>
 <script src="js/comp-timeline.js?v=20261102_1"></script>
-<script src="js/app.js?v=20261021_3"></script>
+<script src="js/app.js?v=20261106_3"></script>
 </body>
 </html>

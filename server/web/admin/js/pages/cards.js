@@ -215,7 +215,7 @@ window.AppPages.Cards = {
     reset() { this.query = { keyword: '', status: '', kind: '', card_type_id: '', expire_within: '', page: 1, size: 20 }; this.load(); },
     exportCsv() { window.open(api.exportUrl('/cards', Object.assign({}, this.query, { page: undefined, size: undefined }))); },
     async loadDicts() {
-      const [cats, staff, coaches] = await Promise.all([api.get('/card-categories'), api.get('/staff'), api.get('/coaches')]);
+      const [cats, staff, coaches] = await Promise.all([api.get('/card-categories'), api.get('/staff'), api.get('/coaches', { status: 1 })]);
       this.cardTypes = cats;
       this.staffSales = staff.filter(s => s.role === 'membership' && s.status === 1);
       this.coaches = coaches;

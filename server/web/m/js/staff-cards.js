@@ -322,9 +322,9 @@ window.Pages.StaffCardDetail = {
     },
     async loadStaff() {
       try {
-        const [staff, coaches] = await Promise.all([API.get('/staff', { silent: true }), API.get('/coaches', { silent: true })]);
+        const [staff, coaches] = await Promise.all([API.get('/staff', { silent: true }), API.get('/coaches', { status: 1, silent: true })]);
         this.staffSales = (staff || []).filter(s => s.role === 'membership' && s.status === 1);
-        this.coaches = coaches || [];
+        this.coaches = (coaches || []).filter(c => c.status !== 0);
       } catch (e) { /* ignore */ }
     },
     async loadLogs() {

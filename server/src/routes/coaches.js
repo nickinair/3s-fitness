@@ -9,9 +9,18 @@ const r = express.Router();
 // ============ 教练档案 ============
 r.get('/coaches', staffAuth(), async (req, res, next) => {
   try {
-    const cond = ['merchant_id=?']; const params = [req.user.mid];
-    if (req.query.status != null && req.query.status !== '') { cond.push('status=?'); params.push(req.query.status); }
-    const rows = await db.query(`SELECT * FROM biz_club_coach WHERE ${cond.join(' AND ')} ORDER BY sort, id`, params);
+    const cond = ['c.merchant_id=?']; const params = [req.user.mid];
+    if (req.query.status != null && req.query.status !== '') {
+      if (Number(req.query.status) === 1) {
+        cond.push('c.status=1 AND (u.id IS NULL OR u.status=1)');
+      } else {
+        cond.push('(c.status=? OR u.status=?)'); params.push(req.query.status, req.query.status);
+      }
+    }
+    const rows = await db.query(
+      `SELECT c.*, CASE WHEN u.id IS NOT NULL AND u.status=0 THEN 0 ELSE c.status END AS status
+       FROM biz_club_coach c LEFT JOIN sys_user u ON u.id=c.user_id
+       WHERE ${cond.join(' AND ')} ORDER BY c.sort, c.id`, params);
     res.json(ok(rows));
   } catch (e) { next(e); }
 });
@@ -65,6 +74,10 @@ r.put('/coaches/:id', staffAuth('admin', 'manager', 'coach'), async (req, res, n
     await db.exec('UPDATE biz_club_coach SET realname=?,nickname=?,good_at=?,`desc`=?,detail=?,avatar=?,cover=?,sort=?,status=?,lesson_price=? WHERE id=? AND merchant_id=?',
       [row.realname, row.nickname, row.good_at, row.desc, row.detail, row.avatar, row.cover,
         row.sort, row.status, row.lesson_price, req.params.id, req.user.mid]);
+    if (!isSelf && cur.user_id && b.status != null) {
+      await db.exec("UPDATE sys_user SET status=?, realname=COALESCE(?,realname) WHERE id=? AND merchant_id=? AND role='coach'",
+        [row.status, row.realname || null, cur.user_id, req.user.mid]);
+    }
     await logAction(req, isSelf ? '更新我的教练主页' : '更新教练档案', row.realname);
     res.json(ok());
   } catch (e) { next(e); }
@@ -173,14 +186,14 @@ const overlap = (aFrom, aTo, bFrom, bTo) => aFrom < bTo && bFrom < aTo;
 // 教练当天的占用区间(对会员脱敏, 不带会员姓名)
 async function getCoachBusy(coachId, date) {
   const busy = [];
-  const bookings = await db.query(
-    'SELECT from_time, to_time FROM biz_ptrain_bespeak_record WHERE coach_id=? AND `date`=? AND status IN (0,1)', [coachId, date]);
+  const [bookings, classes, rests] = await Promise.all([
+    db.query('SELECT from_time, to_time FROM biz_ptrain_bespeak_record WHERE coach_id=? AND `date`=? AND status IN (0,1)', [coachId, date]),
+    db.query(`SELECT title, DATE_FORMAT(start_time,'%H:%i') from_time, DATE_FORMAT(end_time,'%H:%i') to_time FROM biz_syllabus_group
+     WHERE coach_id=? AND DATE(start_time)=? AND status=1`, [coachId, date]),
+    db.query('SELECT from_time, to_time, remark FROM biz_coach_rest WHERE coach_id=? AND rest_date=?', [coachId, date]),
+  ]);
   bookings.forEach(b => busy.push({ from: b.from_time, to: b.to_time, type: 'booked', label: '已约' }));
-  const classes = await db.query(
-    `SELECT title, DATE_FORMAT(start_time,'%H:%i') from_time, DATE_FORMAT(end_time,'%H:%i') to_time FROM biz_syllabus_group
-     WHERE coach_id=? AND DATE(start_time)=? AND status=1`, [coachId, date]);
   classes.forEach(c => busy.push({ from: c.from_time, to: c.to_time, type: 'class', label: '团课·' + c.title }));
-  const rests = await db.query('SELECT from_time, to_time, remark FROM biz_coach_rest WHERE coach_id=? AND rest_date=?', [coachId, date]);
   rests.forEach(x => busy.push(x.from_time
     ? { from: x.from_time, to: x.to_time, type: 'rest', label: '休息' }
     : { from: '00:00', to: '24:00', type: 'rest', label: '全天休息' }));
@@ -190,12 +203,12 @@ async function getCoachBusy(coachId, date) {
 // 会员当天自己已有的课(私教+团课), 避免同一时间约两节
 async function getMemberBusy(vipId, date, excludeBookingId = 0) {
   const busy = [];
-  const pts = await db.query(
-    'SELECT id, from_time, to_time, coach_name FROM biz_ptrain_bespeak_record WHERE vip_id=? AND `date`=? AND status IN (0,1) AND id<>?', [vipId, date, excludeBookingId]);
+  const [pts, groups] = await Promise.all([
+    db.query('SELECT id, from_time, to_time, coach_name FROM biz_ptrain_bespeak_record WHERE vip_id=? AND `date`=? AND status IN (0,1) AND id<>?', [vipId, date, excludeBookingId]),
+    db.query(`SELECT syllabus_title, DATE_FORMAT(class_start_time,'%H:%i') f, DATE_FORMAT(class_end_time,'%H:%i') t
+     FROM biz_syllabus_subscribe_record WHERE vip_id=? AND DATE(class_start_time)=? AND status IN (0,1)`, [vipId, date]),
+  ]);
   pts.forEach(b => busy.push({ from: b.from_time, to: b.to_time, type: 'mine', label: '我的私教·' + b.coach_name }));
-  const groups = await db.query(
-    `SELECT syllabus_title, DATE_FORMAT(class_start_time,'%H:%i') f, DATE_FORMAT(class_end_time,'%H:%i') t
-     FROM biz_syllabus_subscribe_record WHERE vip_id=? AND DATE(class_start_time)=? AND status IN (0,1)`, [vipId, date]);
   groups.forEach(g => busy.push({ from: g.f, to: g.t, type: 'mine', label: '我的团课·' + g.syllabus_title }));
   return busy;
 }
@@ -281,7 +294,7 @@ r.get('/agent-booking/pt', staffAuth('admin', 'manager', 'coach'), async (req, r
 
     const onlyMe = req.user.role === 'coach' ? (myCoachId || 0) : 0;
     const coaches = await db.query(
-      `SELECT id, realname, good_at FROM biz_club_coach WHERE merchant_id=? AND status=1${onlyMe ? ' AND id=?' : ''} ORDER BY sort, id`,
+      `SELECT id, realname, good_at FROM biz_club_coach WHERE merchant_id=? AND status=1 AND NOT EXISTS (SELECT 1 FROM sys_user u WHERE u.id=biz_club_coach.user_id AND u.status=0)${onlyMe ? ' AND id=?' : ''} ORDER BY sort, id`,
       onlyMe ? [mid, onlyMe] : [mid]);
     const courses = await db.query(
       'SELECT id, title, duration, people_count, coach_ids, card_scope FROM biz_ptrain_course WHERE merchant_id=? AND status=1 ORDER BY sort, id', [mid]);
@@ -327,7 +340,7 @@ async function createPtBooking({ mid, clubId, vipId, coachId, courseId, date, fr
   const vip = await db.queryOne('SELECT * FROM biz_vip_user WHERE id=? AND merchant_id=?', [vipId, mid]);
   if (!vip) throw new BizError('会员不存在');
   if (vip.is_black) throw new BizError('该会员在黑名单中，禁止预约');
-  const coach = await db.queryOne('SELECT * FROM biz_club_coach WHERE id=? AND status=1', [coachId]);
+  const coach = await db.queryOne('SELECT * FROM biz_club_coach WHERE id=? AND status=1 AND NOT EXISTS (SELECT 1 FROM sys_user u WHERE u.id=biz_club_coach.user_id AND u.status=0)', [coachId]);
   if (!coach) throw new BizError('教练不存在或已离职');
   const course = await db.queryOne('SELECT * FROM biz_ptrain_course WHERE id=?', [courseId]);
   if (!course) throw new BizError('课程不存在');
