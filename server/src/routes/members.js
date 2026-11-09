@@ -181,7 +181,7 @@ r.post('/members', staffAuth(), async (req, res, next) => {
       `INSERT INTO biz_vip_user (merchant_id,phone,password,realname,nickname,gender,birthday,id_card_number,address,source_id,source_name,
         membership_id,membership_name,coach_id,coach_name,sub_coach_id,sub_coach_name,label_levels,remark,
         initial_weight,target_weight,target_compare_photos,constellation_mbti,training_frequency,studio_feedback)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [req.user.mid, b.phone, await bcrypt.hash('123456', 10), b.realname || '', b.nickname || b.realname || '', b.gender || 0,
         b.birthday || null, b.id_card_number || '', b.address || '', b.source_id || 0, b.source_name || '',
         b.membership_id || 0, b.membership_name || '', b.coach_id || 0, b.coach_name || '',
@@ -190,7 +190,8 @@ r.post('/members', staffAuth(), async (req, res, next) => {
         (b.target_weight === '' || b.target_weight == null) ? null : Number(b.target_weight),
         Array.isArray(b.target_compare_photos) ? JSON.stringify(b.target_compare_photos) : (typeof b.target_compare_photos === 'string' ? b.target_compare_photos : null),
         b.constellation_mbti || null, b.training_frequency || null, b.studio_feedback || null]);
-    await db.exec('INSERT IGNORE INTO biz_user_club (vip_user_id, club_id) VALUES (?,?)', [id, req.clubId]);
+    const clubId = Number(b.club_id) || req.clubId || 1;
+    await db.exec('INSERT IGNORE INTO biz_user_club (vip_user_id, club_id) VALUES (?,?)', [id, clubId]);
     await logAction(req, '新增会员', `${b.realname} ${b.phone}`);
     res.json(ok({ id }));
   } catch (e) { next(e); }
@@ -209,14 +210,22 @@ r.put('/members/:id', staffAuth(), async (req, res, next) => {
 
     await db.exec(
       `UPDATE biz_vip_user SET realname=?,nickname=?,gender=?,birthday=?,id_card_number=?,address=?,source_id=?,source_name=?,
+        membership_id=COALESCE(?,membership_id),membership_name=COALESCE(?,membership_name),
         coach_id=?,coach_name=?,sub_coach_id=?,sub_coach_name=?,label_levels=?,remark=?,
         initial_weight=?,target_weight=?,target_compare_photos=?,constellation_mbti=?,training_frequency=?,studio_feedback=?
        WHERE id=? AND merchant_id=?`,
-      [b.realname, b.nickname, b.gender || 0, b.birthday || null, b.id_card_number || '', b.address || '',
-        b.source_id || 0, b.source_name || '', b.coach_id || 0, b.coach_name || '',
+      [b.realname || '', b.nickname || b.realname || '', b.gender || 0, b.birthday || null, b.id_card_number || '', b.address || '',
+        b.source_id || 0, b.source_name || '',
+        b.membership_id !== undefined ? (Number(b.membership_id) || 0) : null,
+        b.membership_name !== undefined ? (b.membership_name || '') : null,
+        b.coach_id || 0, b.coach_name || '',
         b.sub_coach_id || 0, b.sub_coach_name || '', b.label_levels || 0, b.remark || '',
         initial_weight, target_weight, target_compare_photos, constellation_mbti, training_frequency, studio_feedback,
         req.params.id, req.user.mid]);
+    if (b.club_id) {
+      await db.exec('DELETE FROM biz_user_club WHERE vip_user_id=?', [req.params.id]);
+      await db.exec('INSERT IGNORE INTO biz_user_club (vip_user_id, club_id) VALUES (?,?)', [req.params.id, Number(b.club_id)]);
+    }
     // 主教练变更: 未总结的里程碑转给新主教练
     if (b.coach_id) await db.exec('UPDATE biz_milestone SET coach_id=?, coach_name=? WHERE vip_id=? AND merchant_id=? AND status=0', [b.coach_id, b.coach_name || '', req.params.id, req.user.mid]);
     await logAction(req, '编辑会员', `#${req.params.id} ${b.realname}`);
