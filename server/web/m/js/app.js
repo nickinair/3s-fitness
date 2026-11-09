@@ -132,7 +132,7 @@
     '/staff/checkin': '快速签到',
     '/staff/opencard': '快速开卡',
     '/staff/book': '代约课',
-    '/staff/members': '会员查询',
+    '/staff/members': '会员列表',
     '/staff/potential': '录入潜客',
     '/staff/sales': '顾问业绩',
     '/staff/schedule': '我的课表',

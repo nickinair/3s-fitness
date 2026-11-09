@@ -1,8 +1,18 @@
-/* 员工端-会员查询 / 会员详情(维护) / 录潜客 */
+/* 员工端-会员列表 / 会员详情(维护) / 录潜客
+   对应 PC: server/web/admin/js/pages/members.js, member-detail.js, potentials.js */
 window.Pages.StaffMembers = {
   data() {
     return {
-      kw: '',
+      tab: 'active',
+      role: (Store.user || {}).role,
+      query: {
+        keyword: '',
+        coach_id: '',
+        card_type_id: '',
+        club_id: '',
+        expire_within: '',
+        quick: '',
+      },
       list: [],
       stats: null,
       total: 0,
@@ -10,12 +20,52 @@ window.Pages.StaffMembers = {
       listLoading: false,
       finished: false,
       searched: false,
-      quick: '',
       page: 1,
       pageSize: 20,
+      sources: [],
+      coaches: [],
+      cardTypes: [],
+      clubs: [],
+      // 批量选择模式
+      batchMode: false,
+      selectedIds: [],
+      // 新增/编辑会员弹窗
+      dlg: false,
+      dlgTitle: '新增会员',
+      form: {},
+      saving: false,
+      // 通用下拉选择器
+      pickerShow: false,
+      pickerType: '',
+      pickerCols: [],
+      // 维护记录弹窗
+      mtDlg: false,
+      mtMember: null,
+      mtList: [],
+      mtLoading: false,
+      mtForm: { record_type: 1, content: '' },
+      mtSaving: false,
+      // 更多操作菜单
+      moreShow: false,
+      moreRow: null,
+      // 黑名单原因弹窗
+      blackDlg: false,
+      blackRow: null,
+      blackReason: '',
+      blackSaving: false,
+      // 批量分配教练弹窗
+      assignDlg: false,
+      assignForm: { coach_id: null, coach_name: '' },
+      assignSaving: false,
+      // 专属完善链接弹窗
+      profileLinkDlg: false,
+      profileLinkData: { url: '', token: '', vipName: '' },
     };
   },
   computed: {
+    canManage() { return ['admin', 'manager'].includes(this.role); },
+    canAssign() { return ['admin', 'manager', 'membership'].includes(this.role); },
+    canBlack() { return ['admin', 'manager', 'reception'].includes(this.role); },
     quickCells() {
       const s = this.stats || {};
       return [
@@ -25,66 +75,300 @@ window.Pages.StaffMembers = {
         { k: 'month_new', l: '本月新增', v: s.month_new || 0 },
       ];
     },
-    quickLabel() { const c = this.quickCells.find(x => x.k === this.quick); return c ? c.l : ''; },
+    quickLabel() {
+      const c = this.quickCells.find(x => x.k === this.query.quick);
+      return c ? c.l : '';
+    },
+    hasFilters() {
+      const q = this.query;
+      return !!(q.keyword || q.coach_id !== '' || q.card_type_id !== '' || q.club_id !== '' || q.expire_within !== '' || q.quick);
+    },
+    coachOpts() {
+      return [{ text: '主教练', value: '' }].concat(this.coaches.map(c => ({ text: c.realname, value: c.id })));
+    },
+    cardTypeOpts() {
+      return [{ text: '持有卡型', value: '' }].concat(this.cardTypes.map(c => ({ text: c.title, value: c.id })));
+    },
+    clubOpts() {
+      return [{ text: '所属门店', value: '' }].concat(this.clubs.map(c => ({ text: c.name, value: c.id })));
+    },
+    expireOpts() {
+      return [
+        { text: '到期时间', value: '' },
+        { text: '7天内到期', value: 7 },
+        { text: '15天内到期', value: 15 },
+        { text: '30天内到期', value: 30 },
+      ];
+    },
+    isAllSelected() {
+      return this.list.length > 0 && this.list.every(m => this.selectedIds.includes(m.id));
+    },
+    moreActions() {
+      if (!this.moreRow) return [];
+      const acts = [
+        { name: '专属完善链接 (送70分)', cmd: 'profileLink', color: 'var(--brand)' },
+      ];
+      if (this.canBlack) {
+        acts.push({
+          name: this.moreRow.is_black ? '移出黑名单' : '加入黑名单',
+          cmd: 'black',
+          color: this.moreRow.is_black ? '#07c160' : 'var(--danger)',
+        });
+      }
+      if (this.canManage) {
+        acts.push({
+          name: '禁用会员',
+          subname: '逻辑禁用，保留历史消费与合同数据',
+          cmd: 'disable',
+          color: 'var(--danger)',
+        });
+      }
+      return acts;
+    },
   },
   template: [
     '<div class="page">',
-    '  <m-nav title="会员查询"></m-nav>',
-    '  <van-search v-model="kw" placeholder="姓名 / 昵称 / 手机号" show-action @search="reload" @clear="reload">',
-    '    <template #action><div @click="reload" style="color:var(--brand)">搜索</div></template>',
-    '  </van-search>',
-    // 四个统计可点, 点中即按该口径筛选列表; 再点一次取消
-    '  <div class="stat-row tapable" v-if="stats" style="margin-top:12px">',
-    '    <div v-for="c in quickCells" :key="c.k" class="stat-cell tap" :class="{on:quick===c.k}" @click="pickQuick(c.k)">',
+    '  <m-nav title="会员列表"></m-nav>',
+    '  <van-tabs v-model:active="tab" color="var(--brand)" @change="onTab">',
+    '    <van-tab title="在籍会员" name="active"></van-tab>',
+    '    <van-tab title="过期召回" name="expired"></van-tab>',
+    '    <van-tab title="无卡会员" name="none"></van-tab>',
+    '    <van-tab title="全部" name="all"></van-tab>',
+    '  </van-tabs>',
+    // 四个统计可点下钻
+    '  <div class="stat-row tapable" v-if="stats" style="margin:10px 12px 8px">',
+    '    <div v-for="c in quickCells" :key="c.k" class="stat-cell tap" :class="{on:query.quick===c.k}" @click="pickQuick(c.k)">',
     '      <div class="v">{{ c.v }}</div><div class="l">{{ c.l }}</div>',
     '    </div>',
     '  </div>',
-    '  <div class="qk-bar" style="margin:8px 12px 4px">',
-    '    <template v-if="quick">',
-    '      <van-tag type="primary" round size="medium">{{ quickLabel }}</van-tag>',
-    '      <span class="muted" style="margin-left:8px">共 {{ total }} 人</span>',
-    '      <span class="flex1"></span>',
-    '      <span class="brand-text" style="font-size:13px" @click="pickQuick(quick)">清除筛选</span>',
-    '    </template>',
-    '    <template v-else-if="total">',
-    '      <span class="muted">共 {{ total }} 位会员</span>',
-    '    </template>',
+    '  <van-search v-model="query.keyword" placeholder="姓名 / 昵称 / 手机号" show-action @search="reload" @clear="reload">',
+    '    <template #action><div @click="reload" style="color:var(--brand)">搜索</div></template>',
+    '  </van-search>',
+    '  <van-dropdown-menu style="box-shadow:none">',
+    '    <van-dropdown-item v-model="query.coach_id" :options="coachOpts" @change="reload"></van-dropdown-item>',
+    '    <van-dropdown-item v-model="query.card_type_id" :options="cardTypeOpts" @change="reload"></van-dropdown-item>',
+    '    <van-dropdown-item v-model="query.club_id" :options="clubOpts" @change="reload"></van-dropdown-item>',
+    '    <van-dropdown-item v-model="query.expire_within" :options="expireOpts" @change="reload"></van-dropdown-item>',
+    '  </van-dropdown-menu>',
+
+    // 统计与工具栏
+    '  <div class="flex" style="margin:10px 12px 4px;gap:6px;flex-wrap:wrap">',
+    '    <div class="flex1 flex" style="gap:6px;flex-wrap:wrap">',
+    '      <van-tag v-if="query.quick" type="primary" round size="medium" closeable @close="pickQuick(query.quick)">{{ quickLabel }}</van-tag>',
+    '      <span class="muted">共 <b>{{ total }}</b> 人</span>',
+    '      <span v-if="hasFilters" class="brand-text" style="font-size:12px;cursor:pointer" @click="resetFilters">重置</span>',
+    '    </div>',
+    '    <van-button v-if="canAssign || canManage" size="small" round plain @click="toggleBatchMode">{{ batchMode ? \'完成\' : \'批量\' }}</van-button>',
+    '    <van-button size="small" round plain icon="down" @click="exportCsv">导出</van-button>',
+    '    <van-button size="small" round type="primary" icon="plus" @click="openAdd">新增会员</van-button>',
     '  </div>',
+
+    // 批量操作栏
+    '  <div v-if="batchMode" class="card-box flex" style="margin:6px 12px;padding:10px 12px;gap:8px;background:var(--brand-soft);border:1px solid var(--brand-line)">',
+    '    <van-checkbox :model-value="isAllSelected" checked-color="var(--brand)" @click="toggleSelectAll">',
+    '      <span style="font-size:13px;font-weight:600">全选 ({{ selectedIds.length }})</span>',
+    '    </van-checkbox>',
+    '    <div class="flex1"></div>',
+    '    <van-button v-if="canAssign" size="mini" round type="primary" plain :disabled="!selectedIds.length" @click="openAssign">批量分配教练</van-button>',
+    '    <van-button v-if="canManage" size="mini" round type="danger" plain :disabled="!selectedIds.length" @click="batchDelete">批量删除</van-button>',
+    '  </div>',
+
     '  <div v-if="loading && !list.length" style="text-align:center;padding:40px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <van-list v-model:loading="listLoading" :finished="finished" :finished-text="list.length ? \'没有更多会员了\' : \'\'" :offset="100" @load="loadMore">',
     '    <van-empty v-if="searched && !loading && !list.length" description="没有符合条件的会员"/>',
-    '    <div v-for="m in list" :key="m.id" class="rec-item flex" :class="{black:m.is_black}" @click="$router.push(\'/staff/member/\'+m.id)">',
-    '      <m-avatar :name="m.realname||m.nickname" :size="44" :style="m.is_black?{background:\'var(--danger)\'}:{}"></m-avatar>',
-    '      <div class="flex1" style="margin-left:12px">',
-    '        <div class="name">{{ m.realname || m.nickname || \'未命名\' }}',
-    '          <van-tag v-if="m.is_black" type="danger" style="margin-left:4px">黑名单</van-tag>',
-    '          <d-tag v-else dict="expireStatus" :v="m.expire_status" style="margin-left:4px"></d-tag>',
+    '    <div v-for="m in list" :key="m.id" class="rec-item" :class="{black:m.is_black}" @click="onCardClick(m)">',
+    '      <div class="flex" style="align-items:flex-start">',
+    '        <van-checkbox v-if="batchMode" :model-value="selectedIds.includes(m.id)" checked-color="var(--brand)" style="margin:10px 10px 0 0" @click.stop="toggleSelect(m.id)"/>',
+    '        <m-avatar :name="m.realname||m.nickname" :size="44" :style="m.is_black?{background:\'var(--danger)\'}:{}"></m-avatar>',
+    '        <div class="flex1" style="margin-left:10px">',
+    '          <div class="flex" style="flex-wrap:wrap;gap:4px">',
+    '            <span class="name">{{ m.realname || m.nickname || \'未命名\' }}</span>',
+    '            <span class="muted">{{ DICT.gender[m.gender] }}<template v-if="m.birthday"> · {{ H.dateOf(m.birthday) }}</template></span>',
+    '            <van-tag v-if="m.is_black" type="danger" round>黑名单</van-tag>',
+    '            <van-tag v-if="m.label_levels" plain type="primary" round>{{ DICT.labelLv[m.label_levels] }}</van-tag>',
+    '            <div class="flex1"></div>',
+    '            <d-tag dict="expireStatus" :v="m.expire_status"></d-tag>',
+    '          </div>',
+    '          <div class="muted mt4">{{ m.phone }}<template v-if="m.club_names"> · {{ m.club_names }}</template></div>',
     '        </div>',
-    '        <div class="muted mt4">{{ m.phone }} <template v-if="m.membership_name">· 业绩归属 {{ m.membership_name }}</template></div>',
-    '        <div class="muted mt4" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.card_names || \'无持卡\' }}</div>',
     '      </div>',
-    '      <van-icon name="arrow" color="var(--c-text-4)"/>',
+
+    // 持卡与权益数据块
+    '      <div style="background:var(--c-bg-2);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:12px">',
+    '        <div style="color:var(--c-title);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">',
+    '          持有卡：<span v-if="m.card_names">{{ m.card_names }} <span class="muted" style="font-weight:400">({{ m.card_count }}张)</span></span><span v-else class="muted" style="font-weight:400">无卡</span>',
+    '        </div>',
+    '        <div class="flex" style="flex-wrap:wrap;gap:10px;margin-top:4px;color:var(--c-text-2)">',
+    '          <span v-if="m.total_counts > 0">剩余/总次数：<b :style="{color: m.total_left_counts > 0 ? \'var(--brand)\' : \'var(--danger)\'}">{{ m.total_left_counts || 0 }}</b>/{{ m.total_counts }}</span>',
+    '          <span v-if="m.remaining_value > 0">剩余价值：<b class="price">¥{{ Number(m.remaining_value).toLocaleString() }}</b></span>',
+    '          <span v-if="m.expire_time">最近到期：{{ H.dateOf(m.expire_time) }}</span>',
+    '          <span v-if="m.last_open_card_time">开卡：{{ H.dateOf(m.last_open_card_time) }}</span>',
+    '        </div>',
+    '      </div>',
+
+    // 顾问、主教练与来源信息
+    '      <div class="muted mt8" style="display:flex;flex-wrap:wrap;gap:6px">',
+    '        <span>会籍顾问：{{ m.membership_name || \'无顾问\' }}</span>',
+    '        <span>· 主教练：{{ m.coach_name || \'-\' }}</span>',
+    '        <span v-if="m.source_name">· 来源：{{ m.source_name }}</span>',
+    '        <span v-if="m.last_sign_time">· 最近签到：{{ H.full(m.last_sign_time) }}</span>',
+    '      </div>',
+
+    // 操作按钮区
+    '      <div class="foot" style="border-top:1px solid var(--c-line-2);padding-top:10px;margin-top:10px" @click.stop>',
+    '        <van-button size="mini" round plain @click="$router.push(\'/staff/member/\'+m.id)">详情</van-button>',
+    '        <van-button size="mini" round plain type="primary" @click="openEdit(m)">编辑</van-button>',
+    '        <van-button size="mini" round plain type="primary" @click="openMaintain(m)">维护</van-button>',
+    '        <van-button size="mini" round plain @click="openMore(m)">更多 <van-icon name="arrow-down" size="10"/></van-button>',
+    '      </div>',
     '    </div>',
     '  </van-list>',
+
+    // 新增 / 编辑会员弹层
+    '  <van-popup v-model:show="dlg" position="bottom" round safe-area-inset-bottom>',
+    '    <div style="padding:18px 16px 24px;max-height:82vh;overflow-y:auto">',
+    '      <div style="font-size:16px;font-weight:700;margin-bottom:12px">{{ dlgTitle }}</div>',
+    '      <van-field v-model="form.realname" label="姓名" required placeholder="请输入会员真实姓名"/>',
+    '      <van-field v-model="form.phone" type="tel" maxlength="11" label="手机号" required :readonly="!!form.id" placeholder="请输入11位手机号"/>',
+    '      <van-field v-model="form.nickname" label="昵称" placeholder="选填"/>',
+    '      <van-field label="性别">',
+    '        <template #input>',
+    '          <van-radio-group v-model="form.gender" direction="horizontal">',
+    '            <van-radio :name="1">男</van-radio><van-radio :name="2">女</van-radio><van-radio :name="0">未知</van-radio>',
+    '          </van-radio-group>',
+    '        </template>',
+    '      </van-field>',
+    '      <van-field label="生日">',
+    '        <template #input><input type="date" v-model="form.birthday" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--c-text);width:100%"/></template>',
+    '      </van-field>',
+    '      <van-field v-model="form.id_card_number" label="身份证号" placeholder="选填"/>',
+    '      <van-field :model-value="form.source_name || \'-\'" label="来源渠道" readonly is-link @click="openPicker(\'source\')"/>',
+    '      <van-field label="意向标签">',
+    '        <template #input>',
+    '          <van-radio-group v-model="form.label_levels" direction="horizontal">',
+    '            <van-radio :name="0">无</van-radio><van-radio :name="1">A 高</van-radio><van-radio :name="2">B 中</van-radio><van-radio :name="3">C 低</van-radio>',
+    '          </van-radio-group>',
+    '        </template>',
+    '      </van-field>',
+    '      <van-field :model-value="form.coach_name || \'不指定\'" label="主教练" readonly is-link @click="openPicker(\'coach\')"/>',
+    '      <van-field :model-value="form.sub_coach_name || \'不指定\'" label="副教练" readonly is-link @click="openPicker(\'subCoach\')"/>',
+    '      <van-field v-model="form.address" label="住址" placeholder="选填"/>',
+    '      <van-field v-model="form.remark" type="textarea" rows="2" label="备注" placeholder="选填" :border="false"/>',
+    '      <div class="mt12 flex" style="gap:10px">',
+    '        <van-button plain round block style="flex:1" @click="dlg=false">取消</van-button>',
+    '        <van-button type="primary" round block style="flex:2" :loading="saving" @click="saveMember">保存</van-button>',
+    '      </div>',
+    '    </div>',
+    '  </van-popup>',
+
+    // 维护记录弹层
+    '  <van-popup v-model:show="mtDlg" position="bottom" round safe-area-inset-bottom>',
+    '    <div style="padding:18px 16px 24px;max-height:82vh;overflow-y:auto">',
+    '      <div style="font-size:16px;font-weight:700;margin-bottom:10px">维护记录 · {{ mtMember ? (mtMember.realname || mtMember.phone) : \'\' }}</div>',
+    '      <div style="background:var(--c-bg-2);border-radius:10px;padding:10px 12px;margin-bottom:14px">',
+    '        <div style="font-size:13px;font-weight:600;margin-bottom:8px">新增跟进/回访记录</div>',
+    '        <van-radio-group v-model="mtForm.record_type" direction="horizontal" style="margin-bottom:8px">',
+    '          <van-radio :name="1">电话</van-radio><van-radio :name="2">到店</van-radio><van-radio :name="3">微信</van-radio><van-radio :name="4">其他</van-radio>',
+    '        </van-radio-group>',
+    '        <van-field v-model="mtForm.content" type="textarea" rows="2" placeholder="填写本次维护/回访内容" style="border-radius:8px;padding:8px 10px"/>',
+    '        <div class="mt8" style="text-align:right">',
+    '          <van-button size="small" type="primary" round :loading="mtSaving" @click="saveMaintain">新增记录</van-button>',
+    '        </div>',
+    '      </div>',
+    '      <div class="sec-title" style="margin:6px 0">历史记录（{{ mtList.length }}）</div>',
+    '      <van-loading v-if="mtLoading" size="18" style="text-align:center;padding:20px 0">加载中...</van-loading>',
+    '      <van-empty v-else-if="!mtList.length" description="暂无维护记录" image-size="60"/>',
+    '      <div v-else style="max-height:40vh;overflow-y:auto">',
+    '        <van-cell v-for="r in mtList" :key="r.id" :label="(r.membership_name || \'-\') + \' · \' + H.full(r.insert_time)">',
+    '          <template #title><van-tag plain type="primary" style="margin-right:6px">{{ DICT.maintainType[r.record_type] || \'其他\' }}</van-tag><span>{{ r.content }}</span></template>',
+    '        </van-cell>',
+    '      </div>',
+    '    </div>',
+    '  </van-popup>',
+
+    // 更多操作菜单
+    '  <van-action-sheet v-model:show="moreShow" :title="moreRow ? (moreRow.realname || moreRow.phone) : \'更多操作\'" :actions="moreActions" cancel-text="取消" close-on-click-action @select="onMoreSelect"/>',
+
+    // 加入黑名单弹窗
+    '  <van-popup v-model:show="blackDlg" position="bottom" round safe-area-inset-bottom>',
+    '    <div style="padding:20px 16px 24px" v-if="blackRow">',
+    '      <div style="font-size:16px;font-weight:700;margin-bottom:6px">加入黑名单 · {{ blackRow.realname || blackRow.phone }}</div>',
+    '      <div class="muted" style="margin-bottom:10px">加入黑名单后该会员将无法入场、购卡或预约课程</div>',
+    '      <van-field v-model="blackReason" type="textarea" rows="2" label="原因" placeholder="请填写加入黑名单原因" :border="false"/>',
+    '      <div class="mt12"><van-button type="danger" block round :loading="blackSaving" @click="confirmAddBlack">确认加入黑名单</van-button></div>',
+    '    </div>',
+    '  </van-popup>',
+
+    // 批量分配教练弹窗
+    '  <van-popup v-model:show="assignDlg" position="bottom" round safe-area-inset-bottom>',
+    '    <div style="padding:20px 16px 24px">',
+    '      <div style="font-size:16px;font-weight:700;margin-bottom:6px">批量分配教练</div>',
+    '      <div class="muted" style="margin-bottom:12px">将为选中的 <b>{{ selectedIds.length }}</b> 名会员统一设置主教练</div>',
+    '      <van-field :model-value="assignForm.coach_name || \'请选择教练\'" label="所属教练" readonly is-link @click="openPicker(\'assignCoach\')"/>',
+    '      <div class="mt12"><van-button type="primary" block round :loading="assignSaving" @click="doAssign">确认分配</van-button></div>',
+    '    </div>',
+    '  </van-popup>',
+
+    // 专属完善链接弹窗
+    '  <van-popup v-model:show="profileLinkDlg" position="bottom" round safe-area-inset-bottom>',
+    '    <div style="padding:20px 16px 24px;text-align:center">',
+    '      <div style="font-size:16px;font-weight:700;margin-bottom:4px">会员专属完善资料链接 (免登录)</div>',
+    '      <div class="muted" style="font-size:12px;margin-bottom:14px">会员：{{ profileLinkData.vipName }} · 打开即可完善7项健康档案并最高获得 70 积分</div>',
+    '      <div id="staff-members-list-qr" style="display:inline-block;padding:10px;background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);margin-bottom:14px;min-width:160px;min-height:160px"></div>',
+    '      <div style="margin-bottom:12px;background:var(--c-bg-2);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--c-text-2);word-break:break-all;text-align:left">',
+    '        {{ profileLinkData.url }}',
+    '      </div>',
+    '      <div class="flex" style="gap:10px">',
+    '        <van-button plain round block @click="profileLinkDlg=false" style="flex:1">关闭</van-button>',
+    '        <van-button type="primary" round block @click="copyProfileLink" style="flex:2">复制链接</van-button>',
+    '      </div>',
+    '    </div>',
+    '  </van-popup>',
+
+    // 通用选择器
+    '  <van-popup v-model:show="pickerShow" position="bottom" round>',
+    '    <van-picker :columns="pickerCols" @confirm="onPickerConfirm" @cancel="pickerShow=false" confirm-button-text="确定"></van-picker>',
+    '  </van-popup>',
     '</div>',
   ].join('\n'),
   methods: {
-    // 再点同一个 = 取消筛选
-    pickQuick(k) { this.quick = this.quick === k ? '' : k; this.reload(); },
+    onTab() {
+      this.reload();
+    },
+    pickQuick(k) {
+      this.query.quick = this.query.quick === k ? '' : k;
+      if (this.query.quick) this.tab = 'all';
+      this.reload();
+    },
+    resetFilters() {
+      this.query = { keyword: '', coach_id: '', card_type_id: '', club_id: '', expire_within: '', quick: '' };
+      this.reload();
+    },
     reload() {
       this.page = 1;
       this.finished = false;
       this.list = [];
+      this.selectedIds = [];
       this.fetchPage();
+    },
+    buildQueryParams(forExport) {
+      const q = { status: this.tab };
+      if (!forExport) {
+        q.page = this.page;
+        q.size = this.pageSize;
+      }
+      if (this.query.keyword && this.query.keyword.trim()) q.keyword = this.query.keyword.trim();
+      if (this.query.coach_id !== '') q.coach_id = this.query.coach_id;
+      if (this.query.card_type_id !== '') q.card_type_id = this.query.card_type_id;
+      if (this.query.club_id !== '') q.club_id = this.query.club_id;
+      if (this.query.expire_within !== '') q.expire_within = this.query.expire_within;
+      if (this.query.quick) q.quick = this.query.quick;
+      return q;
     },
     async fetchPage() {
       if (this.page === 1) this.loading = true;
       try {
-        const q = '/members?keyword=' + encodeURIComponent(this.kw.trim())
-          + '&page=' + this.page
-          + '&size=' + this.pageSize
-          + (this.quick ? '&quick=' + this.quick : '');
-        const d = await API.get(q);
+        const d = await API.get('/members', this.buildQueryParams(false));
         const rows = d.list || [];
         this.stats = d.stats;
         this.total = d.total || 0;
@@ -106,8 +390,295 @@ window.Pages.StaffMembers = {
       if (this.finished || this.loading) return;
       this.fetchPage();
     },
+    async loadDicts() {
+      try {
+        const [sources, coaches, cats, clubs] = await Promise.all([
+          API.get('/sources', { silent: true }),
+          API.get('/coaches', { status: 1, silent: true }),
+          API.get('/card-categories', { silent: true }),
+          API.get('/clubs', { silent: true }),
+        ]);
+        this.sources = sources || [];
+        this.coaches = (coaches || []).filter(c => c.status !== 0);
+        this.cardTypes = cats || [];
+        this.clubs = clubs || [];
+      } catch (e) { /* ignore */ }
+    },
+    onCardClick(m) {
+      if (this.batchMode) {
+        this.toggleSelect(m.id);
+        return;
+      }
+      this.$router.push('/staff/member/' + m.id);
+    },
+    toggleBatchMode() {
+      this.batchMode = !this.batchMode;
+      this.selectedIds = [];
+    },
+    toggleSelect(id) {
+      const idx = this.selectedIds.indexOf(id);
+      if (idx === -1) this.selectedIds.push(id);
+      else this.selectedIds.splice(idx, 1);
+    },
+    toggleSelectAll() {
+      if (this.isAllSelected) {
+        this.selectedIds = [];
+      } else {
+        this.selectedIds = this.list.map(m => m.id);
+      }
+    },
+    exportCsv() {
+      const q = this.buildQueryParams(true);
+      q.export = 'csv';
+      q.token = Store.token;
+      const qs = Object.keys(q).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(q[k])).join('&');
+      window.open('/api/members?' + qs);
+    },
+    openAdd() {
+      this.dlgTitle = '新增会员';
+      this.form = {
+        realname: '', phone: '', nickname: '', gender: 0, birthday: '',
+        id_card_number: '', source_id: 0, source_name: '', label_levels: 0,
+        coach_id: 0, coach_name: '', sub_coach_id: 0, sub_coach_name: '',
+        address: '', remark: '',
+      };
+      this.dlg = true;
+    },
+    async openEdit(row) {
+      this.dlgTitle = '编辑会员 · ' + (row.realname || row.phone);
+      try {
+        const d = await API.get('/members/' + row.id);
+        const p = d.profile || row;
+        this.form = Object.assign({}, p, {
+          birthday: p.birthday ? H.dateOf(p.birthday) : '',
+        });
+      } catch (e) {
+        this.form = Object.assign({}, row, {
+          birthday: row.birthday ? H.dateOf(row.birthday) : '',
+        });
+      }
+      this.dlg = true;
+    },
+    openPicker(type) {
+      this.pickerType = type;
+      if (type === 'source') {
+        this.pickerCols = [{ text: '无', value: 0 }].concat(this.sources.map(s => ({ text: s.title, value: s.id })));
+      } else if (type === 'coach' || type === 'subCoach') {
+        this.pickerCols = [{ text: '不指定', value: 0 }].concat(this.coaches.map(c => ({ text: c.realname, value: c.id })));
+      } else if (type === 'assignCoach') {
+        this.pickerCols = this.coaches.map(c => ({ text: c.realname, value: c.id }));
+      }
+      this.pickerShow = true;
+    },
+    onPickerConfirm({ selectedOptions }) {
+      const opt = selectedOptions && selectedOptions[0];
+      if (opt) {
+        if (this.pickerType === 'source') {
+          this.form.source_id = opt.value;
+          this.form.source_name = opt.value ? opt.text : '';
+        } else if (this.pickerType === 'coach') {
+          this.form.coach_id = opt.value;
+          this.form.coach_name = opt.value ? opt.text : '';
+        } else if (this.pickerType === 'subCoach') {
+          this.form.sub_coach_id = opt.value;
+          this.form.sub_coach_name = opt.value ? opt.text : '';
+        } else if (this.pickerType === 'assignCoach') {
+          this.assignForm.coach_id = opt.value;
+          this.assignForm.coach_name = opt.text;
+        }
+      }
+      this.pickerShow = false;
+    },
+    async saveMember() {
+      if (!this.form.realname || !this.form.realname.trim()) return vant.showToast('请填写姓名');
+      if (!this.form.id && !/^1\d{10}$/.test(this.form.phone || '')) return vant.showToast('请填写正确的11位手机号');
+      this.saving = true;
+      try {
+        if (this.form.id) {
+          await API.put('/members/' + this.form.id, this.form);
+        } else {
+          await API.post('/members', this.form);
+        }
+        vant.showToast({ message: '保存成功', icon: 'success' });
+        this.dlg = false;
+        this.reload();
+      } finally {
+        this.saving = false;
+      }
+    },
+    async openMaintain(row) {
+      this.mtMember = row;
+      this.mtForm = { record_type: 1, content: '' };
+      this.mtList = [];
+      this.mtDlg = true;
+      this.mtLoading = true;
+      try {
+        const d = await API.get('/maintain-records', { vip_user_id: row.id, vip_user_type: 1, size: 50 });
+        this.mtList = (d && d.list) || [];
+      } finally {
+        this.mtLoading = false;
+      }
+    },
+    async saveMaintain() {
+      if (!this.mtForm.content || !this.mtForm.content.trim()) return vant.showToast('请填写维护内容');
+      this.mtSaving = true;
+      try {
+        await API.post('/maintain-records', {
+          vip_user_id: this.mtMember.id,
+          vip_user_type: 1,
+          record_type: this.mtForm.record_type,
+          content: this.mtForm.content.trim(),
+        });
+        vant.showToast({ message: '已记录', icon: 'success' });
+        this.mtForm.content = '';
+        const d = await API.get('/maintain-records', { vip_user_id: this.mtMember.id, vip_user_type: 1, size: 50 });
+        this.mtList = (d && d.list) || [];
+      } finally {
+        this.mtSaving = false;
+      }
+    },
+    openMore(row) {
+      this.moreRow = row;
+      this.moreShow = true;
+    },
+    onMoreSelect(action) {
+      const row = this.moreRow;
+      if (!row) return;
+      if (action.cmd === 'profileLink') this.openProfileLinkDialog(row);
+      else if (action.cmd === 'black') this.toggleBlack(row);
+      else if (action.cmd === 'disable') this.disableMember(row);
+    },
+    async openProfileLinkDialog(row) {
+      try {
+        const res = await API.get('/members/' + row.id + '/profile-link');
+        if (!res) return;
+        const fullUrl = window.location.origin + '/m/' + (res.link || res.path);
+        this.profileLinkData = {
+          url: fullUrl,
+          token: res.token,
+          vipName: res.vip_name || row.realname || '',
+        };
+        this.profileLinkDlg = true;
+        this.$nextTick(() => {
+          const el = document.getElementById('staff-members-list-qr');
+          if (el) {
+            el.innerHTML = '';
+            if (window.QRCode) {
+              new QRCode(el, { text: fullUrl, width: 160, height: 160, colorDark: H.color('--brand'), colorLight: '#ffffff' });
+            }
+          }
+        });
+      } catch (e) {
+        vant.showToast(e.message || '获取专属链接失败');
+      }
+    },
+    async copyProfileLink() {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(this.profileLinkData.url);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = this.profileLinkData.url;
+          ta.style.position = 'fixed';
+          ta.style.top = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        vant.showToast({ message: '专属链接已复制', icon: 'success' });
+      } catch (e) {
+        vant.showToast('复制失败，请长按文本复制');
+      }
+    },
+    async toggleBlack(row) {
+      if (row.is_black) {
+        try {
+          await vant.showConfirmDialog({
+            title: '移出黑名单',
+            message: '确定将「' + (row.realname || row.phone) + '」移出黑名单吗？',
+            confirmButtonColor: 'var(--brand)',
+          });
+        } catch (e) { return; }
+        await API.post('/members/' + row.id + '/blacklist', { is_black: 0 });
+        vant.showToast({ message: '已移出黑名单', icon: 'success' });
+        this.reload();
+      } else {
+        this.blackRow = row;
+        this.blackReason = '';
+        this.blackDlg = true;
+      }
+    },
+    async confirmAddBlack() {
+      if (!this.blackRow) return;
+      this.blackSaving = true;
+      try {
+        await API.post('/members/' + this.blackRow.id + '/blacklist', {
+          is_black: 1,
+          reason: (this.blackReason || '').trim(),
+        });
+        this.blackDlg = false;
+        vant.showToast({ message: '已加入黑名单', icon: 'success' });
+        this.reload();
+      } finally {
+        this.blackSaving = false;
+      }
+    },
+    async disableMember(row) {
+      try {
+        await vant.showConfirmDialog({
+          title: '禁用会员',
+          message: '禁用后「' + (row.realname || row.phone) + '」将从会员列表隐藏、无法登录会员端；历史消费与合同数据全部保留。确定禁用吗？',
+          confirmButtonColor: 'var(--danger)',
+        });
+      } catch (e) { return; }
+      await API.post('/members/' + row.id + '/disable', { enable: 0 });
+      vant.showToast({ message: '已禁用（历史数据保留）', icon: 'success' });
+      this.reload();
+    },
+    openAssign() {
+      if (!this.selectedIds.length) return vant.showToast('请先勾选会员');
+      this.assignForm = { coach_id: null, coach_name: '' };
+      this.assignDlg = true;
+    },
+    async doAssign() {
+      if (!this.assignForm.coach_id) return vant.showToast('请选择教练');
+      this.assignSaving = true;
+      try {
+        await API.post('/members/assign', {
+          ids: this.selectedIds,
+          type: 'member',
+          coach_id: this.assignForm.coach_id,
+          coach_name: this.assignForm.coach_name,
+        });
+        vant.showToast({ message: '分配成功', icon: 'success' });
+        this.assignDlg = false;
+        this.batchMode = false;
+        this.reload();
+      } finally {
+        this.assignSaving = false;
+      }
+    },
+    async batchDelete() {
+      const n = this.selectedIds.length;
+      if (!n) return;
+      try {
+        await vant.showConfirmDialog({
+          title: '批量删除会员',
+          message: '确定删除选中的 ' + n + ' 名会员吗？删除后会员不再出现在列表和统计中，也无法登录；历史消费、合同与流水会保留。',
+          confirmButtonColor: 'var(--danger)',
+        });
+      } catch (e) { return; }
+      const d = await API.post('/members/batch-disable', { ids: this.selectedIds });
+      vant.showToast({ message: '已删除 ' + (d.count || n) + ' 名会员', icon: 'success' });
+      this.batchMode = false;
+      this.reload();
+    },
   },
-  mounted() { this.reload(); },
+  mounted() {
+    this.reload();
+    this.loadDicts();
+  },
 };
 
 window.Pages.StaffMemberDetail = {

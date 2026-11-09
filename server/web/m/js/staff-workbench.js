@@ -6,7 +6,7 @@
     checkin: { t: '快速签到', icon: 'aim', to: '/staff/checkin', roles: ['admin', 'manager', 'reception'] },
     opencard: { t: '快速开卡', icon: 'credit-pay', to: '/staff/opencard', roles: ['admin', 'manager', 'membership', 'reception'] },
     book: { t: '代约课', icon: 'calendar-o', to: '/staff/book', roles: ['admin', 'manager', 'coach'] },
-    members: { t: '会员查询', icon: 'search', to: '/staff/members', roles: ['admin', 'manager', 'membership', 'reception'] },
+    members: { t: '会员列表', icon: 'friends-o', to: '/staff/members', roles: ['admin', 'manager', 'membership', 'reception'] },
     groupToday: { t: '团课核销', icon: 'todo-list-o', to: '/staff/group-today', roles: ['admin', 'manager', 'reception'] },
     todayBook: { t: '今日预约', icon: 'clock-o', to: '/staff/today', roles: ['admin', 'manager', 'membership', 'reception', 'coach'] },
     potential: { t: '录潜客', icon: 'add-o', to: '/staff/potential', roles: ['admin', 'manager', 'membership'] },
@@ -62,25 +62,25 @@
   };
   /* 顺序即工作台展示顺序 —— 教练: 预约管理(主按钮)→会员各维度数据; 管理员: 开卡/约课(主按钮)→看数据→会员维度 */
   const ROLE_MENUS = {
-    reception: ['checkin', 'segLow', 'segBirth', 'tcActive', 'tcExpired', 'intents', 'members', 'groupToday', 'todayBook', 'myperf'],
+    reception: ['checkin', 'members', 'segLow', 'segBirth', 'tcActive', 'tcExpired', 'intents', 'groupToday', 'todayBook', 'myperf'],
     membership: ['members', 'segLow', 'segBirth', 'seg10', 'seg50', 'tcActive', 'tcExpired', 'potential', 'intents', 'myperf', 'sales'],
     coach: ['segLow', 'seg10', 'seg50', 'segBirth', 'tcActive', 'tcExpired', 'cstudents', 'cschedule', 'cplans', 'cmilestones', 'myperf', 'cperf', 'crests', 'cprofile'],
-    manager: ['dashboard', 'report', 'segLow', 'segBirth', 'seg10', 'seg50', 'tcExpired', 'cplans', 'members', 'todayBook', 'cbookings', 'intents', 'contracts', 'potential', 'salesAll', 'perfAll', 'myperf'],
-    admin: ['dashboard', 'report', 'segLow', 'segBirth', 'seg10', 'seg50', 'tcExpired', 'cplans', 'members', 'todayBook', 'cbookings', 'intents', 'contracts', 'potential', 'salesAll', 'perfAll', 'myperf'],
+    manager: ['dashboard', 'report', 'members', 'segLow', 'segBirth', 'seg10', 'seg50', 'tcExpired', 'cplans', 'todayBook', 'cbookings', 'intents', 'contracts', 'potential', 'salesAll', 'perfAll', 'myperf'],
+    admin: ['dashboard', 'report', 'members', 'segLow', 'segBirth', 'seg10', 'seg50', 'tcExpired', 'cplans', 'todayBook', 'cbookings', 'intents', 'contracts', 'potential', 'salesAll', 'perfAll', 'myperf'],
   };
 
   /* 全部功能: 与 PC 后台菜单(web/admin/js/app.js)一一对齐, roles 取值一致 */
   const MENU_TREE = [
     { title: '会员管理', icon: 'friends-o', children: [
-      { t: '会员查询', to: '/staff/members', roles: ['admin', 'manager', 'membership', 'reception'] },
+      { t: '会员列表', to: '/staff/members', roles: ['admin', 'manager', 'membership', 'reception'] },
+      { t: '潜在客户', to: '/staff/potential', roles: ['admin', 'manager', 'membership'] },
+      { t: '会员概况', to: '/staff/members-overview', roles: ['admin', 'manager'] },
       { t: '课时不足', to: '/staff/segment/low_lesson', roles: ['admin', 'manager', 'membership', 'reception', 'coach'] },
       { t: '会员生日', to: '/staff/segment/birthday_week', roles: ['admin', 'manager', 'membership', 'reception', 'coach'] },
       { t: '当月满10次', to: '/staff/segment/trained_10', roles: ['admin', 'manager', 'membership', 'coach'] },
       { t: '半年满50次', to: '/staff/segment/trained_50', roles: ['admin', 'manager', 'membership', 'coach'] },
       { t: '有效期卡', to: '/staff/segment/timecard_active', roles: ['admin', 'manager', 'membership', 'reception', 'coach'] },
       { t: '过期期卡', to: '/staff/segment/timecard_expired', roles: ['admin', 'manager', 'membership', 'reception', 'coach'] },
-      { t: '潜在客户', to: '/staff/potential', roles: ['admin', 'manager', 'membership'] },
-      { t: '会员概况', to: '/staff/members-overview', roles: ['admin', 'manager'] },
     ] },
     { title: '会员卡管理', icon: 'credit-pay', children: [
       { t: '快速开卡', to: '/staff/opencard', roles: ['admin', 'manager', 'membership', 'reception'] },
