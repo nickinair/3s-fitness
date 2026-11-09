@@ -27,8 +27,13 @@ r.get('/home', async (req, res, next) => {
     const banners = await db.query('SELECT * FROM biz_club_banner WHERE merchant_id=? AND status=1 ORDER BY sort', [mid]);
     const vip = await db.queryOne('SELECT id,realname,nickname,phone,avatar,points,expire_status,expire_time,is_black FROM biz_vip_user WHERE id=?', [req.user.vip]);
     const cards = await db.query(
-      `SELECT id,card_kind,card_type_name,counts,left_counts,left_money,expire_time,status FROM biz_member_card
-       WHERE vip_id=? AND status IN (0,1,3) ORDER BY id DESC`, [req.user.vip]);
+      `SELECT c.id,c.card_kind,c.card_type_name,c.counts,c.left_counts,c.left_money,c.expire_time,c.status,
+              IF(c.vip_id=?, 0, 1) AS is_shared, v.realname AS owner_name
+       FROM biz_member_card c
+       JOIN biz_vip_user v ON v.id = c.vip_id
+       WHERE (c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?))
+         AND c.status IN (0,1,3)
+       ORDER BY is_shared, c.id DESC`, [req.user.vip, req.user.vip, req.user.vip]);
     // 近一周(今天起 7 天内)的待上课程数
     const [{ n: upcoming }] = await db.query(
       `SELECT (SELECT COUNT(*) FROM biz_ptrain_bespeak_record WHERE vip_id=? AND status IN (0,1)
@@ -136,17 +141,32 @@ r.get('/training-plans/:id', async (req, res, next) => {
 r.get('/my-cards', async (req, res, next) => {
   try {
     await lifecycleTick();
-    const rows = await db.query('SELECT * FROM biz_member_card WHERE vip_id=? ORDER BY FIELD(status,1,0,3,2,4,5), id DESC', [req.user.vip]);
+    const rows = await db.query(
+      `SELECT c.*, IF(c.vip_id=?, 0, 1) AS is_shared, v.realname AS owner_name
+       FROM biz_member_card c
+       JOIN biz_vip_user v ON v.id = c.vip_id
+       WHERE c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?)
+       ORDER BY is_shared, FIELD(c.status,1,0,3,2,4,5), c.id DESC`,
+      [req.user.vip, req.user.vip, req.user.vip]);
     res.json(ok(rows));
   } catch (e) { next(e); }
 });
 r.get('/my-cards/:id', async (req, res, next) => {
   try {
-    const card = await db.queryOne('SELECT * FROM biz_member_card WHERE id=? AND vip_id=?', [req.params.id, req.user.vip]);
+    const card = await db.queryOne(
+      `SELECT c.*, IF(c.vip_id=?, 0, 1) AS is_shared, v.realname AS owner_name, v.phone AS owner_phone
+       FROM biz_member_card c
+       JOIN biz_vip_user v ON v.id = c.vip_id
+       WHERE c.id=? AND (c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?))`,
+      [req.user.vip, req.params.id, req.user.vip, req.user.vip]);
     if (!card) throw new BizError('会员卡不存在');
+    const shared_users = await db.query(
+      `SELECT u.vip_id, u.realname, u.relation, u.insert_time
+       FROM biz_member_card_user u
+       WHERE u.card_id=? ORDER BY u.id ASC`, [card.id]);
     const recharges = await db.query('SELECT id,type,actual_money,counts,expire_days,pay_method,insert_time FROM biz_card_recharge WHERE card_id=? ORDER BY id DESC', [card.id]);
-    const spends = await db.query('SELECT id,scene,costs,spend_money,coach_name,remark,insert_time FROM biz_card_spend WHERE card_id=? ORDER BY id DESC LIMIT 50', [card.id]);
-    res.json(ok({ card, recharges, spends }));
+    const spends = await db.query('SELECT id,scene,costs,spend_money,coach_name,realname,remark,insert_time FROM biz_card_spend WHERE card_id=? ORDER BY id DESC LIMIT 50', [card.id]);
+    res.json(ok({ card, recharges, spends, shared_users }));
   } catch (e) { next(e); }
 });
 
@@ -173,8 +193,13 @@ r.get('/schedule/:id/available-cards', async (req, res, next) => {
     const g = await db.queryOne('SELECT * FROM biz_course_group WHERE id=?', [s.group_id]);
     const scope = JSON.parse((g && g.card_scope) || '[]');
     const cards = await db.query(
-      `SELECT id,card_kind,card_type_id,card_type_name,counts,left_counts,left_money,expire_time,status FROM biz_member_card
-       WHERE vip_id=? ORDER BY FIELD(status,1,0,3,2,4,5), FIELD(card_kind,1,2,4,3), expire_time DESC`, [req.user.vip]);
+      `SELECT c.id,c.card_kind,c.card_type_id,c.card_type_name,c.counts,c.left_counts,c.left_money,c.expire_time,c.status,
+              IF(c.vip_id=?, 0, 1) AS is_shared, v.realname AS owner_name
+       FROM biz_member_card c
+       JOIN biz_vip_user v ON v.id = c.vip_id
+       WHERE c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?)
+       ORDER BY is_shared, FIELD(c.status,1,0,3,2,4,5), FIELD(c.card_kind,1,2,4,3), c.expire_time DESC`,
+      [req.user.vip, req.user.vip, req.user.vip]);
     cards.forEach(c => {
       let reason = cardBlockReason(c, s.start_time);
       if (!reason && scope.length && !scope.includes(c.card_type_id)) reason = '不支持「' + (g ? g.title : '该课程') + '」';
@@ -297,10 +322,15 @@ r.get('/my-pt-cards', async (req, res, next) => {
       scope = JSON.parse((course && course.card_scope) || '[]');
       courseTitle = (course && course.title) || '';
     }
-    // 任何卡种都能约私教课; 不可用的也返回, 带 reason 让会员知道为什么约不了
+    // 任何卡种都能约私教课; 支持本人主卡与绑定的家庭共享卡; 不可用的也返回, 带 reason 让会员知道为什么约不了
     const cards = await db.query(
-      `SELECT id,card_type_id,card_type_name,card_kind,counts,left_counts,left_money,expire_time,status FROM biz_member_card
-       WHERE vip_id=? ORDER BY FIELD(status,1,0,3,2,4,5), FIELD(card_kind,4,1,2,3), expire_time DESC`, [req.user.vip]);
+      `SELECT c.id, c.card_type_id, c.card_type_name, c.card_kind, c.counts, c.left_counts, c.left_money, c.expire_time, c.status,
+              IF(c.vip_id=?, 0, 1) AS is_shared, v.realname AS owner_name
+       FROM biz_member_card c
+       JOIN biz_vip_user v ON v.id = c.vip_id
+       WHERE c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?)
+       ORDER BY is_shared, FIELD(c.status,1,0,3,2,4,5), FIELD(c.card_kind,4,1,2,3), c.expire_time DESC`,
+      [req.user.vip, req.user.vip, req.user.vip]);
     cards.forEach(c => {
       let reason = cardBlockReason(c, req.query.date);
       if (!reason && scope.length && !scope.includes(c.card_type_id)) reason = '不支持「' + courseTitle + '」';

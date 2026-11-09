@@ -77,17 +77,20 @@
         this.showUpload = true;
       },
       async afterUpload(fileItem) {
-        fileItem.status = 'uploading';
-        fileItem.message = '上传中...';
+        const item = Array.isArray(fileItem) ? fileItem[0] : fileItem;
+        if (!item) return;
+        item.status = 'uploading';
+        item.message = '上传中...';
         try {
-          const res = await API.upload(fileItem.file);
-          fileItem.status = 'done';
-          fileItem.url = res.url;
-          this.uploadForm.photo_url = res.url;
+          const res = await API.upload(item.file);
+          const url = typeof res === 'string' ? res : (res && res.url);
+          item.status = 'done';
+          item.url = url;
+          this.uploadForm.photo_url = url;
           vant.showToast('图片上传成功');
         } catch (e) {
-          fileItem.status = 'failed';
-          fileItem.message = '上传失败';
+          item.status = 'failed';
+          item.message = '上传失败';
           vant.showToast(e.message || '图片上传失败');
         }
       },
@@ -150,31 +153,25 @@
     template: `
     <div class="page training-photos-page" style="min-height:100vh;background:var(--c-bg);padding-bottom:50px">
       <!-- 顶部导航 -->
-      <van-nav-bar
-        class="m-nav"
-        title="训练风采"
-        left-arrow
-        @click-left="$router.back()"
-      >
-        <template #right>
-          <span style="color:var(--c-title);font-size:14px;font-weight:600" @click="openUploadModal">
-            + 上传照片
-          </span>
-        </template>
-      </van-nav-bar>
+      <m-nav title="训练风采"></m-nav>
 
       <div style="padding:14px">
         <!-- 每月限额与成长激励卡片 -->
         <div style="background:var(--brand);color:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 6px 16px rgba(var(--brand-rgb),0.22);margin-bottom:16px">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
             <div>
               <div style="font-size:17px;font-weight:700">📸 训练风采专属相册</div>
               <div style="font-size:12px;opacity:0.85;margin-top:3px">每月限5张 · 见证身体与体能的蜕变</div>
             </div>
-            <div style="text-align:right">
-              <van-tag :type="remainingQuota > 0 ? 'success' : 'warning'" round size="medium">
-                {{ remainingQuota > 0 ? '还可上传 ' + remainingQuota + ' 张' : '本月额度已满' }}
-              </van-tag>
+            <div style="text-align:right;flex-shrink:0">
+              <van-button
+                v-if="remainingQuota > 0"
+                size="small"
+                round
+                style="background:#fff;color:var(--brand);border:none;font-weight:600;height:28px;padding:0 12px"
+                @click="openUploadModal"
+              >+ 上传照片</van-button>
+              <van-tag v-else type="warning" round size="medium">本月额度已满</van-tag>
             </div>
           </div>
 

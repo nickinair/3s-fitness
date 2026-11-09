@@ -62,15 +62,11 @@ window.Pages.StaffCoachProfile = {
     async pick(fileObj, field) {
       const file = fileObj && fileObj.file;
       if (!file) return;
-      if (file.size > 5 * 1024 * 1024) return vant.showToast('图片不能超过 5MB');
+      if (file.size > 20 * 1024 * 1024) return vant.showToast('图片不能超过 20MB');
       this.uploading = field;
       try {
-        const fd = new FormData();
-        fd.append('file', file);
-        const resp = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + Store.token }, body: fd });
-        const j = await resp.json();
-        if (j.code !== 0) throw new Error(j.msg || '上传失败');
-        this.form[field] = j.data.url;
+        const url = await API.upload(file);
+        this.form[field] = url;
         vant.showToast({ message: '已上传，记得点保存', icon: 'success' });
       } catch (e) {
         vant.showToast(e.message || '上传失败');

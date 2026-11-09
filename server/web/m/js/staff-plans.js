@@ -49,7 +49,8 @@
     ].join('\n'),
     methods: {
       itemCount(p) { return window.parsePlanItems(p.items).length; },
-      genImage(p) {
+      async genImage(p) {
+        await window.PlanImage.ready;
         this.img = window.PlanImage({
           title: p.title, member: p.is_template ? '' : (p.realname || ''), coach: p.coach_name || (Store.user || {}).realname,
           date: H.dateOf(p.plan_date), note: p.note, items: window.parsePlanItems(p.items),

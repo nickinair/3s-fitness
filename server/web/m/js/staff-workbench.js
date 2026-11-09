@@ -140,6 +140,21 @@
     ] },
   ];
 
+  /* 九宫格图标的低饱和色调(按功能类别): blue=数据报表 sand=业绩/卡/钱 sage=会员成长/训练 clay=预警 rose=关怀 violet=课程预约 slate=设置
+     颜色定义见 app.css 的 .wb-cell[data-tone]; 未列出的入口默认 slate */
+  const TONE = {
+    dashboard: 'blue', report: 'blue', membersOverview: 'blue', checkinReport: 'blue', financeMonthly: 'blue',
+    sales: 'sand', salesAll: 'sand', perfAll: 'sand', cperf: 'sand', myperf: 'sand', intents: 'sand', contracts: 'sand',
+    cards: 'sand', recharges: 'sand', spends: 'sand', cardBalance: 'sand', coachConsume: 'sand', opencard: 'sand',
+    seg10: 'sage', seg50: 'sage', seg20: 'sage', tcActive: 'sage', cplans: 'sage', cmilestones: 'sage', actions: 'sage',
+    cstudents: 'sage', members: 'sage', potential: 'sage',
+    segLow: 'clay', tcExpired: 'clay',
+    segBirth: 'rose', cprofile: 'rose', coaches: 'rose',
+    todayBook: 'violet', cschedule: 'violet', cbookings: 'violet', book: 'violet', groupToday: 'violet', checkin: 'violet',
+    scheduleAdmin: 'violet', crests: 'violet', ptRecords: 'violet', ptCourses: 'violet', groupCourses: 'violet', checkinRecords: 'violet',
+  };
+  const GROUP_TONE = { 会员管理: 'sage', 会员卡管理: 'sand', 教练管理: 'rose', 课程与排课: 'violet', 签到管理: 'violet', 报表中心: 'blue', 财务报表: 'sand', 系统设置: 'slate' };
+
   window.Pages.StaffHome = {
     data() {
       // 工作台每次进入都会重建(路由 key 变化), 展开状态存起来, 否则点进子页再回来又得重新展开
@@ -167,7 +182,7 @@
       },
       // 当前角色可用的全部入口(编辑态添加池的数据源)
       availKeys() { return Object.keys(MENU).filter(k => MENU[k].roles.includes(this.role)); },
-      menuDefs() { return this.availKeys.reduce((m, k) => { m[k] = { t: MENU[k].t, icon: MENU[k].icon }; return m; }, {}); },
+      menuDefs() { return this.availKeys.reduce((m, k) => { m[k] = { t: MENU[k].t, icon: MENU[k].icon, tone: TONE[k] || 'slate' }; return m; }, {}); },
       // 主按钮的 to 集合: 已在顶部大按钮展示, 九宫格里不再重复
       mainTos() { return this.mainActs.map(a => a.to); },
       // 九宫格当前布局: 过滤掉已失效(角色变化/入口下线)与主按钮重复项, 平滑升级 seg20 -> seg50
@@ -189,7 +204,7 @@
       groups() {
         const r = this.role;
         return MENU_TREE
-          .map(g => ({ title: g.title, icon: g.icon, children: g.children.filter(c => c.roles.includes(r)) }))
+          .map(g => ({ title: g.title, icon: g.icon, tone: GROUP_TONE[g.title] || 'slate', children: g.children.filter(c => c.roles.includes(r)) }))
           .filter(g => g.children.length);
       },
       showStats() { return this.role !== 'coach' && this.dash; },
@@ -247,7 +262,7 @@
       '  <van-collapse v-model="open" class="fn-collapse">',
       // name 用分组标题而非下标: 菜单增删后已展开的分组不会串位
       '    <van-collapse-item v-for="g in groups" :key="g.title" :name="g.title">',
-      '      <template #title><van-icon :name="g.icon" color="var(--brand)" style="margin-right:6px;vertical-align:-2px"/>{{ g.title }}<span class="muted" style="margin-left:6px;font-size:12px">{{ g.children.length }}</span></template>',
+      '      <template #title><span class="fn-ico" :data-tone="g.tone"><van-icon :name="g.icon"/></span>{{ g.title }}<span class="muted" style="margin-left:6px;font-size:12px">{{ g.children.length }}</span></template>',
       '      <van-cell v-for="c in g.children" :key="c.to" :title="c.t" is-link @click="$router.push(c.to)"/>',
       '    </van-collapse-item>',
       '  </van-collapse>',

@@ -97,6 +97,10 @@ window.Pages.StaffCardDetail = {
       refundShow: false, refundForm: {},
       editShow: false, editForm: {},
       pickerShow: false, pickerMode: '',
+      sharedShow: false, sharedMode: 'search',
+      sharedRelation: '家属', sharedRelations: ['家属', '配偶', '子女', '父母', '亲戚', '朋友'],
+      searchKw: '', searchingMembers: false, searchedMembers: [], selectedVipId: null,
+      newMemberForm: { realname: '', phone: '', gender: 1 }, addingShared: false,
     };
   },
   computed: {
@@ -197,6 +201,19 @@ window.Pages.StaffCardDetail = {
     '      <van-button v-if="canManage" size="small" round plain @click="openEdit">改卡</van-button>',
     '    </div>',
 
+    '    <div class="sec-title" style="display:flex;align-items:center;justify-content:space-between">',
+    '      <span>家庭共享用卡人（{{ (d.shared_users||[]).length }}）</span>',
+    '      <van-button v-if="canWrite || canManage" size="mini" round type="primary" plain @click="openAddShared">+ 添加共享成员</van-button>',
+    '    </div>',
+    '    <div class="card-box" v-if="(d.shared_users||[]).length" style="padding:2px 8px">',
+    '      <van-cell v-for="u in d.shared_users" :key="u.vip_id" :title="u.realname + \' (\' + (u.relation || \'家属\') + \')\'" :label="u.phone">',
+    '        <template #value>',
+    '          <van-button v-if="canWrite || canManage" size="mini" round type="danger" plain @click="removeShared(u)">解绑</van-button>',
+    '        </template>',
+    '      </van-cell>',
+    '    </div>',
+    '    <div v-else class="muted" style="padding:4px 16px 12px;font-size:12px">暂无家庭共享成员，绑定后可共用此卡约课与签到</div>',
+
     '    <div class="sec-title">收款流水（{{ (d.recharges||[]).length }}）</div>',
     '    <van-empty v-if="!(d.recharges||[]).length" description="暂无收款流水" image-size="60"/>',
     '    <div class="card-box" v-else style="padding:2px 8px">',
@@ -208,7 +225,7 @@ window.Pages.StaffCardDetail = {
     '    <div class="sec-title">耗卡流水（{{ (d.spends||[]).length }}）</div>',
     '    <van-empty v-if="!(d.spends||[]).length" description="暂无耗卡流水" image-size="60"/>',
     '    <div class="card-box" v-else style="padding:2px 8px">',
-    '      <van-cell v-for="s in d.spends" :key="s.id" :title="DICT.spendScene[s.scene]" :label="H.full(s.insert_time)+(s.coach_name?(\' · \'+s.coach_name):\'\')">',
+    '      <van-cell v-for="s in d.spends" :key="s.id" :title="DICT.spendScene[s.scene]" :label="H.full(s.insert_time)+(s.coach_name?(\' · \'+s.coach_name):\'\')+(s.realname?(\' · 使用人: \'+s.realname):\'\')">',
     '        <template #value>{{ (s.costs ? (\'-\'+H.num(s.costs)+\'次 \') : \'\') + H.money(s.spend_money) }}</template>',
     '      </van-cell>',
     '    </div>',
@@ -306,7 +323,49 @@ window.Pages.StaffCardDetail = {
     '      <div class="mt12"><van-button type="primary" block round :loading="saving" @click="doEdit">保存修改</van-button></div>',
     '    </div>',
     '  </van-popup>',
-
+    '',
+    '    <!-- 家庭共享成员弹层 -->',
+    '    <van-popup v-model:show="sharedShow" position="bottom" round safe-area-inset-bottom>',
+    '      <div style="padding:20px 16px 24px;max-height:80vh;overflow-y:auto" v-if="d">',
+    '        <div style="font-size:16px;font-weight:600;margin-bottom:12px">添加家庭共享成员 · {{ card.card_type_name }}</div>',
+    '        <van-tabs v-model:active="sharedMode" type="card" style="margin-bottom:14px">',
+    '          <van-tab title="选择已有会员" name="search"></van-tab>',
+    '          <van-tab title="新建家庭成员" name="create"></van-tab>',
+    '        </van-tabs>',
+    '        <div v-if="sharedMode===\'search\'">',
+    '          <van-search v-model="searchKw" placeholder="输入姓名或手机号搜索会员" @input="onSearchKw" @search="searchMembers"/>',
+    '          <van-loading v-if="searchingMembers" size="18" style="text-align:center;padding:12px 0">搜索中...</van-loading>',
+    '          <div v-else-if="searchedMembers.length" style="max-height:180px;overflow-y:auto;border:1px solid #f0f0f0;border-radius:8px;margin-bottom:12px">',
+    '            <van-cell v-for="m in searchedMembers" :key="m.id" :title="m.realname" :label="m.phone" clickable @click="selectedVipId = m.id">',
+    '              <template #right-icon>',
+    '                <van-icon v-if="selectedVipId===m.id" name="success" color="var(--brand)"/>',
+    '              </template>',
+    '            </van-cell>',
+    '          </div>',
+    '          <div v-else-if="searchKw" class="muted" style="text-align:center;padding:12px 0;font-size:12px">未找到匹配会员</div>',
+    '        </div>',
+    '        <div v-else>',
+    '          <van-field v-model="newMemberForm.realname" label="姓名" placeholder="请输入成员真实姓名"/>',
+    '          <van-field v-model="newMemberForm.phone" type="tel" label="手机号" placeholder="请输入11位手机号"/>',
+    '          <van-field label="性别">',
+    '            <template #input>',
+    '              <van-radio-group v-model="newMemberForm.gender" direction="horizontal">',
+    '                <van-radio :name="1">男</van-radio>',
+    '                <van-radio :name="2">女</van-radio>',
+    '              </van-radio-group>',
+    '            </template>',
+    '          </van-field>',
+    '        </div>',
+    '        <div style="margin-top:10px">',
+    '          <div style="font-size:13px;color:#666;margin-bottom:6px">与主卡人关系</div>',
+    '          <div class="flex" style="gap:6px;flex-wrap:wrap;margin-bottom:16px">',
+    '            <van-tag v-for="r in sharedRelations" :key="r" size="medium" :type="sharedRelation===r ? \'primary\' : \'default\'" style="cursor:pointer;padding:4px 10px" @click="sharedRelation = r">{{ r }}</van-tag>',
+    '          </div>',
+    '        </div>',
+    '        <van-button type="primary" block round :loading="addingShared" @click="doAddShared">确认绑定共享</van-button>',
+    '      </div>',
+    '    </van-popup>',
+    '',
     '  <van-popup v-model:show="pickerShow" position="bottom" round>',
     '    <van-picker :columns="pickerCols" @confirm="onPickerConfirm" @cancel="pickerShow=false" confirm-button-text="确定"></van-picker>',
     '  </van-popup>',
@@ -455,6 +514,87 @@ window.Pages.StaffCardDetail = {
         vant.showToast({ message: '改卡成功', icon: 'success' });
         this.load();
       } finally { this.saving = false; }
+    },
+
+    openAddShared() {
+      this.sharedMode = 'search';
+      this.searchKw = '';
+      this.searchedMembers = [];
+      this.selectedVipId = null;
+      this.sharedRelation = '家属';
+      this.newMemberForm = { realname: '', phone: '', gender: 1 };
+      this.sharedShow = true;
+    },
+    onSearchKw() {
+      clearTimeout(this._searchTimer);
+      if (!this.searchKw || !this.searchKw.trim()) {
+        this.searchedMembers = [];
+        return;
+      }
+      this._searchTimer = setTimeout(() => {
+        this.searchMembers();
+      }, 300);
+    },
+    async searchMembers() {
+      const kw = (this.searchKw || '').trim();
+      if (!kw) return;
+      this.searchingMembers = true;
+      try {
+        const res = await API.get('/members?keyword=' + encodeURIComponent(kw) + '&page=1&size=10', { silent: true });
+        const list = (res && res.list) || [];
+        const existIds = new Set([this.card.vip_id, ...(this.d.shared_users || []).map(u => u.vip_id)]);
+        this.searchedMembers = list.filter(m => !existIds.has(m.id));
+      } catch (e) {
+        this.searchedMembers = [];
+      } finally {
+        this.searchingMembers = false;
+      }
+    },
+    async doAddShared() {
+      const relation = this.sharedRelation || '家属';
+      let payload = { relation };
+      if (this.sharedMode === 'search') {
+        if (!this.selectedVipId) return vant.showToast('请选择要绑定的会员');
+        payload.vip_id = this.selectedVipId;
+      } else {
+        const f = this.newMemberForm;
+        if (!f.realname || !f.realname.trim()) return vant.showToast('请输入姓名');
+        if (!f.phone || !/^1\d{10}$/.test(f.phone.trim())) return vant.showToast('请输入正确的11位手机号');
+        payload.new_member = {
+          realname: f.realname.trim(),
+          phone: f.phone.trim(),
+          gender: Number(f.gender) || 1,
+        };
+      }
+      this.addingShared = true;
+      try {
+        await API.post('/cards/' + this.card.id + '/shared-users', payload);
+        this.sharedShow = false;
+        vant.showToast({ message: '绑定成功', icon: 'success' });
+        this.load();
+      } catch (e) {
+        // handled
+      } finally {
+        this.addingShared = false;
+      }
+    },
+    async removeShared(u) {
+      try {
+        await vant.showConfirmDialog({
+          title: '解除家庭共享',
+          message: `确定要解除 ${u.realname} 对该会员卡的共享使用权吗？解除后该成员将不能使用此卡约课或签到。`,
+          confirmButtonColor: '#e02020',
+        });
+      } catch (e) {
+        return;
+      }
+      try {
+        await API.delete('/cards/' + this.card.id + '/shared-users/' + u.vip_id);
+        vant.showToast({ message: '已解除共享', icon: 'success' });
+        this.load();
+      } catch (e) {
+        // handled
+      }
     },
   },
   mounted() { this.load(); this.loadStaff(); },

@@ -319,8 +319,13 @@ r.get('/agent-booking/pt', staffAuth('admin', 'manager', 'coach'), async (req, r
     });
     const clubs = await db.query('SELECT id, name, address, open_time FROM biz_club WHERE merchant_id=? AND status=1 ORDER BY sort, id', [mid]);
     const cards = vipId ? await db.query(
-      `SELECT id, card_type_id, card_type_name, card_kind, counts, left_counts, left_money, expire_time, status FROM biz_member_card
-       WHERE vip_id=? AND merchant_id=? AND status IN (0,1,2) ORDER BY FIELD(status,1,0,2), FIELD(card_kind,4,1,2,3), expire_time`, [vipId, mid]) : [];
+      `SELECT c.id, c.card_type_id, c.card_type_name, c.card_kind, c.counts, c.left_counts, c.left_money, c.expire_time, c.status,
+              IF(c.vip_id=?, 0, 1) AS is_shared, v.realname AS owner_name
+       FROM biz_member_card c
+       JOIN biz_vip_user v ON v.id = c.vip_id
+       WHERE (c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?))
+         AND c.merchant_id=? AND c.status IN (0,1,2)
+       ORDER BY is_shared, FIELD(c.status,1,0,2), FIELD(c.card_kind,4,1,2,3), c.expire_time`, [vipId, vipId, vipId, mid]) : [];
     cards.forEach(c => { const why = cardBlockReason(c, date); c.usable = !why; c.reason = why; });
     const mine = vipId ? await db.query(
       `SELECT id, coach_name, course_title, from_time, to_time, status FROM biz_ptrain_bespeak_record
@@ -346,8 +351,13 @@ async function createPtBooking({ mid, clubId, vipId, coachId, courseId, date, fr
   if (!course) throw new BizError('课程不存在');
   const coachIds = JSON.parse(course.coach_ids || '[]');
   if (coachIds.length && !coachIds.includes(coach.id)) throw new BizError('该教练不授此课程');
-  const card = await db.queryOne('SELECT * FROM biz_member_card WHERE id=? AND vip_id=?', [cardId, vipId]);
-  if (!card) throw new BizError('支付卡不存在');
+  const card = await db.queryOne(
+    `SELECT c.*, IF(c.vip_id=?, 0, 1) AS is_shared, v.realname AS owner_name
+     FROM biz_member_card c
+     JOIN biz_vip_user v ON v.id = c.vip_id
+     WHERE c.id=? AND (c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?))`,
+    [vipId, cardId, vipId, vipId]);
+  if (!card) throw new BizError('支付卡不存在或无权使用');
   // 2026-09-21: 任何卡种都能约任何课程; 次卡/私教卡按次扣, 时间卡不扣次, 储值卡看余额
   const cardWhy = cardBlockReason(card, date);
   if (cardWhy) throw new BizError(`该卡${cardWhy}`);
@@ -633,7 +643,12 @@ r.post('/ptrain-records/manual', staffAuth('admin', 'manager'), async (req, res,
     const { vip_id, coach_id, card_id, costs = 1, remark, date } = req.body;
     const vip = await db.queryOne('SELECT * FROM biz_vip_user WHERE id=? AND merchant_id=?', [vip_id, req.user.mid]);
     const coach = await db.queryOne('SELECT * FROM biz_club_coach WHERE id=?', [coach_id]);
-    let card = await db.queryOne('SELECT * FROM biz_member_card WHERE id=? AND vip_id=?', [card_id, vip_id]);
+    let card = await db.queryOne(
+      `SELECT c.*, IF(c.vip_id=?, 0, 1) AS is_shared, v.realname AS owner_name
+       FROM biz_member_card c
+       JOIN biz_vip_user v ON v.id = c.vip_id
+       WHERE c.id=? AND (c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?))`,
+      [vip_id, card_id, vip_id, vip_id]);
     if (!vip || !coach || !card) throw new BizError('参数有误');
     if (card.status === 0) card = await activateCard(card.id);
     if (card.left_counts < costs) throw new BizError('卡剩余课时不足');

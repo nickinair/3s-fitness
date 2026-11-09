@@ -47,8 +47,11 @@ function serveIndex(app_) {
     res.type('html').send(indexCache[app_]);
   };
 }
-app.use('/static', express.static(path.join(web, 'static')));
-app.use('/uploads', express.static(path.join(web, 'uploads')));
+app.use('/static', express.static(path.join(web, 'static'), { maxAge: '30d' }));
+if (fs.existsSync('/data/uploads')) {
+  app.use('/uploads', express.static('/data/uploads', { maxAge: '365d', immutable: true }));
+}
+app.use('/uploads', express.static(path.join(web, 'uploads'), { maxAge: '365d', immutable: true }));
 for (const a of ['admin', 'platform', 'm']) {
   // 无尾斜杠 → 302 到带斜杠(保证相对路径 js/css 正确); 带斜杠 → 注入版本号的 index.html
   app.get(`/${a}`, (req, res) => (req.originalUrl.split('?')[0].endsWith('/') ? serveIndex(a)(req, res) : res.redirect(`/${a}/`)));

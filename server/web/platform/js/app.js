@@ -269,29 +269,73 @@
   };
 
   // ---------- 日志监控 ----------
+  const MEMBER_ACTIONS = ['会员登录', '会员注册', '会员约私教', '会员取消私教', '会员确认消课', '会员约团课', '会员取消团课', '会员签到', '会员签署合同', '会员购卡意向', '会员查看计划', '会员完善资料', '会员上传风采'];
+  const STAFF_ACTIONS = ['登录', '私教代约', '代确认消课', '确认私教预约', '开卡', '续卡', '改卡', '停卡', '退卡', '自定义工作台', '上传会员训练风采', '删除会员训练风采', '新增教练', '新增员工', '更新员工', '新增卡类型', '更新卡类型', '更新门店信息', '开通商户', '更新商户'];
+
   const LogsPage = {
     template: `
       <div class="card">
-        <div class="toolbar">
-          <div class="card-title" style="margin:0">操作日志监控</div>
-          <el-select v-model="merchantId" clearable placeholder="全部商户" style="width:200px" @change="load">
+        <div class="toolbar" style="flex-wrap:wrap;gap:10px">
+          <div class="card-title" style="margin:0;margin-right:auto">操作日志监控</div>
+          <el-radio-group v-model="roleType" @change="onRoleChange">
+            <el-radio-button value="">全部 ({{ list.length }})</el-radio-button>
+            <el-radio-button value="member">健身会员</el-radio-button>
+            <el-radio-button value="staff">员工与管理</el-radio-button>
+          </el-radio-group>
+          <el-select v-model="actionFilter" clearable placeholder="全部动作" style="width:150px" @change="load">
+            <el-option v-for="a in actionOptions" :key="a" :value="a" :label="a" />
+          </el-select>
+          <el-input v-model="keyword" clearable placeholder="搜索姓名/手机号/详情" style="width:190px" @keyup.enter="load" @clear="load" />
+          <el-select v-model="merchantId" clearable placeholder="全部商户" style="width:150px" @change="load">
             <el-option v-for="m in merchants" :key="m.id" :value="m.id" :label="m.name" />
           </el-select>
+          <el-button type="primary" plain @click="load">查询</el-button>
         </div>
-        <el-table :data="list" stripe size="small">
+        <el-table :data="list" stripe size="small" v-loading="loading">
           <el-table-column prop="id" label="ID" width="70" />
           <el-table-column prop="merchant_name" label="商户" width="110"><template #default="{row}">{{ row.merchant_name || '平台' }}</template></el-table-column>
-          <el-table-column prop="username" label="操作人" width="110" />
-          <el-table-column prop="action" label="动作" width="130" />
+          <el-table-column label="操作人" width="150">
+            <template #default="{row}">
+              <span>{{ row.username || '-' }}</span>
+              <el-tag v-if="isMember(row)" type="success" size="small" effect="plain" style="margin-left:6px">会员</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="动作" width="140">
+            <template #default="{row}">
+              <el-tag :type="isMember(row) ? 'success' : 'info'" size="small">{{ row.action }}</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="detail" label="详情" min-width="300" show-overflow-tooltip />
           <el-table-column label="时间" width="150"><template #default="{row}">{{ fmtTime(row.insert_time) }}</template></el-table-column>
         </el-table>
       </div>`,
     setup() {
-      const list = ref([]); const merchants = ref([]); const merchantId = ref(null);
-      const load = async () => { list.value = await api.get('/platform/logs' + (merchantId.value ? `?merchant_id=${merchantId.value}` : '')); };
+      const list = ref([]); const merchants = ref([]); const loading = ref(false);
+      const merchantId = ref(null); const roleType = ref(''); const actionFilter = ref(''); const keyword = ref('');
+      const isMember = (row) => String((row && row.action) || '').startsWith('会员');
+      const actionOptions = Vue.computed(() => {
+        if (roleType.value === 'member') return MEMBER_ACTIONS;
+        if (roleType.value === 'staff') return STAFF_ACTIONS;
+        return [...MEMBER_ACTIONS, ...STAFF_ACTIONS];
+      });
+      const load = async () => {
+        loading.value = true;
+        try {
+          const q = new URLSearchParams();
+          if (merchantId.value) q.set('merchant_id', merchantId.value);
+          if (roleType.value) q.set('role_type', roleType.value);
+          if (actionFilter.value) q.set('action', actionFilter.value);
+          if (keyword.value && keyword.value.trim()) q.set('keyword', keyword.value.trim());
+          const qs = q.toString();
+          list.value = await api.get('/platform/logs' + (qs ? `?${qs}` : ''));
+        } finally { loading.value = false; }
+      };
+      const onRoleChange = () => {
+        if (actionFilter.value && !actionOptions.value.includes(actionFilter.value)) actionFilter.value = '';
+        load();
+      };
       onMounted(async () => { load(); merchants.value = await api.get('/platform/merchants'); });
-      return { list, merchants, merchantId, load, fmtTime };
+      return { list, merchants, loading, merchantId, roleType, actionFilter, keyword, actionOptions, isMember, onRoleChange, load, fmtTime };
     },
   };
 

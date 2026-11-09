@@ -21,9 +21,14 @@ const fmt = (d) => dayjs(d).format('YYYY-MM-DD HH:mm:ss');
 async function logAction(req, action, detail = '') {
   try {
     const u = req.user || {};
+    let name = u.name || '';
+    if (!name && u.vip) {
+      const v = await db.queryOne('SELECT realname,nickname,phone FROM biz_vip_user WHERE id=?', [u.vip]);
+      if (v) name = v.realname || v.nickname || v.phone || ('会员#' + u.vip);
+    }
     await db.insert(
       'INSERT INTO sys_log (merchant_id,club_id,user_id,username,action,detail) VALUES (?,?,?,?,?,?)',
-      [u.mid || 0, u.cid || 0, u.uid || u.vip || 0, u.name || '', action, String(detail).slice(0, 490)]);
+      [u.mid || 1, u.cid || req.clubId || 0, u.uid || u.vip || 0, name, action, String(detail).slice(0, 490)]);
   } catch (e) { /* 日志失败不影响业务 */ }
 }
 
@@ -52,12 +57,12 @@ async function lifecycleTick(force = false) {
     lifecycleTick._lastGrowth = Date.now();
     try { await require('./routes/growth').dailyGrowthTick(); } catch (e) { console.error('growth tick:', e.message); }
   }
-  // 会员到期快照
+  // 会员到期快照 (主卡或共用有效卡的会员均计为在籍)
   await db.exec(`UPDATE biz_vip_user v SET
-    expire_time = (SELECT MAX(expire_time) FROM biz_member_card c WHERE c.vip_id=v.id AND c.status IN (0,1,3)),
+    expire_time = (SELECT MAX(expire_time) FROM biz_member_card c WHERE (c.vip_id=v.id OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=v.id)) AND c.status IN (0,1,3)),
     expire_status = CASE
-      WHEN EXISTS (SELECT 1 FROM biz_member_card c WHERE c.vip_id=v.id AND c.status IN (0,1,3)) THEN 1
-      WHEN EXISTS (SELECT 1 FROM biz_member_card c WHERE c.vip_id=v.id) THEN 2
+      WHEN EXISTS (SELECT 1 FROM biz_member_card c WHERE (c.vip_id=v.id OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=v.id)) AND c.status IN (0,1,3)) THEN 1
+      WHEN EXISTS (SELECT 1 FROM biz_member_card c WHERE (c.vip_id=v.id OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=v.id))) THEN 2
       ELSE 0 END`);
 }
 

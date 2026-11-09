@@ -336,7 +336,7 @@ window.Pages.StaffMemberDetail = {
     '          <van-image :src="photoForm.photo_url" width="100" height="100" fit="cover"/>',
     '          <div @click="photoForm.photo_url=\'\'" style="position:absolute;top:0;right:0;background:rgba(0,0,0,0.6);color:#fff;width:22px;height:22px;line-height:20px;text-align:center;font-size:14px;cursor:pointer">×</div>',
     '        </div>',
-    '        <van-uploader v-else :after-read="afterReadTrainingPhoto" accept="image/*" :max-size="5 * 1024 * 1024" @oversize="vant.showToast(\'图片不能超过5MB\')">',
+    '        <van-uploader v-else :after-read="afterReadTrainingPhoto" accept="image/*" :max-size="20 * 1024 * 1024" @oversize="vant.showToast(\'图片不能超过20MB\')">',
     '          <div style="width:100px;height:100px;border:1.5px dashed var(--brand);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--brand);background:var(--brand-soft)">',
     '            <van-icon name="photograph" size="28"/>',
     '            <span style="font-size:11px;font-weight:600;margin-top:4px">{{ photoUploading ? \'上传中...\' : \'选择照片\' }}</span>',

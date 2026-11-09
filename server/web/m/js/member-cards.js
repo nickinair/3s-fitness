@@ -7,15 +7,23 @@ window.Pages.MemberCards = {
     '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else>',
     '    <van-empty v-if="!list.length" description="暂无会员卡"><van-button type="primary" round size="small" to="/buy" style="min-width:120px">去买卡</van-button></van-empty>',
-    '    <div v-for="c in list" :key="c.id" class="vip-face block" :class="H.faceCls(c)" @click="$router.push(\'/card/\'+c.id)">',
+    '    <div v-for="(c, idx) in list" :key="c.id" class="vip-face block is-link" :class="H.faceCls(c, idx)" @click="$router.push(\'/card/\'+c.id)">',
     '      <div class="flex">',
     '        <span class="kind">{{ DICT.cardKind[c.card_kind] }}</span>',
+    '        <span v-if="c.is_shared" style="margin-left:6px;font-size:11px;background:rgba(255,255,255,0.25);border-radius:4px;padding:2px 6px">家庭共用</span>',
     '        <div class="flex1"></div>',
     '        <d-tag dict="cardStatus" :v="c.status"></d-tag>',
     '      </div>',
     '      <div class="name">{{ c.card_type_name }}</div>',
     '      <div class="left">{{ H.cardLeft(c) }}</div>',
-    '      <div class="exp">{{ H.cardExp(c) }} · 合同号 {{ c.contract_number }}</div>',
+    '      <div class="exp">',
+    '        <template v-if="c.is_shared">主卡人: {{ c.owner_name }} · </template>',
+    '        {{ H.cardExp(c) }} · 合同号 {{ c.contract_number }}',
+    '      </div>',
+    '      <van-icon name="arrow" class="vip-arrow"/>',
+    '    </div>',
+    '    <div v-if="list.length" class="vip-add block" @click="$router.push(\'/buy\')">',
+    '      <van-icon name="plus" size="17"/><span>新增会员卡</span>',
     '    </div>',
     '  </template>',
     '</div>',
@@ -27,15 +35,17 @@ window.Pages.MemberCards = {
 };
 
 window.Pages.MemberCardDetail = {
-  data() { return { card: null, recharges: [], spends: [], loading: true, tab: 0 }; },
+  data() { return { card: null, recharges: [], spends: [], shared_users: [], loading: true, tab: 0 }; },
   template: [
     '<div class="page">',
     '  <m-nav title="会员卡详情"></m-nav>',
     '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '  <template v-else-if="card">',
+    '    <van-notice-bar v-if="card.is_shared" left-icon="info-o" :text="\'此卡由 \'+card.owner_name+\' 共享给您使用，约课与签到自动扣减此卡\'" style="margin-bottom:10px;border-radius:8px"/>',
     '    <div class="vip-face block" :class="H.faceCls(card)">',
     '      <div class="flex">',
     '        <span class="kind">{{ DICT.cardKind[card.card_kind] }}</span>',
+    '        <span v-if="card.is_shared" style="margin-left:6px;font-size:11px;background:rgba(255,255,255,0.25);border-radius:4px;padding:2px 6px">家庭共用</span>',
     '        <div class="flex1"></div>',
     '        <d-tag dict="cardStatus" :v="card.status"></d-tag>',
     '      </div>',
@@ -44,6 +54,8 @@ window.Pages.MemberCardDetail = {
     '      <div class="exp">{{ H.cardExp(card) }}</div>',
     '    </div>',
     '    <div class="card-box" style="padding:4px 8px">',
+    '      <van-cell v-if="card.is_shared" title="主卡人" :value="card.owner_name" />',
+    '      <van-cell v-else-if="shared_users.length" title="家庭共享成员" :value="shared_users.map(u => u.realname + \'(\' + (u.relation || \'家属\') + \')\').join(\'、\')" />',
     '      <van-cell title="合同号" :value="card.contract_number" />',
     '      <van-cell title="开卡时间" :value="card.open_card_time ? H.full(card.open_card_time) : DICT.openMode[card.open_card_mode]" />',
     '      <van-cell title="到期时间" :value="card.expire_time ? H.full(card.expire_time) : \'未开卡\'" />',
@@ -61,7 +73,7 @@ window.Pages.MemberCardDetail = {
     '        </van-tab>',
     '        <van-tab :title="\'耗卡流水(\'+spends.length+\')\'">',
     '          <van-empty v-if="!spends.length" description="暂无耗卡流水" image-size="60"/>',
-    '          <van-cell v-for="s in spends" :key="s.id" :title="DICT.spendScene[s.scene]" :label="H.full(s.insert_time) + (s.coach_name ? \' · \'+s.coach_name : \'\')">',
+    '          <van-cell v-for="s in spends" :key="s.id" :title="DICT.spendScene[s.scene]" :label="H.full(s.insert_time) + (s.coach_name ? \' · \'+s.coach_name : \'\') + (s.realname ? \' · 使用人: \'+s.realname : \'\')">',
     '            <template #value><span>{{ s.costs ? \'-\'+H.num(s.costs)+\'次\' : \'\' }} {{ H.money(s.spend_money) }}</span></template>',
     '          </van-cell>',
     '        </van-tab>',
@@ -74,6 +86,7 @@ window.Pages.MemberCardDetail = {
     try {
       const d = await API.get('/member/my-cards/' + this.$route.params.id);
       this.card = d.card; this.recharges = d.recharges || []; this.spends = d.spends || [];
+      this.shared_users = d.shared_users || [];
     } finally { this.loading = false; }
   },
 };

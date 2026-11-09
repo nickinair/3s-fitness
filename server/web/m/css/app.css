@@ -29,8 +29,14 @@
 html, body { margin: 0; padding: 0; }
 body { background: var(--c-outer); font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
 #app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: var(--c-bg); box-shadow: 0 0 28px rgba(0,0,0,.12); position: relative; }
-.page { min-height: 100vh; padding-bottom: 24px; }
+.page { min-height: 100vh; padding-bottom: 24px; display: flow-root; }
 .page.has-tabbar { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px) * 0.5); }
+
+/* 小程序 web-view 内顶部已有微信原生状态栏与导航栏: 安全区与 H5 顶栏高度归零, 消除原生顶栏下方的空白间隙 */
+html.is-mp { --safe-top: 0px; --nav-h: 0px; }
+html.is-mp .mn-head { padding-top: 12px; }
+html.is-mp .staff-hero { padding-top: 14px; }
+html.is-mp .home-hero { padding-top: 14px; }
 
 /* 顶部导航 */
 .m-nav { position: sticky; top: 0; z-index: 100; padding-top: var(--safe-top); background: #fff; }
@@ -422,7 +428,13 @@ body { background: var(--c-outer); font-family: -apple-system, BlinkMacSystemFon
 
 /* 我的会员卡: 末尾的"新增"卡位 */
 .vip-add { flex: 0 0 132px; border-radius: 14px; border: 1.5px dashed var(--c-text-4); background: #fff; color: var(--brand);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 108px; font-size: 13px; gap: 6px; }
+  display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 108px; font-size: 13px; gap: 6px; cursor: pointer; }
+.vip-add.block { flex: none; width: auto; margin: 12px 12px 20px; min-height: 54px; border-radius: 16px;
+  flex-direction: row; font-size: 14px; font-weight: 600; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.03); }
+.vip-add:active { background: var(--c-panel); }
+.vip-face.is-link { padding-right: 36px; cursor: pointer; }
+.vip-face .vip-arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 16px; color: rgba(255,255,255,.82); filter: drop-shadow(0 1px 4px rgba(0,0,0,.45)); pointer-events: none; }
 
 /* 常用功能图标: 统一品牌色, 去掉多色 */
 .quick-grid { margin: 0; box-shadow: none; }
@@ -923,7 +935,7 @@ body:has(.login-page) { background: var(--c-card); }
 .mh-shade { position: absolute; inset: 0; pointer-events: none; background:
   linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 24%),
   radial-gradient(ellipse 75% 32% at 50% 42%, rgba(0,0,0,.38), rgba(0,0,0,0) 72%),
-  linear-gradient(180deg, rgba(244,244,244,0) 66%, rgba(244,244,244,.5) 86%, var(--c-bg) 100%); }
+  linear-gradient(180deg, rgba(244,244,244,0) 86%, rgba(244,244,244,.28) 94%, var(--c-bg) 99.5%, var(--c-bg) 100%); }
 .mh-top { position: absolute; left: 16px; right: 16px; top: calc(var(--safe-top) + 14px); z-index: 2; display: flex; align-items: center; color: #fff; }
 .mh-top .m-avatar { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.5); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .mh-hello { font-size: 15px; font-weight: 700; text-shadow: 0 1px 6px rgba(0,0,0,.35); }
@@ -951,6 +963,10 @@ body:has(.login-page) { background: var(--c-card); }
 .mh-club-bar { display: flex; align-items: center; padding: 11px 14px; background: var(--brand); color: #fff; font-size: 13.5px; cursor: pointer; }
 .mh-club-txt { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mh-club-act { flex-shrink: 0; margin-left: 10px; font-size: 12.5px; }
+.mh-club-sub { display: flex; align-items: center; padding: 10px 14px 2px; font-size: 12.5px; color: var(--c-title); cursor: pointer; }
+.mh-club-sub:active { opacity: .65; }
+.mh-club-sub-txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mh-club-sub-more { flex-shrink: 0; margin-left: 8px; font-size: 12px; color: var(--c-text-3); display: inline-flex; align-items: center; gap: 2px; }
 .mh-club-body { padding: 10px 10px 12px; }
 .mh-icons { display: flex; overflow-x: auto; padding: 16px 2px 12px; border-radius: 12px; background: var(--c-panel);
   scrollbar-width: none; -webkit-overflow-scrolling: touch; }
@@ -965,36 +981,78 @@ body:has(.login-page) { background: var(--c-card); }
 .mh-ic .s { font-size: 10.5px; color: var(--c-text-4); margin-top: 3px; white-space: nowrap; }
 .mh-track { width: 36px; height: 3px; margin: 10px auto 0; border-radius: 2px; background: var(--c-line); overflow: hidden; }
 .mh-track i { display: block; height: 100%; border-radius: 2px; background: var(--c-title); }
-.mh-more { text-align: center; font-size: 12px; letter-spacing: 1px; color: var(--c-text-4); padding: 16px 0 6px; cursor: pointer; }
+.mh-more { text-align: center; font-size: 12px; letter-spacing: 1px; color: var(--c-text-4); padding: 14px 0 8px; margin-bottom: calc(64px + env(safe-area-inset-bottom, 0px) * .2); cursor: pointer; }
 .mh-banners { position: relative; margin: 0 12px; }
 @media (prefers-reduced-motion: reduce) { .mh-video { transition: none; } }
 
-/* ===== 会员卡面 & 活动 Banner 质感升级(参考 M Stand「潮流周边」按钮):
-   左侧纯色托住文字, 右侧实景照片渐显 + 3S Logo 水印若隐若现。照片复用首页视频的封面图, 无额外下载 ===== */
-.vip-face { --k-rgb: 20, 20, 20; --k-img: none; isolation: isolate;
+/* ===== 会员卡面 & 购卡卡片 & 活动 Banner 质感升级:
+   全幅复用首页视频首帧作为卡面背景 + 深色渐变加深 + 磨砂玻璃半透明层(backdrop-filter) + 3S Logo 水印 ===== */
+.vip-face { --k-rgb: 18, 20, 24; --k-img: url(/static/videos/dumbbell-poster.jpg); isolation: isolate;
+  border-radius: 16px;
+  box-shadow: 0 8px 22px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.22), inset 0 0 0 1px rgba(255,255,255,.08);
   background:
-    linear-gradient(160deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 38%),
-    linear-gradient(90deg, rgb(var(--k-rgb)) 32%, rgba(var(--k-rgb), .62) 62%, rgba(var(--k-rgb), .12) 100%),
-    var(--k-img) right center / auto 100% no-repeat,
+    linear-gradient(135deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,.03) 36%, rgba(255,255,255,0) 65%),
+    linear-gradient(100deg, rgba(var(--k-rgb), .88) 0%, rgba(var(--k-rgb), .72) 52%, rgba(var(--k-rgb), .46) 100%),
+    var(--k-img) center / cover no-repeat,
     rgb(var(--k-rgb)); }
 .vip-face::after { content: ''; position: absolute; z-index: -1; right: -16px; bottom: -14px; width: 128px; height: 72px;
-  background: url(/static/logo-white.png) center / contain no-repeat; opacity: .13; transform: rotate(-10deg); pointer-events: none; }
+  background: url(/static/logo-white.png) center / contain no-repeat; opacity: .14; transform: rotate(-10deg); pointer-events: none; }
 .vip-face.block::after { width: 168px; height: 95px; right: -18px; bottom: -16px; }
-.vip-face .name, .vip-face .left { text-shadow: 0 1px 6px rgba(0,0,0,.45); }
-.vip-face .kind { background: rgba(0,0,0,.25); }
-.vip-face.face-k4 { --k-rgb: 18, 18, 18;  --k-img: url(/static/videos/dumbbell-poster.jpg); }   /* 私教卡 */
-.vip-face.face-k1 { --k-rgb: 30, 34, 38;  --k-img: url(/static/videos/hanteln2-poster.jpg); }   /* 次卡 */
-.vip-face.face-k2 { --k-rgb: 10, 10, 10;  --k-img: url(/static/videos/21Run01-poster.jpg); }    /* 时间卡 */
-.vip-face.face-k3 { --k-rgb: 34, 30, 27;  --k-img: url(/static/videos/MR8_8170-poster.jpg); }   /* 储值卡 */
-.vip-face.face-dead { --k-rgb: 168, 168, 168; --k-img: none; }                                    /* 过期/停用/退卡: 纯灰, 一眼区分 */
+.vip-face .name, .vip-face .left { text-shadow: 0 2px 8px rgba(0,0,0,.55); }
+.vip-face .exp { opacity: .82; text-shadow: 0 1px 4px rgba(0,0,0,.45); }
+.vip-face .kind { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); border-radius: 999px;
+  padding: 2px 9px; font-size: 11px; font-weight: 600; letter-spacing: .5px;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.vip-face .van-tag { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.vip-face .van-tag--primary:not(.van-tag--plain), .vip-face .van-tag--success:not(.van-tag--plain) {
+  background: rgba(255,255,255,.22); color: #fff; border: 1px solid rgba(255,255,255,.35); }
+.vip-face.face-k4 { --k-rgb: 16, 18, 22; --k-img: url(/static/videos/dumbbell-poster.jpg); }   /* 私教卡 */
+.vip-face.face-k1 { --k-rgb: 24, 28, 34; --k-img: url(/static/videos/hanteln2-poster.jpg); }   /* 次卡 */
+.vip-face.face-k2 { --k-rgb: 14, 14, 16; --k-img: url(/static/videos/21Run01-poster.jpg); }    /* 时间卡 */
+.vip-face.face-k3 { --k-rgb: 30, 26, 23; --k-img: url(/static/videos/MR8_8170-poster.jpg); }   /* 储值卡 */
+/* 同类卡片列表按序号轮换 4 张首页视频首帧封面, 避免同一 Tab 下背景千篇一律 */
+.vip-face.face-v0 { --k-img: url(/static/videos/dumbbell-poster.jpg); }
+.vip-face.face-v1 { --k-img: url(/static/videos/hanteln2-poster.jpg); }
+.vip-face.face-v2 { --k-img: url(/static/videos/21Run01-poster.jpg); }
+.vip-face.face-v3 { --k-img: url(/static/videos/MR8_8170-poster.jpg); }
+.vip-face.face-dead { --k-rgb: 138, 140, 144; --k-img: none; }                                 /* 过期/停用/退卡: 纯灰, 一眼区分 */
 .vip-face.face-dead::after { opacity: .22; }
 
-/* 活动 Banner(未上传图片的默认样式): 替换原来的 3D 插画为实景照片渐显 + 右上角 Logo 水印 */
-.banner-item:not(.has-img) { isolation: isolate; }
-.banner-item:not(.has-img)::after { z-index: 0; background-size: auto 100%, auto 100%; background-position: 0 0, right center; background-repeat: no-repeat; }
-.banner-g0::after { background-image: linear-gradient(90deg, #000 30%, rgba(0,0,0,.6) 58%, rgba(0,0,0,.08) 100%), url(/static/videos/dumbbell-poster.jpg) !important; background-size: 100% 100%, auto 100% !important; }
-.banner-g1::after { background-image: linear-gradient(90deg, #15181b 30%, rgba(21,24,27,.6) 58%, rgba(21,24,27,.08) 100%), url(/static/videos/hanteln2-poster.jpg) !important; background-size: 100% 100%, auto 100% !important; }
-.banner-g2::after { background-image: linear-gradient(90deg, #0a0a0a 30%, rgba(10,10,10,.6) 58%, rgba(10,10,10,.08) 100%), url(/static/videos/21Run01-poster.jpg) !important; background-size: 100% 100%, auto 100% !important; }
+/* 购卡页卡片(.buy-card): 视频首帧加深底 + 磨砂胶囊标签 + 完整保留名称/简介/有效期/次数/赠金/原价/现价/意向按钮 */
+.buy-card { margin: 12px 12px; padding: 16px 16px 14px; cursor: pointer; transition: transform .15s ease; }
+.buy-card:active { transform: scale(.985); }
+.buy-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.buy-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.buy-intent-tag { display: inline-flex; align-items: center; font-size: 10.5px; font-weight: 600; color: #fff;
+  background: rgba(255,255,255,.22); border: 1px solid rgba(255,255,255,.38); border-radius: 999px; padding: 1.5px 8px;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.buy-price-box { display: flex; align-items: baseline; gap: 6px; flex-shrink: 0; }
+.buy-price { font-size: 21px; font-weight: 800; color: #fff; line-height: 1; font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 10px rgba(0,0,0,.55); }
+.buy-orig { font-size: 12px; color: rgba(255,255,255,.58); text-decoration: line-through; }
+.buy-title { font-size: 17px; font-weight: 700; margin-top: 9px; line-height: 1.3; color: #fff; }
+.buy-intro { margin-top: 6px; font-size: 12px; line-height: 1.5; color: rgba(255,255,255,.78);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  text-shadow: 0 1px 4px rgba(0,0,0,.45); }
+.buy-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.buy-spec { font-size: 11.5px; color: rgba(255,255,255,.92); background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 4px 11px;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(100% - 92px); }
+.buy-btn { flex-shrink: 0; appearance: none; outline: none; cursor: pointer;
+  background: rgba(255,255,255,.22); color: #fff; border: 1px solid rgba(255,255,255,.45);
+  border-radius: 999px; padding: 6px 16px; font-size: 12.5px; font-weight: 600; line-height: 1.2;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.25); }
+.buy-btn:active { background: rgba(255,255,255,.32); }
+.buy-btn.is-done { background: rgba(255,255,255,.10); color: rgba(255,255,255,.55); border-color: rgba(255,255,255,.18); box-shadow: none; cursor: default; }
+
+/* 活动 Banner(未上传图片的默认样式): 全幅视频首帧背景加深 + 右上角 Logo 水印 */
+.banner-item:not(.has-img) { isolation: isolate; box-shadow: 0 8px 22px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2); }
+.banner-item:not(.has-img)::after { z-index: 0; background-size: 100% 100%, 100% 100%, cover !important; background-position: 0 0, 0 0, center !important; background-repeat: no-repeat; }
+.banner-g0::after { background-image: linear-gradient(135deg, rgba(255,255,255,.15) 0%, transparent 60%), linear-gradient(100deg, rgba(16,18,22,.88) 0%, rgba(16,18,22,.70) 55%, rgba(16,18,22,.42) 100%), url(/static/videos/dumbbell-poster.jpg) !important; }
+.banner-g1::after { background-image: linear-gradient(135deg, rgba(255,255,255,.15) 0%, transparent 60%), linear-gradient(100deg, rgba(24,28,34,.88) 0%, rgba(24,28,34,.70) 55%, rgba(24,28,34,.42) 100%), url(/static/videos/hanteln2-poster.jpg) !important; }
+.banner-g2::after { background-image: linear-gradient(135deg, rgba(255,255,255,.15) 0%, transparent 60%), linear-gradient(100deg, rgba(14,14,16,.88) 0%, rgba(14,14,16,.70) 55%, rgba(14,14,16,.42) 100%), url(/static/videos/21Run01-poster.jpg) !important; }
 .banner-item:not(.has-img)::before { content: ''; position: absolute; z-index: 1; right: 14px; top: 12px; width: 64px; height: 36px;
   background: url(/static/logo-white.png) center / contain no-repeat; opacity: .32; pointer-events: none; }
 .banner-item:not(.has-img) .banner-mask { display: none; }
@@ -1033,6 +1091,11 @@ body:has(.login-page) { background: var(--c-card); }
 .mn-pill:active { background: var(--c-panel); }
 /* 会员卡行 / 空态 */
 .mn-crow { display: flex; align-items: center; gap: 10px; padding: 12px 0 0; margin-top: 12px; border-top: 1px solid var(--c-line-2); }
+.mn-vip-row { display: flex; align-items: center; gap: 10px; flex: none; width: auto; min-height: 0;
+  margin-top: 10px; padding: 13px 14px; border-radius: 13px; }
+.mn-vip-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.mn-vip-name { font-size: 15px; font-weight: 700; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
+.mn-vip-sub { font-size: 12px; color: rgba(255,255,255,.82); margin-top: 5px; text-shadow: 0 1px 4px rgba(0,0,0,.45); }
 .mn-empty { font-size: 13.5px; color: var(--c-text-3); margin-top: 14px; }
 .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 左右两栏 + 黑色胶囊(「余额 / 积分」卡) */
@@ -1050,3 +1113,35 @@ body:has(.login-page) { background: var(--c-card); }
 .mn-gi .van-icon { font-size: 24px; color: var(--c-title); }
 .mn-logout { margin: 8px 12px 0; text-align: center; padding: 14px 0; font-size: 14px; color: var(--c-text-3); }
 .mn-logout:active { color: var(--danger); }
+
+/* ===== 员工工作台: 视频首帧顶栏 + 低饱和色调图标(克制地加一点颜色, 整体仍以黑白为主) ===== */
+.staff-hero { position: relative; color: #fff;
+  background:
+    linear-gradient(180deg, rgba(244,244,244,0) 64%, var(--c-bg) 100%),
+    linear-gradient(100deg, rgba(20,22,24,.86) 0%, rgba(20,22,24,.68) 55%, rgba(20,22,24,.46) 100%),
+    url(/static/videos/dumbbell-poster.jpg) center 40% / cover no-repeat,
+    #1c1e20; }
+.staff-hero::after { content: ''; position: absolute; right: 10px; top: calc(var(--safe-top) + 8px); width: 92px; height: 52px;
+  background: url(/static/logo-white.png) center / contain no-repeat; opacity: .22; pointer-events: none; }
+html.is-mp .staff-hero::after { top: 8px; }
+.staff-hero .m-avatar { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.55);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.staff-hero .role-tag { background: rgba(255,255,255,.92); color: #1c1e20; font-weight: 600; }
+.staff-hero .flex1 > div:first-child { text-shadow: 0 1px 6px rgba(0,0,0,.35); }
+.staff-hero + .stat-row { box-shadow: 0 6px 22px rgba(0,0,0,.06); }
+
+/* 色调: 近乎中性灰, 只留一丝冷暖倾向用于区分类别(整体仍偏黑白) */
+[data-tone="blue"]   { --t-bg: #ECEEEF; --t-fg: #5F676E; }
+[data-tone="sand"]   { --t-bg: #EFEEEB; --t-fg: #716B63; }
+[data-tone="sage"]   { --t-bg: #ECEEEC; --t-fg: #646B66; }
+[data-tone="clay"]   { --t-bg: #EFECEA; --t-fg: #766A65; }
+[data-tone="rose"]   { --t-bg: #EFECED; --t-fg: #726A6D; }
+[data-tone="violet"] { --t-bg: #EDEDEF; --t-fg: #676873; }
+[data-tone="slate"]  { --t-bg: #EEEEEF; --t-fg: #606367; }
+.wb-cell[data-tone] .wb-ic { width: 42px; height: 42px; border-radius: 14px; background: var(--t-bg); }
+.wb-cell[data-tone] .wb-ic .van-icon { color: var(--t-fg); font-size: 22px !important; }
+.wb-cell[data-tone] .wb-tx { margin-top: 7px; }
+.fn-ico { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 8px;
+  margin-right: 8px; vertical-align: -6px; font-size: 14px; background: var(--t-bg, var(--brand-soft)); color: var(--t-fg, var(--brand)); }
+/* 主按钮: 浅色那个用极淡的暖灰, 深色主按钮保持品牌黑 */
+.act-panel .wb-act:not(.primary) { background: #F1F0EE; color: #4A4744; border-color: #E4E2DF; }

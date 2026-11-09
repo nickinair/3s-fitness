@@ -109,18 +109,23 @@
         this.form.training_frequency = val;
       },
       async afterUpload(fileItem) {
-        fileItem.status = 'uploading';
-        fileItem.message = '上传中...';
-        try {
-          const res = await API.upload(fileItem.file);
-          fileItem.status = 'done';
-          fileItem.url = res.url;
-          this.syncPhotos();
-          vant.showToast('图片上传成功');
-        } catch (e) {
-          fileItem.status = 'failed';
-          fileItem.message = '上传失败';
-          vant.showToast(e.message || '上传失败');
+        const items = Array.isArray(fileItem) ? fileItem : [fileItem];
+        for (const item of items) {
+          if (!item) continue;
+          item.status = 'uploading';
+          item.message = '上传中...';
+          try {
+            const res = await API.upload(item.file);
+            const url = typeof res === 'string' ? res : (res && res.url);
+            item.status = 'done';
+            item.url = url;
+            this.syncPhotos();
+            vant.showToast('图片上传成功');
+          } catch (e) {
+            item.status = 'failed';
+            item.message = '上传失败';
+            vant.showToast(e.message || '上传失败');
+          }
         }
       },
       onDeletePhoto(file) {
@@ -169,16 +174,7 @@
     template: `
     <div class="complete-profile-page" style="min-height:100vh;background:var(--c-bg);padding-bottom:80px">
       <!-- 顶部沉浸式导航栏 -->
-      <van-nav-bar
-        class="m-nav"
-        title="完善档案 · 领专属积分"
-        left-arrow
-        @click-left="$router.back()"
-      >
-        <template #right>
-          <span style="color:var(--c-title);font-size:13px" @click="goToHome">前往首页</span>
-        </template>
-      </van-nav-bar>
+      <m-nav title="完善档案 · 领专属积分"></m-nav>
 
       <van-loading v-if="loading" style="text-align:center;padding:60px 0" vertical>正在加载会员专属档案...</van-loading>
 

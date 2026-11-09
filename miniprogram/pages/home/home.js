@@ -22,11 +22,12 @@ const VIDEOS = ['dumbbell', 'hanteln2', 'MR8_8170', '21Run01'].map(n => ({
 const CLIP_SEC = 8;
 const FADE_MS = 900;
 const KIND_NAME = { 1: '次卡', 2: '时间卡', 3: '储值卡', 4: '私教卡' };
-// 卡面: [底色 rgb, 右侧实景照片]; 与 H5 app.css 的 .vip-face.face-k* 保持一致
+// 卡面: [底色 rgb, 默认实景照片]; 列表按卡片序号轮换 4 张视频首帧封面, 与 H5 app.css 的 .vip-face 保持一致
+const POSTERS = ['dumbbell', 'hanteln2', '21Run01', 'MR8_8170'];
 const FACE = {
-  4: ['18,18,18', 'dumbbell'], 1: ['30,34,38', 'hanteln2'], 2: ['10,10,10', '21Run01'], 3: ['34,30,27', 'MR8_8170'],
+  4: ['16,18,22', 'dumbbell'], 1: ['24,28,34', 'hanteln2'], 2: ['14,14,16', '21Run01'], 3: ['30,26,23', 'MR8_8170'],
 };
-const BANNER_BG = [['0,0,0', 'dumbbell'], ['21,24,27', 'hanteln2'], ['10,10,10', '21Run01']];
+const BANNER_BG = [['16,18,22', 'dumbbell'], ['24,28,34', 'hanteln2'], ['14,14,16', '21Run01'], ['30,26,23', 'MR8_8170']];
 const WEEK = '日一二三四五六';
 
 function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -36,18 +37,18 @@ function humanDay(s) {
   const d = parseDay(s); if (!d) return '';
   const t = new Date(); t.setHours(0, 0, 0, 0);
   const diff = Math.round((d - t) / 86400000);
-  if (diff === 0) return '今天'; if (diff === 1) return '明天'; if (diff === 2) return '后天'; if (diff === -1) return '昨天';
-  if (diff > 2 && diff < 7) return '周' + WEEK[d.getDay()];
+  if (diff === 0) return '今天';
+  if (diff === 1) return '明天';
   return (d.getFullYear() === t.getFullYear() ? '' : d.getFullYear() + '-') + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 }
 function hm(s) { const m = String(s || '').slice(10).match(/(\d{1,2}):(\d{2})/); return m ? m[0] : ''; }
 function money(v) { const n = Number(v || 0); return '¥' + (Math.abs(n % 1) > 0.004 ? n.toFixed(2) : String(Math.round(n))); }
 function photoBg(rgb, img) {
-  return 'background-image:linear-gradient(160deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 38%),'
-    + 'linear-gradient(90deg, rgb(' + rgb + ') 32%, rgba(' + rgb + ',.62) 62%, rgba(' + rgb + ',.12) 100%)'
+  return 'background-image:linear-gradient(135deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,.03) 36%, rgba(255,255,255,0) 65%),'
+    + 'linear-gradient(100deg, rgba(' + rgb + ',.88) 0%, rgba(' + rgb + ',.72) 52%, rgba(' + rgb + ',.46) 100%)'
     + (img ? ',url(' + ORIGIN + '/static/videos/' + img + '-poster.jpg)' : '')
-    + ';background-size:100% 100%,100% 100%' + (img ? ',auto 100%' : '')
-    + ';background-position:0 0,0 0' + (img ? ',right center' : '')
+    + ';background-size:100% 100%,100% 100%' + (img ? ',cover' : '')
+    + ';background-position:0 0,0 0' + (img ? ',center' : '')
     + ';background-repeat:no-repeat;background-color:rgb(' + rgb + ');';
 }
 function titleLines(t) {
@@ -62,7 +63,7 @@ Page({
   data: {
     staff: false, logged: false, home: null, loginShow: false,
     name: '欢迎来到3S', initial: '3S', nextText: '登录后即可在线约课', isMember: false,
-    clubText: '加入3S会员 开启你的蜕变之旅', clubAct: '登录/注册',
+    clubText: '加入3S会员 开启你的蜕变之旅', clubAct: '登录/注册', lessonBar: '', lessonMore: '',
     quicks: [], banners: [], notices: [], cards: [],
     capTop: 24, capH: 32, capRight: 100, heroH: 0,
     videos: VIDEOS, layerIdx: [0, 1], layer: 0, vIdx: 0, played: false,
@@ -86,6 +87,10 @@ Page({
       const win = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
       const cap = wx.getMenuButtonBoundingClientRect();
       this.winW = win.windowWidth;
+      this.screenH = win.screenHeight || win.windowHeight || 0;
+      this.safeBottom = (win.safeArea && this.screenH)
+        ? Math.max(0, this.screenH - win.safeArea.bottom)
+        : ((win.safeAreaInsets && win.safeAreaInsets.bottom) || 0);
       if (cap && cap.top) this.setData({ capTop: cap.top, capH: cap.height, capRight: win.windowWidth - cap.left + 8 });
     } catch (e) { /* 用默认值 */ }
     this.renderQuicks(QUICK_DEFAULT, {});
@@ -100,12 +105,21 @@ Page({
 
   onShow() {
     if (this.data.staff) return;
+    this.fitHero();
     this.load();
     if (this.vctx) this.vctx[this.data.layer].play();
   },
 
+  onResize() {
+    if (!this.data.staff) this.fitHero();
+  },
+
   onHide() { if (this.vctx) this.vctx.forEach(v => v.pause()); },
-  onUnload() { clearTimeout(this.fadeT); },
+  onUnload() {
+    clearTimeout(this.fadeT);
+    clearTimeout(this.fitT1);
+    clearTimeout(this.fitT2);
+  },
 
   /* ---------- 数据 ---------- */
   token() { return wx.getStorageSync('mp_token') || ''; },
@@ -145,40 +159,49 @@ Page({
     this.layout = null; this.badges = {};
     this.setData({
       logged: false, home: null, name: '欢迎来到3S', initial: '3S', nextText: '登录后即可在线约课', isMember: false,
-      clubText: '加入3S会员 开启你的蜕变之旅', clubAct: '登录/注册', banners: [], notices: [], cards: [],
-    });
+      clubText: '加入3S会员 开启你的蜕变之旅', clubAct: '登录/注册', lessonBar: '', lessonMore: '', banners: [], notices: [], cards: [],
+    }, () => this.fitHero());
     this.renderQuicks(QUICK_DEFAULT, {});
-    this.fitHero();
   },
 
   renderHome(h) {
     h = h || {};
     const v = h.vip || {};
     const name = v.realname || v.nickname || '会员';
-    const cards = (h.cards || []).map(c => {
+    const cards = (h.cards || []).map((c, idx) => {
       const dead = c.status >= 2 && c.status !== 3;
-      const f = dead ? ['168,168,168', ''] : (FACE[c.card_kind] || FACE[1]);
+      const f = dead ? ['148,148,152', ''] : (FACE[c.card_kind] || FACE[1]);
+      const poster = dead ? '' : POSTERS[(idx + (Number(c.card_kind) || 1)) % POSTERS.length];
       let leftText = '剩余 ' + (c.left_counts == null ? '-' : c.left_counts) + ' 次';
       if (c.card_kind === 2) leftText = '不限次 · 时间卡';
       if (c.card_kind === 3) leftText = '余额 ' + money(c.left_money);
       const expText = c.status === 0
         ? (c.latest_open_time ? '最晚 ' + dateOf(c.latest_open_time) + ' 前开卡' : '待开卡')
         : (c.expire_time ? dateOf(c.expire_time) + ' 到期' : '');
-      return { id: c.id, card_type_name: c.card_type_name, kindName: KIND_NAME[c.card_kind] || '', leftText, expText, cls: dead ? 'dead' : '', bg: photoBg(f[0], f[1]), raw: c };
+      return { id: c.id, card_type_name: c.card_type_name, kindName: KIND_NAME[c.card_kind] || '', leftText, expText, cls: dead ? 'dead' : '', bg: photoBg(f[0], poster), raw: c };
     });
     const isMember = cards.length > 0;
     let nextText = '近一周预约 ' + (h.upcoming || 0) + ' 节';
+    let lessonBar = '', lessonMore = '';
     if (h.nextLesson) {
-      nextText = '下一节 ' + humanDay(h.nextLesson.start_time) + ' ' + hm(h.nextLesson.start_time)
-        + (h.nextLesson.coach_name ? ' · ' + h.nextLesson.coach_name : '');
+      const nl = h.nextLesson;
+      nextText = '下一节 ' + humanDay(nl.start_time) + ' ' + hm(nl.start_time)
+        + (nl.coach_name ? ' · ' + nl.coach_name : '');
+      const timeRange = hm(nl.start_time) + (nl.to_time ? '-' + String(nl.to_time).slice(0, 5) : '');
+      const rawTitle = nl.title || (nl.kind === 'pt' ? '私教课' : '团课');
+      const title = (nl.kind === 'pt' && /1v1.*私教/i.test(rawTitle)) ? '私教课' : rawTitle;
+      const coach = nl.coach_name ? ' · ' + nl.coach_name + '教练' : '';
+      const prefix = nl.status === 0 ? (nl.kind === 'pt' ? '待确认预约：' : '候补中：') : '已约课程：';
+      lessonBar = prefix + humanDay(nl.start_time) + ' ' + timeRange + ' · ' + title + coach;
+      lessonMore = (h.upcoming > 1) ? ('共' + h.upcoming + '节') : '';
     }
     const banners = (h.banners || []).map((b, i) => {
       const img = b.image ? String(b.image) : '';
       const hasImg = img.indexOf('/uploads') === 0 || img.indexOf('/static') === 0 || img.indexOf('http') === 0;
-      const g = BANNER_BG[i % 3];
+      const g = BANNER_BG[i % BANNER_BG.length];
       const bg = hasImg
-        ? 'background-image:linear-gradient(100deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.42) 52%, rgba(0,0,0,.16) 100%),url(' + (img.indexOf('http') === 0 ? img : ORIGIN + img) + ');background-size:100% 100%,cover;background-position:center;'
-        : 'background-image:linear-gradient(90deg, rgb(' + g[0] + ') 30%, rgba(' + g[0] + ',.6) 58%, rgba(' + g[0] + ',.08) 100%),url(' + ORIGIN + '/static/videos/' + g[1] + '-poster.jpg);background-size:100% 100%,auto 100%;background-position:0 0,right center;background-repeat:no-repeat;';
+        ? 'background-image:linear-gradient(100deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,.52) 52%, rgba(0,0,0,.28) 100%),url(' + (img.indexOf('http') === 0 ? img : ORIGIN + img) + ');background-size:100% 100%,cover;background-position:center;'
+        : photoBg(g[0], g[1]);
       return { id: b.id, link: b.link || '', hasImg, bg, lines: titleLines(b.title) };
     });
     const notices = (h.notices || []).map(n => ({ id: n.id, title: n.title, content: n.content, day: humanDay(n.insert_time) }));
@@ -187,10 +210,10 @@ Page({
       logged: true, home: h, name, initial: name.slice(0, 1), nextText, isMember,
       clubText: isMember ? cards[0].card_type_name + ' · ' + cards[0].leftText : '加入3S会员 开启你的蜕变之旅',
       clubAct: isMember ? '我的会员卡' : '去买卡',
+      lessonBar, lessonMore,
       cards, banners, notices,
-    });
+    }, () => this.fitHero());
     this.renderQuicks(this.layout || QUICK_DEFAULT, this.badges);
-    this.fitHero();
   },
 
   renderQuicks(keys, badges) {
@@ -200,20 +223,33 @@ Page({
 
   /* ---------- 布局 ---------- */
   // 首屏高度: 让「上滑探索更多精彩」正好落在底部导航上方(与 H5 fitHero 同一算法)
+  // 兼容从带原生顶部导航栏的 web-view 页(pages/index) reLaunch / navigateBack 回本页(custom 全屏)时的视口过渡期:
+  // 过渡期内视口高度暂未恢复全屏(少一个顶部导航栏约 88~91px), 此时用 screenHeight 推算底部 tabbar 最终位置, 并在过渡结束后复测校准
+  _measureHero() {
+    wx.createSelectorQuery().in(this)
+      .select('#hero').boundingClientRect()
+      .select('#hint').boundingClientRect()
+      .select('#tabbar').boundingClientRect()
+      .exec(([hero, hint, tab]) => {
+        if (!hero || !hint || !tab) return;
+        const expectedTabTop = this.screenH
+          ? (this.screenH - (tab.height || 56) - 8 - Math.round((this.safeBottom || 0) * 0.18))
+          : 0;
+        const tabTop = (expectedTabTop && tab.bottom < this.screenH - 45)
+          ? Math.max(tab.top, expectedTabTop)
+          : tab.top;
+        const below = hint.bottom - hero.bottom;
+        const h = Math.round(tabTop - 4 - below);
+        const heroH = Math.max(300, Math.min(h, 820));
+        if (Math.abs(heroH - this.data.heroH) > 1) this.setData({ heroH });
+      });
+  },
   fitHero() {
-    wx.nextTick(() => {
-      wx.createSelectorQuery().in(this)
-        .select('#hero').boundingClientRect()
-        .select('#hint').boundingClientRect()
-        .select('#tabbar').boundingClientRect()
-        .exec(([hero, hint, tab]) => {
-          if (!hero || !hint || !tab) return;
-          const below = hint.bottom - hero.bottom;
-          const h = Math.round(tab.top - 4 - below);
-          const heroH = Math.max(300, Math.min(h, 820));
-          if (Math.abs(heroH - this.data.heroH) > 1) this.setData({ heroH });
-        });
-    });
+    wx.nextTick(() => this._measureHero());
+    clearTimeout(this.fitT1);
+    clearTimeout(this.fitT2);
+    this.fitT1 = setTimeout(() => this._measureHero(), 150);
+    this.fitT2 = setTimeout(() => this._measureHero(), 380);
   },
   measureIcons() {
     wx.createSelectorQuery().in(this).select('#icons').fields({ size: true, scrollOffset: true }).exec(([r]) => {
@@ -274,6 +310,13 @@ Page({
     const path = e.currentTarget.dataset.path;
     if (!this.token()) { this.openLogin(); return; }
     wx.navigateTo({ url: this.h5Url(path) });
+  },
+  // 底部 tab(约课/私教/我的)是一级页面: 用 redirectTo 替换当前页, 没有右侧滑入动画,
+  // 与 H5 内部 tab 互切(app.js 里 isTabSwitch → MP.go(path, true))保持一致; 回首页由 H5 tabbar 的「首页」reLaunch 回来
+  goTab(e) {
+    const path = e.currentTarget.dataset.path;
+    if (!this.token()) { this.openLogin(); return; }
+    wx.redirectTo({ url: this.h5Url(path) });
   },
   /* ---------- 登录弹层 ---------- */
   openLogin() { this.setData({ loginShow: true }); },

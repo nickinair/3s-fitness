@@ -346,17 +346,25 @@ window.Pages.StaffSmsLogs = {
     '  </template>',
     '</div>',
   ].join('\n'),
+  watch: {
+    'query.keyword'() {
+      clearTimeout(this._kwT);
+      this._kwT = setTimeout(() => this.applyFilter(), 280);
+    },
+  },
   methods: {
     async loadPage(reset) {
-      if (reset) { this.list = []; this.query.page = 1; this.finished = false; }
+      const seq = (this._seq = (this._seq || 0) + 1);
+      if (reset) { this.query.page = 1; this.finished = false; }
       this.loading = true;
       try {
         const d = await API.get('/sms-logs', this.query);
-        this.list = this.list.concat(d.list || []);
+        if (seq !== this._seq) return;
+        this.list = reset ? (d.list || []) : this.list.concat(d.list || []);
         this.total = d.total || 0; this.monthCount = d.monthCount || 0;
         this.query.page += 1;
         if (this.list.length >= this.total || !(d.list || []).length) this.finished = true;
-      } finally { this.loading = false; }
+      } finally { if (seq === this._seq) this.loading = false; }
     },
     exportCsv() {
       var url = '/api/sms-logs?export=csv';
@@ -364,7 +372,7 @@ window.Pages.StaffSmsLogs = {
       if (this.query.keyword) url += '&keyword=' + encodeURIComponent(this.query.keyword);
       window.open(url + '&token=' + encodeURIComponent(Store.token));
     },
-    applyFilter() { this.loadPage(true); },
+    applyFilter() { clearTimeout(this._kwT); this.loadPage(true); },
   },
 };
 
@@ -376,6 +384,7 @@ window.Pages.StaffOpLogs = {
     return {
       raw: [], loading: true,
       role: (Store.user || {}).role,
+      roleType: 'all',
       keyword: '', range: null, calShow: false,
       minDate: new Date(2020, 0, 1), maxDate: new Date(),
       displayCount: 20, loadingMore: false,
@@ -384,9 +393,11 @@ window.Pages.StaffOpLogs = {
   },
   computed: {
     allowed() { return ['admin', 'manager'].includes(this.role); },
-    rangeLabel() { return this.range ? (this.range[0] + ' 至 ' + this.range[1]) : '全部时间（近200条）'; },
+    rangeLabel() { return this.range ? (this.range[0] + ' 至 ' + this.range[1]) : '全部时间（近300条）'; },
     filtered() {
       let rows = this.raw;
+      if (this.roleType === 'member') rows = rows.filter(r => String(r.action || '').indexOf('会员') === 0);
+      else if (this.roleType === 'staff') rows = rows.filter(r => String(r.action || '').indexOf('会员') !== 0);
       if (this.range) {
         const a = this.range[0], b = this.range[1];
         rows = rows.filter(r => { const d = String(r.insert_time || '').slice(0, 10); return d >= a && d <= b; });
@@ -400,24 +411,30 @@ window.Pages.StaffOpLogs = {
   },
   watch: {
     keyword() { this.displayCount = 20; },
+    roleType() { this.displayCount = 20; },
   },
   template: [
     '<div class="page">',
     '  <m-nav title="操作日志"></m-nav>',
     '  <van-empty v-if="!allowed" description="暂无权限查看（仅店长/管理员）"></van-empty>',
     '  <template v-else>',
+    '    <van-tabs v-model:active="roleType" color="var(--brand)" title-active-color="var(--brand)">',
+    '      <van-tab title="全部" name="all"></van-tab>',
+    '      <van-tab title="健身会员" name="member"></van-tab>',
+    '      <van-tab title="员工与管理" name="staff"></van-tab>',
+    '    </van-tabs>',
     '    <div class="card-box" style="margin-bottom:0">',
     '      <van-field :model-value="rangeLabel" label="时间范围" readonly is-link @click="calShow=true"></van-field>',
     '      <div v-if="range" style="text-align:right;padding-top:4px"><span class="brand-text" style="font-size:12px" @click="range=null; displayCount=20">清除日期筛选</span></div>',
     '    </div>',
     '    <van-calendar v-model:show="calShow" type="range" :min-date="minDate" :max-date="maxDate" @confirm="onRangeConfirm"></van-calendar>',
     '    <van-search v-model="keyword" placeholder="操作人/操作/详情关键词"></van-search>',
-    '    <div class="muted" style="padding:0 14px 6px">近200条 · 当前筛选出 {{ filtered.length }} 条</div>',
+    '    <div class="muted" style="padding:0 14px 6px">近300条 · 当前筛选出 {{ filtered.length }} 条</div>',
     '    <div class="rpt-export-row" @click="exportCsv()">导出本期数据 <van-icon name="arrow" size="11"/></div>',
     '    <van-empty v-if="!loading && !display.length" description="暂无操作日志"></van-empty>',
     '    <van-list v-if="display.length" v-model:loading="loadingMore" :finished="listFinished" finished-text="没有更多了" @load="loadMore">',
     '      <div v-for="r in display" :key="r.id" class="rec-item">',
-    '        <div class="head"><span class="name">{{ r.username }}</span><van-tag type="primary" round>{{ r.action }}</van-tag></div>',
+    '        <div class="head"><span class="name">{{ r.username }}</span><van-tag :type="isMember(r) ? \'success\' : \'primary\'" round>{{ r.action }}</van-tag></div>',
     '        <div class="muted mt4" v-if="r.detail">{{ r.detail }}</div>',
     '        <div class="muted mt4">{{ H.full(r.insert_time) }}</div>',
     '      </div>',
@@ -426,6 +443,7 @@ window.Pages.StaffOpLogs = {
     '</div>',
   ].join('\n'),
   methods: {
+    isMember(r) { return String((r && r.action) || '').indexOf('会员') === 0; },
     onRangeConfirm(dates) {
       this.range = [dayjs(dates[0]).format('YYYY-MM-DD'), dayjs(dates[1]).format('YYYY-MM-DD')];
       this.calShow = false;
@@ -437,6 +455,7 @@ window.Pages.StaffOpLogs = {
     },
     exportCsv() {
       var url = '/api/logs?export=csv';
+      if (this.roleType === 'member' || this.roleType === 'staff') url += '&role_type=' + this.roleType;
       if (this.range) url += '&from=' + this.range[0] + '&to=' + this.range[1];
       var kw = this.keyword.trim();
       if (kw) url += '&keyword=' + encodeURIComponent(kw);

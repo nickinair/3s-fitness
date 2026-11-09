@@ -80,7 +80,7 @@ window.Pages.StaffBook = {
     '    </van-tabs>',
     '  </div>',
 
-    '  <div class="flex" style="align-items:center;justify-content:space-between;padding:4px 4px 6px">',
+    '  <div class="flex" style="align-items:center;justify-content:space-between;padding:8px 14px 2px;background:#fff">',
     '    <span class="muted" style="font-size:13px;font-weight:600">{{ H.day(date) }}</span>',
     '    <div style="display:flex;gap:6px">',
     '      <van-button v-if="date!==H.today()" size="mini" round plain type="primary" @click="goToday">回今天</van-button>',
@@ -134,11 +134,11 @@ window.Pages.StaffBook = {
     '        <div class="card-box" style="padding:10px 12px">',
     '          <m-time-picker v-model="fromTime" :date="date" :open-time="openTime" :busy="coach.busy" :mine="pt.member_busy || []" :duration="duration" :allow-past="true"></m-time-picker>',
     '        </div>',
-    '        <div class="sec-title">选择支付卡（会员本人的卡，任意卡种均可）</div>',
+    '        <div class="sec-title">选择支付卡（会员本人的卡或家庭共用卡，任意卡种均可）</div>',
     '        <div class="card-box" style="padding:6px 12px 10px">',
     '          <van-empty v-if="!ptCards.length" description="该会员没有可用于此课程的会员卡" image-size="60"/>',
     '          <div v-for="c in ptCards" :key="c.id" class="cat-pick flex" :class="{on:cardId===c.id}" @click="cardId=c.id">',
-    '            <div class="flex1"><div style="font-size:14px;font-weight:600">{{ c.card_type_name }}</div>',
+    '            <div class="flex1"><div style="font-size:14px;font-weight:600">{{ c.card_type_name }} <van-tag v-if="c.is_shared" type="primary" plain size="mini">家庭共用·主卡:{{ c.owner_name }}</van-tag></div>',
     '              <div class="muted mt4">{{ cardDesc(c) }}<template v-if="c.expire_time"> · {{ H.dateOf(c.expire_time) }}到期</template></div></div>',
     '            <van-icon v-if="cardId===c.id" name="checked" color="var(--brand)" size="20"/>',
     '          </div>',
@@ -179,7 +179,7 @@ window.Pages.StaffBook = {
     '      <van-empty v-else-if="!gCards.length" description="该会员无可用会员卡" image-size="60"/>',
     '      <template v-else>',
     '        <div v-for="c in gCards" :key="c.id" class="cat-pick flex" :class="{on:gCardId===c.id}" @click="gCardId=c.id">',
-    '          <div class="flex1">{{ c.card_type_name }}<span class="muted" style="margin-left:6px">{{ cardDesc(c) }}</span></div>',
+    '          <div class="flex1">{{ c.card_type_name }} <van-tag v-if="c.is_shared" type="primary" plain size="mini">家庭共用·主卡:{{ c.owner_name }}</van-tag><span class="muted" style="margin-left:6px">{{ cardDesc(c) }}</span></div>',
     '          <van-icon v-if="gCardId===c.id" name="checked" color="var(--brand)" size="20"/>',
     '        </div>',
     '      </template>',
@@ -296,8 +296,8 @@ window.Pages.StaffBook = {
     async openGroup(it) {
       if (it.status !== 1) return vant.showToast('该课程不可预约');
       this.gCur = it; this.gCards = null; this.gCardId = 0; this.gShow = true;
-      const d = await API.get('/cards?vip_id=' + this.vip.id + '&size=50', { silent: true });
-      this.gCards = (d.list || []).filter(c => [0, 1].includes(c.status) && (![1, 4].includes(c.card_kind) || c.left_counts > 0) && (c.card_kind !== 3 || Number(c.left_money) > 0));
+      const d = await API.get('/members/' + this.vip.id, { silent: true });
+      this.gCards = (d && d.cards || []).filter(c => [0, 1].includes(c.status) && (![1, 4].includes(c.card_kind) || c.left_counts > 0) && (c.card_kind !== 3 || Number(c.left_money) > 0));
       if (this.gCards.length) this.gCardId = this.gCards[0].id;
     },
     async doBookGroup() {

@@ -330,13 +330,9 @@ window.Pages.StaffBanners = {
       file.status = 'uploading';
       file.message = '上传中...';
       try {
-        const fd = new FormData();
-        fd.append('file', file.file);
-        const resp = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + Store.token }, body: fd });
-        const j = await resp.json();
-        if (j.code !== 0) throw new Error(j.msg || '上传失败');
-        this.form.image = j.data.url;
-        file.url = j.data.url;
+        const url = await API.upload(file.file);
+        this.form.image = url;
+        file.url = url;
         file.status = 'done';
         file.message = '';
       } catch (e) {

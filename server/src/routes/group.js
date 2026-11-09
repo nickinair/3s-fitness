@@ -237,8 +237,13 @@ async function createGroupBooking({ mid, clubId, syllabusId, vipId, cardId, user
   if (vip.is_black) throw new BizError('该会员在黑名单中，禁止预约');
   const dup = await db.queryOne('SELECT id FROM biz_syllabus_subscribe_record WHERE syllabus_id=? AND vip_id=? AND status IN (0,1)', [s.id, vipId]);
   if (dup) throw new BizError('已预约该课程，请勿重复预约');
-  const card = await db.queryOne('SELECT * FROM biz_member_card WHERE id=? AND vip_id=?', [cardId, vipId]);
-  if (!card) throw new BizError('支付卡不存在');
+  const card = await db.queryOne(
+    `SELECT c.*, IF(c.vip_id=?, 0, 1) AS is_shared, v.realname AS owner_name
+     FROM biz_member_card c
+     JOIN biz_vip_user v ON v.id = c.vip_id
+     WHERE c.id=? AND (c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?))`,
+    [vipId, cardId, vipId, vipId]);
+  if (!card) throw new BizError('支付卡不存在或无权使用');
   // 2026-09-21: 任何卡种都能约团课; 次卡/私教卡按课程扣次, 时间卡不扣次, 储值卡看余额
   const cardWhy = cardBlockReason(card);
   if (cardWhy) throw new BizError(`该卡${cardWhy}`);

@@ -35,8 +35,8 @@ r.get('/members', staffAuth(), async (req, res, next) => {
       `SELECT v.id,v.phone,v.realname,v.nickname,v.avatar,v.gender,v.birthday,v.source_name,v.membership_id,v.membership_name,
               v.coach_id,v.coach_name,v.points,v.expire_time,v.expire_status,v.last_sign_time,v.last_maintain_time,v.label_levels,
               v.is_black,v.remark,v.insert_time,
-              (SELECT COUNT(*) FROM biz_member_card c WHERE c.vip_id=v.id AND c.status IN (0,1,3)) card_count,
-              (SELECT GROUP_CONCAT(DISTINCT c.card_type_name SEPARATOR ' / ') FROM biz_member_card c WHERE c.vip_id=v.id AND c.status IN (0,1,3)) card_names,
+              (SELECT COUNT(*) FROM biz_member_card c WHERE (c.vip_id=v.id OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=v.id)) AND c.status IN (0,1,3)) card_count,
+              (SELECT GROUP_CONCAT(DISTINCT c.card_type_name SEPARATOR ' / ') FROM biz_member_card c WHERE (c.vip_id=v.id OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=v.id)) AND c.status IN (0,1,3)) card_names,
               -- 所属门店 = 名下卡的开卡门店(分成按开卡店算); 在两个店都开过卡的会两个都列出来
               (SELECT GROUP_CONCAT(DISTINCT cl.name ORDER BY cl.id SEPARATOR ' / ') FROM biz_member_card c
                  JOIN biz_club cl ON cl.id=c.club_id WHERE c.vip_id=v.id) club_names,
@@ -125,7 +125,12 @@ r.get('/members/:id', staffAuth(), async (req, res, next) => {
     const v = await db.queryOne('SELECT * FROM biz_vip_user WHERE id=? AND merchant_id=?', [req.params.id, req.user.mid]);
     if (!v) throw new BizError('会员不存在');
     delete v.password;
-    const cards = await db.query('SELECT * FROM biz_member_card WHERE vip_id=? ORDER BY FIELD(status,1,0,3,2,4,5), id DESC', [v.id]);
+    const cards = await db.query(
+      `SELECT c.*, IF(c.vip_id=?, 0, 1) AS is_shared, v2.realname AS owner_name
+       FROM biz_member_card c
+       JOIN biz_vip_user v2 ON v2.id = c.vip_id
+       WHERE c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?)
+       ORDER BY is_shared, FIELD(c.status,1,0,3,2,4,5), c.id DESC`, [v.id, v.id, v.id]);
     const recharges = await db.query('SELECT * FROM biz_card_recharge WHERE vip_id=? ORDER BY id DESC LIMIT 50', [v.id]);
     const spends = await db.query('SELECT * FROM biz_card_spend WHERE vip_id=? ORDER BY id DESC LIMIT 50', [v.id]);
     const maintains = await db.query('SELECT * FROM biz_maintain_record WHERE vip_user_id=? AND vip_user_type=1 ORDER BY id DESC LIMIT 50', [v.id]);

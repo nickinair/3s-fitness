@@ -45,11 +45,15 @@
     </view>
   </view>
 
-  <!-- ===== 黑色会员条 + 常用功能横滑 ===== -->
+  <!-- ===== 黑色会员条 + 预约提示条(对标 M Stand) + 常用功能横滑 ===== -->
   <view class="club">
     <view class="club-bar" bindtap="onClubBar">
       <text class="club-txt">{{clubText}}</text>
       <text class="club-act">{{clubAct}} ›</text>
+    </view>
+    <view class="club-sub" wx:if="{{lessonBar}}" hover-class="tap" data-path="my-bookings" bindtap="goPath">
+      <text class="club-sub-txt">{{lessonBar}}</text>
+      <text class="club-sub-more">{{lessonMore ? lessonMore + ' ›' : '›'}}</text>
     </view>
     <view class="club-body">
       <scroll-view class="icons" id="icons" scroll-x enhanced show-scrollbar="{{false}}" bindscroll="onIconScroll">
@@ -142,9 +146,9 @@
   <!-- ===== 悬浮底部导航(与 H5 一致) ===== -->
   <view class="tabbar" id="tabbar">
     <view class="tab on"><image class="tab-i" src="/assets/icons/tab-home.png"></image><text>首页</text></view>
-    <view class="tab" data-path="schedule" bindtap="goPath"><image class="tab-i" src="/assets/icons/tab-schedule.png"></image><text>约课</text></view>
-    <view class="tab" data-path="coaches" bindtap="goPath"><image class="tab-i" src="/assets/icons/tab-coach.png"></image><text>私教</text></view>
-    <view class="tab" data-path="mine" bindtap="goPath"><image class="tab-i" src="/assets/icons/tab-mine.png"></image><text>我的</text></view>
+    <view class="tab" data-path="schedule" bindtap="goTab"><image class="tab-i" src="/assets/icons/tab-schedule.png"></image><text>约课</text></view>
+    <view class="tab" data-path="coaches" bindtap="goTab"><image class="tab-i" src="/assets/icons/tab-coach.png"></image><text>私教</text></view>
+    <view class="tab" data-path="mine" bindtap="goTab"><image class="tab-i" src="/assets/icons/tab-mine.png"></image><text>我的</text></view>
   </view>
 
   <!-- 未登录时点任意会员功能: 底部弹出登录层 -->

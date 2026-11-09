@@ -394,12 +394,7 @@ window.AppPages.SettingsBanners = {
     async doUpload(opt) {
       this.uploading = true;
       try {
-        const fd = new FormData();
-        fd.append('file', opt.file);
-        const resp = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + Auth.getToken() }, body: fd });
-        const j = await resp.json();
-        if (j.code !== 0) throw new Error(j.msg);
-        this.form.image = j.data.url;
+        this.form.image = await api.upload(opt.file);
         ElementPlus.ElMessage.success('图片已上传');
       } catch (e) { ElementPlus.ElMessage.error(e.message || '上传失败'); }
       finally { this.uploading = false; }
@@ -429,28 +424,76 @@ window.AppPages.SettingsBanners = {
 };
 
 /* ============ 操作日志 ============ */
+const LOG_MEMBER_ACTIONS = ['会员登录', '会员注册', '会员约私教', '会员取消私教', '会员确认消课', '会员约团课', '会员取消团课', '会员签到', '会员签署合同', '会员购卡意向', '会员查看计划', '会员完善资料', '会员上传风采'];
+const LOG_STAFF_ACTIONS = ['登录', '私教代约', '代确认消课', '确认私教预约', '开卡', '续卡', '改卡', '停卡', '退卡', '自定义工作台', '上传会员训练风采', '删除会员训练风采', '新增教练', '新增员工', '更新员工', '新增卡类型', '更新卡类型', '更新门店信息'];
+
 window.AppPages.SettingsLogs = {
   name: 'SettingsLogsPage',
   data() {
-    return { list: [], loading: false, Fmt: window.Fmt, DICT: window.DICT };
+    return {
+      list: [], loading: false,
+      roleType: '', actionFilter: '', keyword: '',
+      Fmt: window.Fmt, DICT: window.DICT,
+    };
+  },
+  computed: {
+    actionOptions() {
+      if (this.roleType === 'member') return LOG_MEMBER_ACTIONS;
+      if (this.roleType === 'staff') return LOG_STAFF_ACTIONS;
+      return [...LOG_MEMBER_ACTIONS, ...LOG_STAFF_ACTIONS];
+    },
   },
   template: `
   <div>
     <div class="card-box">
-      <div class="box-title">操作日志（近200条）</div>
+      <div class="flex-between" style="flex-wrap:wrap;gap:10px;margin-bottom:14px">
+        <div class="box-title" style="margin:0">操作日志（近300条）</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <el-radio-group v-model="roleType" @change="onRoleChange">
+            <el-radio-button value="">全部 ({{ list.length }})</el-radio-button>
+            <el-radio-button value="member">健身会员</el-radio-button>
+            <el-radio-button value="staff">员工与管理</el-radio-button>
+          </el-radio-group>
+          <el-select v-model="actionFilter" clearable placeholder="全部动作" style="width:150px" @change="load">
+            <el-option v-for="a in actionOptions" :key="a" :value="a" :label="a" />
+          </el-select>
+          <el-input v-model="keyword" clearable placeholder="搜索姓名/手机号/详情" style="width:190px" @keyup.enter="load" @clear="load" />
+          <el-button type="primary" plain @click="load">查询</el-button>
+        </div>
+      </div>
       <el-table border :data="list" v-loading="loading" stripe size="small">
         <el-table-column label="时间" width="150"><template #default="{ row }">{{ Fmt.time(row.insert_time) }}</template></el-table-column>
-        <el-table-column prop="username" label="操作人" width="120" />
-        <el-table-column prop="action" label="操作" width="130" />
+        <el-table-column label="操作人" width="150">
+          <template #default="{ row }">
+            <span>{{ row.username || '-' }}</span>
+            <el-tag v-if="isMember(row)" type="success" size="small" effect="plain" style="margin-left:6px">会员</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="140">
+          <template #default="{ row }">
+            <el-tag :type="isMember(row) ? 'success' : 'info'" size="small">{{ row.action }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="detail" label="详情" min-width="280" show-overflow-tooltip />
       </el-table>
     </div>
   </div>`,
   methods: {
+    isMember(row) { return String((row && row.action) || '').startsWith('会员'); },
+    onRoleChange() {
+      if (this.actionFilter && !this.actionOptions.includes(this.actionFilter)) this.actionFilter = '';
+      this.load();
+    },
     async load() {
       this.loading = true;
-      try { this.list = await api.get('/logs'); }
-      finally { this.loading = false; }
+      try {
+        const q = new URLSearchParams();
+        if (this.roleType) q.set('role_type', this.roleType);
+        if (this.actionFilter) q.set('action', this.actionFilter);
+        if (this.keyword && this.keyword.trim()) q.set('keyword', this.keyword.trim());
+        const qs = q.toString();
+        this.list = await api.get('/logs' + (qs ? `?${qs}` : ''));
+      } finally { this.loading = false; }
     },
   },
   mounted() { this.load(); },

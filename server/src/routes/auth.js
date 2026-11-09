@@ -69,7 +69,10 @@ r.post('/member/login', async (req, res, next) => {
     const v = await db.queryOne('SELECT * FROM biz_vip_user WHERE phone=? AND status=1', [phone]);
     if (!v) throw new BizError('该手机号未注册，请先注册');
     if (!(await bcrypt.compare(password || '', v.password))) throw new BizError('手机号或密码错误');
-    const token = sign({ type: 'member', vip: v.id, name: v.realname, mid: v.merchant_id });
+    const vName = v.realname || v.nickname || v.phone;
+    const token = sign({ type: 'member', vip: v.id, name: vName, mid: v.merchant_id });
+    req.user = { vip: v.id, name: vName, mid: v.merchant_id };
+    await logAction(req, '会员登录', `${vName}(${v.phone}) 手机号密码登录`);
     res.json(ok({ token, user: memberProfile(v) }));
   } catch (e) { next(e); }
 });
@@ -82,6 +85,7 @@ r.post('/member/register', async (req, res, next) => {
     if (!password || password.length < 6) throw new BizError('密码至少6位');
     const bcryptPwd = await bcrypt.hash(password, 10);
     let v = await db.queryOne('SELECT * FROM biz_vip_user WHERE merchant_id=1 AND phone=?', [phone]);
+    const existed = !!v;
     if (v) {
       // 已有档案(门店录入) → 绑定并设置密码
       await db.exec('UPDATE biz_vip_user SET password=?, realname=IF(realname="",?,realname), nickname=IF(nickname="",?,nickname) WHERE id=?',
@@ -94,7 +98,10 @@ r.post('/member/register', async (req, res, next) => {
       v = await db.queryOne('SELECT * FROM biz_vip_user WHERE id=?', [id]);
     }
     v = await db.queryOne('SELECT * FROM biz_vip_user WHERE merchant_id=1 AND phone=?', [phone]);
-    const token = sign({ type: 'member', vip: v.id, name: v.realname, mid: v.merchant_id });
+    const vName = v.realname || v.nickname || v.phone;
+    const token = sign({ type: 'member', vip: v.id, name: vName, mid: v.merchant_id });
+    req.user = { vip: v.id, name: vName, mid: v.merchant_id };
+    await logAction(req, '会员注册', `${vName}(${v.phone}) ${existed ? '绑定门店档案并设密' : '新会员注册'}`);
     res.json(ok({ token, user: memberProfile(v) }));
   } catch (e) { next(e); }
 });
@@ -136,7 +143,10 @@ r.post('/member/wx-phone-login', async (req, res, next) => {
     } else if (v.status !== 1) {
       throw new BizError('该会员账号已被停用，请联系门店');
     }
-    const token = sign({ type: 'member', vip: v.id, name: v.realname, mid: v.merchant_id });
+    const vName = v.realname || v.nickname || v.phone;
+    const token = sign({ type: 'member', vip: v.id, name: vName, mid: v.merchant_id });
+    req.user = { vip: v.id, name: vName, mid: v.merchant_id };
+    await logAction(req, '会员登录', `${vName}(${v.phone}) 微信手机号快捷登录`);
     res.json(ok({ token, user: memberProfile(v) }));
   } catch (e) { next(e); }
 });

@@ -115,12 +115,20 @@ r.delete('/notices/:id', async (req, res, next) => {
 // 日志监控（全平台）
 r.get('/logs', async (req, res, next) => {
   try {
-    const { merchant_id } = req.query;
+    const { merchant_id, role_type, action, keyword } = req.query;
     const cond = []; const params = [];
     if (merchant_id) { cond.push('l.merchant_id=?'); params.push(merchant_id); }
+    if (role_type === 'member') { cond.push("l.action LIKE '会员%'"); }
+    else if (role_type === 'staff') { cond.push("l.action NOT LIKE '会员%'"); }
+    if (action) { cond.push('l.action=?'); params.push(action); }
+    if (keyword && String(keyword).trim()) {
+      const kw = `%${String(keyword).trim()}%`;
+      cond.push('(l.username LIKE ? OR l.action LIKE ? OR l.detail LIKE ?)');
+      params.push(kw, kw, kw);
+    }
     const rows = await db.query(
       `SELECT l.*, m.name merchant_name FROM sys_log l LEFT JOIN sys_merchant m ON m.id=l.merchant_id
-       ${cond.length ? 'WHERE ' + cond.join(' AND ') : ''} ORDER BY l.id DESC LIMIT 300`, params);
+       ${cond.length ? 'WHERE ' + cond.join(' AND ') : ''} ORDER BY l.insert_time DESC, l.id DESC LIMIT 300`, params);
     res.json(ok(rows));
   } catch (e) { next(e); }
 });

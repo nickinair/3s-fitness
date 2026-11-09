@@ -27,14 +27,20 @@ async function doCheckin({ mid, clubId, vipId, cardId, opeUserId, opeUsername, p
     [vipId, clubId, dayjs().format('YYYY-MM-DD 00:00:00')]);
   if (open) throw new BizError('该会员已在场内（未出场），请勿重复签到');
 
-  // 选卡: 指定卡 or 自动 (时间卡优先 > 次卡 > 储值卡)
+  // 选卡: 指定卡 or 自动 (支持本人主卡与家庭共享卡; 时间卡优先 > 次卡 > 储值卡)
   let card = null;
   if (cardId) {
-    card = await db.queryOne('SELECT * FROM biz_member_card WHERE id=? AND vip_id=?', [cardId, vipId]);
-    if (!card) throw new BizError('会员卡不存在');
+    card = await db.queryOne(
+      `SELECT c.* FROM biz_member_card c
+       WHERE c.id=? AND (c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?))`,
+      [cardId, vipId, vipId]);
+    if (!card) throw new BizError('会员卡不存在或无权使用');
   } else {
     const cards = await db.query(
-      `SELECT * FROM biz_member_card WHERE vip_id=? AND status IN (0,1) AND card_kind IN (1,2,3) ORDER BY FIELD(card_kind,2,1,3), expire_time`, [vipId]);
+      `SELECT c.* FROM biz_member_card c
+       WHERE (c.vip_id=? OR c.id IN (SELECT card_id FROM biz_member_card_user WHERE vip_id=?))
+         AND c.status IN (0,1) AND c.card_kind IN (1,2,3)
+       ORDER BY FIELD(c.card_kind,2,1,3), c.expire_time`, [vipId, vipId]);
     card = cards.find(c => c.card_kind === 2) || cards.find(c => c.card_kind === 1 && c.left_counts > 0) || cards.find(c => c.card_kind === 3 && Number(c.left_money) > 0);
     if (!card) throw new BizError('该会员没有可用于入场的有效卡（时间卡/次卡/储值卡）');
   }

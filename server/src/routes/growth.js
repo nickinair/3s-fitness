@@ -415,7 +415,11 @@ r.get('/sms-logs', staffAuth('admin', 'manager'), async (req, res, next) => {
     const exp = req.query.export === 'csv';
     const cond = ['merchant_id=?']; const params = [req.user.mid];
     if (scene) { cond.push('scene=?'); params.push(scene); }
-    if (keyword) { cond.push('(realname LIKE ? OR phone LIKE ?)'); params.push(`%${keyword}%`, `%${keyword}%`); }
+    if (keyword && String(keyword).trim()) {
+      const kw = `%${String(keyword).trim()}%`;
+      cond.push('(realname LIKE ? OR phone LIKE ? OR content LIKE ?)');
+      params.push(kw, kw, kw);
+    }
     const where = cond.join(' AND ');
     const [{ total }] = await db.query(`SELECT COUNT(*) total FROM biz_sms_log WHERE ${where}`, params);
     const rows = await db.query(`SELECT * FROM biz_sms_log WHERE ${where} ORDER BY id DESC ${exp ? '' : 'LIMIT ? OFFSET ?'}`,

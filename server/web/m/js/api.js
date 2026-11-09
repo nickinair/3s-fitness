@@ -52,25 +52,94 @@
   /* 小程序桥: 首页是原生页(web-view 去不掉原生导航栏, 做不了沉浸式视频), 会员回首页 / 登录 / 退出时切回原生首页 */
   const MP = {
     is() {
-      try { if (sessionStorage.getItem('mp') === '1') return true; } catch (e) { /* ignore */ }
+      if (document.documentElement.classList.contains('is-mp')) return true;
+      try {
+        if (sessionStorage.getItem('mp') === '1') return true;
+        if (new URLSearchParams(location.search).get('mp') === '1') return true;
+      } catch (e) { /* ignore */ }
       return window.__wxjs_environment === 'miniprogram' || /miniProgram/i.test(navigator.userAgent || '');
     },
     ready() { return !!(window.wx && wx.miniProgram && wx.miniProgram.reLaunch); },
     // extra: 例如 '?logout=1' 或 '?token=xxx&type=member'
     home(extra) { if (this.ready()) { wx.miniProgram.reLaunch({ url: '/pages/home/home' + (extra || '') }); return true; } return false; },
     homeWithToken() { return this.home(Store.token ? '?type=' + (Store.type || 'member') + '&token=' + encodeURIComponent(Store.token) : ''); },
+    pageUrl(path) {
+      const clean = String(path || '').replace(/^#/, '');
+      const t = Store.token;
+      const type = Store.type || 'member';
+      return '/pages/index/index?path=' + encodeURIComponent(clean)
+        + (t ? '&token=' + encodeURIComponent(t) + '&type=' + type : '');
+    },
+    go(path, replace) {
+      if (!this.ready()) return false;
+      const url = this.pageUrl(path);
+      if (replace && wx.miniProgram.redirectTo) wx.miniProgram.redirectTo({ url });
+      else if (wx.miniProgram.navigateTo) wx.miniProgram.navigateTo({ url });
+      else return false;
+      return true;
+    },
   };
   window.MP = MP;
 
+  /* 上传前客户端自动压缩大图(手机原图常为 3~12MB, 压缩到长边 ≤1600px JPEG 约 120~200KB, 上传提速 15~30 倍) */
+  function compressImage(file, maxSide = 1600, quality = 0.82) {
+    return new Promise((resolve) => {
+      if (!file || !(file instanceof Blob) || !/^image\/(jpeg|jpg|png|webp|heic|heif)/i.test(file.type || '') || file.size <= 180 * 1024) {
+        return resolve(file);
+      }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let w = img.naturalWidth || img.width;
+        let h = img.naturalHeight || img.height;
+        if (!w || !h) return resolve(file);
+        if (w > maxSide || h > maxSide) {
+          if (w >= h) { h = Math.round((h * maxSide) / w); w = maxSide; }
+          else { w = Math.round((w * maxSide) / h); h = maxSide; }
+        }
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        cv.toBlob((blob) => {
+          if (!blob || blob.size >= file.size) return resolve(file);
+          const name = (file.name || 'photo.jpg').replace(/\.[^.]+$/, '') + '.jpg';
+          try {
+            resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() }));
+          } catch (e) {
+            blob.name = name;
+            resolve(blob);
+          }
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
   const API = {
-    get: (u, o) => request('GET', u, null, o),
+    get: (u, o) => {
+      if (o && typeof o === 'object') {
+        const qs = Object.keys(o)
+          .filter(k => k !== 'silent' && o[k] !== undefined && o[k] !== null && o[k] !== '')
+          .map(k => encodeURIComponent(k) + '=' + encodeURIComponent(typeof o[k] === 'string' ? o[k].trim() : o[k]))
+          .join('&');
+        if (qs) u += (u.indexOf('?') === -1 ? '?' : '&') + qs;
+      }
+      return request('GET', u, null, o);
+    },
     post: (u, d, o) => request('POST', u, d == null ? {} : d, o),
     put: (u, d, o) => request('PUT', u, d == null ? {} : d, o),
     del: (u, o) => request('DELETE', u, null, o),
     delete: (u, o) => request('DELETE', u, null, o),
+    compressImage,
     upload: async (file) => {
+      const compressed = await compressImage(file);
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('file', compressed, (compressed && compressed.name) || 'photo.jpg');
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: Store.token ? { Authorization: 'Bearer ' + Store.token } : {},
@@ -110,8 +179,9 @@
   const H = {
     // 读取 theme.css 里的配色变量实际值, 给 canvas/二维码这类不认 var() 的地方用
     color(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); },
-    // 吸顶导航的实际高度(状态栏 + 导航内容区), 给 van-tabs sticky 的 offset-top 用; 小程序沉浸式下状态栏高度由外壳传入
+    // 吸顶导航的实际高度(状态栏 + 导航内容区), 给 van-tabs sticky 的 offset-top 用; 小程序内已隐藏 m-nav, 吸顶直接贴顶(0)
     navTop() {
+      if (MP.is()) return 0;
       const cs = getComputedStyle(document.documentElement);
       const sb = parseFloat(cs.getPropertyValue('--safe-top')) || 0;
       const nh = parseFloat(cs.getPropertyValue('--nav-h')) || 46;
@@ -122,15 +192,12 @@
     dateOf(s) { return s ? String(s).slice(0, 10) : ''; },
     time(s) { if (!s) return ''; const m = String(s).match(/(\d{1,2}):(\d{2})/); return m ? m[0] : String(s); },
     week(s) { return '周' + WEEK[dayjs(H.dateOf(s)).day()]; },
-    day(s) { /* 人性化日期 */
+    day(s) { /* 日期展示: 今天显示「今天」, 第二天显示「明天」, 其余显示具体日期 MM-DD(跨年 YYYY-MM-DD) */
       if (!s) return '';
       const d = dayjs(H.dateOf(s));
       const diff = d.startOf('day').diff(dayjs().startOf('day'), 'day');
       if (diff === 0) return '今天';
       if (diff === 1) return '明天';
-      if (diff === 2) return '后天';
-      if (diff === -1) return '昨天';
-      if (diff > 2 && diff < 7) return '周' + WEEK[d.day()];
       return d.format(d.year() === dayjs().year() ? 'MM-DD' : 'YYYY-MM-DD');
     },
     dt(s) { if (!s) return ''; return H.day(s) + ' ' + H.time(String(s).slice(10)); },
@@ -154,9 +221,12 @@
       return arr;
     },
     stars(n) { let s = ''; for (let i = 0; i < (Number(n) || 1); i++) s += '★'; return s; },
-    faceCls(card) { /* 卡面配色 */
+    faceCls(card, idx) { /* 卡面配色 + 视频首帧背景轮换 */
+      if (!card) return 'face-k1 face-v0';
       if (card.status >= 2 && card.status !== 3) return 'face-dead';
-      return 'face-k' + (card.card_kind || 1);
+      const k = Number(card.card_kind) || 1;
+      const seed = idx != null ? (Number(idx) + k) : ((Number(card.id) || 0) + k);
+      return 'face-k' + k + ' face-v' + (Math.abs(seed) % 4);
     },
     cardLeft(c) { /* 卡剩余描述 */
       if (c.card_kind === 2) return '不限次 · 时间卡';

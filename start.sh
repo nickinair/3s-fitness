@@ -1,4 +1,4 @@
-#!/bin/bash
+  #!/bin/bash
 # 启动健身房管理系统服务 (端口 8090)
 cd "$(dirname "$0")/server"
 if lsof -i :8090 -sTCP:LISTEN >/dev/null 2>&1; then

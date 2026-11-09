@@ -157,7 +157,7 @@
                           : { left: 0, top: 0, width: r.width * COLS, height: r.height };
         this.drag = {
           idx,
-          key: c.key, t: c.t, icon: c.icon,
+          key: c.key, t: c.t, icon: c.icon, tone: c.tone,
           // ghost 初始 translate = 元素当前视口坐标 (position:fixed 坐标系)
           initX: r.left,
           initY: r.top,
@@ -241,6 +241,7 @@
       '  <template v-for="(c, idx) in cells" :key="c.key">',
       '    <div class="wb-cell" :class="{ \'wb-drag-src\': drag && drag.key === c.key }"',
       '         :data-key="c.key"',
+      '         :data-tone="c.tone || null"',
       '         @touchstart.passive="down($event, idx)"',
       '         @mousedown="down($event, idx)"',
       '         @click="tap(c.key)">',
@@ -255,7 +256,7 @@
       '      <div class="wb-tx">{{ c.t }}</div>',
       '    </div>',
       '  </template>',
-      '  <div v-if="drag" ref="ghost" class="wb-cell wb-ghost" :style="ghostStyle">',
+      '  <div v-if="drag" ref="ghost" class="wb-cell wb-ghost" :data-tone="drag.tone || null" :style="ghostStyle">',
       '    <div class="wb-ic"><van-icon :name="drag.icon" :size="iconSize"/></div>',
       '    <div class="wb-tx">{{ drag.t }}</div>',
       '  </div>',

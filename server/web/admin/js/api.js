@@ -69,15 +69,55 @@
     return json.data;
   }
 
+  function compressImage(file, maxSide = 1600, quality = 0.82) {
+    return new Promise((resolve) => {
+      if (!file || !(file instanceof Blob) || !/^image\/(jpeg|jpg|png|webp|heic|heif)/i.test(file.type || '') || file.size <= 180 * 1024) {
+        return resolve(file);
+      }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let w = img.naturalWidth || img.width;
+        let h = img.naturalHeight || img.height;
+        if (!w || !h) return resolve(file);
+        if (w > maxSide || h > maxSide) {
+          if (w >= h) { h = Math.round((h * maxSide) / w); w = maxSide; }
+          else { w = Math.round((w * maxSide) / h); h = maxSide; }
+        }
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        cv.toBlob((blob) => {
+          if (!blob || blob.size >= file.size) return resolve(file);
+          const name = (file.name || 'photo.jpg').replace(/\.[^.]+$/, '') + '.jpg';
+          try {
+            resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() }));
+          } catch (e) {
+            blob.name = name;
+            resolve(blob);
+          }
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
   const api = {
     get: (url, params) => request('GET', url, params),
     post: (url, data) => request('POST', url, data),
     put: (url, data) => request('PUT', url, data),
     del: (url, params) => request('DELETE', url, params),
     delete: (url, params) => request('DELETE', url, params),
+    compressImage,
     async upload(file) {
+      const compressed = await compressImage(file);
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('file', compressed, (compressed && compressed.name) || 'photo.jpg');
       const headers = {};
       const token = getToken();
       if (token) headers['Authorization'] = 'Bearer ' + token;

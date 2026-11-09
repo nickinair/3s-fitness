@@ -129,7 +129,7 @@ window.Pages.MemberCoachDetail = {
     '        <van-radio-group v-model="cardId">',
     '          <div v-for="c in usableCards" :key="c.id" class="cat-pick flex" :class="{on:cardId===c.id}" @click="cardId=c.id">',
     '            <div class="flex1">',
-    '              <div style="font-size:14px;font-weight:600">{{ c.card_type_name }}</div>',
+    '              <div style="font-size:14px;font-weight:600">{{ c.card_type_name }}<span v-if="c.is_shared" style="margin-left:6px;font-size:11px;font-weight:normal;color:#1890ff;background:rgba(24,144,255,0.1);padding:1px 6px;border-radius:3px">家庭共用·{{ c.owner_name }}</span></div>',
     '              <div class="muted mt4">{{ cardDesc(c) }}<template v-if="c.expire_time"> · {{ H.dateOf(c.expire_time) }}到期</template></div>',
     '            </div>',
     '            <van-radio :name="c.id" checked-color="var(--brand)"/>',

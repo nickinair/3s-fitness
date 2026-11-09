@@ -3,7 +3,7 @@ window.Pages.MemberBuy = {
   data() {
     return {
       cats: [], intents: [], loading: true, kind: 0,
-      detail: null,            // 详情弹层
+      detail: null, detailIdx: 0, // 详情弹层
       intentShow: false, intentCard: null, remark: '', submitting: false,
     };
   },
@@ -30,28 +30,34 @@ window.Pages.MemberBuy = {
     '      <van-tab v-for="k in kinds" :key="k" :title="DICT.cardKind[k]" :name="k"></van-tab>',
     '    </van-tabs>',
     '    <van-empty v-if="!curList.length" description="暂无在售卡" />',
-    '    <div v-for="c in curList" :key="c.id" class="rec-item flex" @click="detail=c">',
-    '      <div class="flex1">',
-    '        <div class="name">{{ c.title }} <van-tag v-if="intentedIds[c.id]" type="success" plain round style="margin-left:4px">已提交意向</van-tag></div>',
-    '        <div class="muted mt4" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ c.intro }}</div>',
-    '        <div class="mt8 muted">',
+    '    <div v-for="(c, idx) in curList" :key="c.id" class="vip-face block buy-card" :class="H.faceCls(c, idx)" @click="openDetail(c, idx)">',
+    '      <div class="buy-head">',
+    '        <div class="buy-badges">',
+    '          <span class="kind">{{ DICT.cardKind[c.card_kind] }}</span>',
+    '          <span v-if="intentedIds[c.id]" class="buy-intent-tag">已提交意向</span>',
+    '        </div>',
+    '        <div class="buy-price-box">',
+    '          <span class="buy-orig" v-if="Number(c.original_price)>Number(c.price)">{{ H.money(c.original_price) }}</span>',
+    '          <span class="buy-price">{{ H.money(c.price) }}</span>',
+    '        </div>',
+    '      </div>',
+    '      <div class="name buy-title">{{ c.title }}</div>',
+    '      <div v-if="c.intro" class="buy-intro">{{ c.intro }}</div>',
+    '      <div class="buy-foot">',
+    '        <div class="buy-spec">',
     '          有效期 {{ c.expire_days }} 天',
     '          <template v-if="c.total_counts"> · {{ c.total_counts }} 次</template>',
     '          <template v-if="Number(c.gift_money)"> · 赠 {{ H.money(c.gift_money) }}</template>',
     '        </div>',
-    '      </div>',
-    '      <div class="tr" style="margin-left:10px">',
-    '        <div class="price" style="font-size:18px">{{ H.money(c.price) }}</div>',
-    '        <div class="line-through" v-if="Number(c.original_price)>Number(c.price)">{{ H.money(c.original_price) }}</div>',
-    '        <van-button v-if="!intentedIds[c.id]" type="primary" size="small" round style="margin-top:8px;min-width:76px" @click.stop="openIntent(c)">提交意向</van-button>',
-    '        <van-button v-else size="small" round disabled style="margin-top:8px;min-width:76px">已提交</van-button>',
+    '        <button v-if="!intentedIds[c.id]" type="button" class="buy-btn" @click.stop="openIntent(c)">提交意向</button>',
+    '        <button v-else type="button" class="buy-btn is-done" disabled @click.stop>已提交</button>',
     '      </div>',
     '    </div>',
     '  </template>',
 
     '  <van-popup :show="!!detail" @update:show="v=>!v&&(detail=null)" position="bottom" round closeable safe-area-inset-bottom>',
     '    <div v-if="detail" style="padding:20px 18px 24px">',
-    '      <div class="vip-face block" :class="\'face-k\'+detail.card_kind" style="margin:0 0 14px">',
+    '      <div class="vip-face block" :class="H.faceCls(detail, detailIdx)" style="margin:0 0 14px">',
     '        <span class="kind">{{ DICT.cardKind[detail.card_kind] }}</span>',
     '        <div class="name">{{ detail.title }}</div>',
     '        <div class="left">{{ detail.total_counts ? detail.total_counts+\' 次\' : (detail.card_kind===3 ? \'充值 \'+H.money(detail.price) : \'不限次\') }} · 有效期 {{ detail.expire_days }} 天</div>',
@@ -83,6 +89,7 @@ window.Pages.MemberBuy = {
     '</div>',
   ].join('\n'),
   methods: {
+    openDetail(c, idx) { this.detail = c; this.detailIdx = idx || 0; },
     openIntent(c) { this.intentCard = c; this.remark = ''; this.detail = null; this.intentShow = true; },
     async submitIntent() {
       this.submitting = true;

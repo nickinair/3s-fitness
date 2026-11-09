@@ -20,7 +20,7 @@ window.Pages.MemberSecurity = {
   },
   template: [
     '<div class="page">',
-    '  <van-nav-bar class="m-nav" :title="title" left-arrow :border="false" @click-left="back"/>',
+    '  <m-nav :title="title"></m-nav>',
     '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
 
     /* ---- 账号与安全首页 ---- */
@@ -82,6 +82,7 @@ window.Pages.MemberSecurity = {
     '    </div>',
     '    <div style="margin:20px 16px"><van-button type="primary" block round :loading="submitting" :disabled="pwd1.length<6||!pwd2" @click="savePwd">确认修改</van-button></div>',
     '  </template>',
+    '  <div v-if="!loading && step!==\'home\'" style="margin:12px 16px 0"><van-button plain round block @click="back">返回上一步</van-button></div>',
     '</div>',
   ].join('\n'),
   methods: {

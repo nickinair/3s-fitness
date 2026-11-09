@@ -496,15 +496,12 @@ window.AppPages.MemberDetail = {
       this.editDlg = true;
     },
     async uploadComparePhoto(file) {
-      if (file.size > 5 * 1024 * 1024) { ElementPlus.ElMessage.warning('图片不能超过 5MB'); return false; }
+      if (file.size > 20 * 1024 * 1024) { ElementPlus.ElMessage.warning('图片不能超过 20MB'); return false; }
       this.uploadingPhoto = true;
       try {
-        const fd = new FormData(); fd.append('file', file);
-        const resp = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + Auth.getToken() }, body: fd });
-        const j = await resp.json();
-        if (j.code !== 0) throw new Error(j.msg || '上传失败');
+        const url = await api.upload(file);
         if (!Array.isArray(this.form.target_compare_photos)) this.form.target_compare_photos = [];
-        this.form.target_compare_photos.push(j.data.url);
+        this.form.target_compare_photos.push(url);
         ElementPlus.ElMessage.success('已上传');
       } catch (e) { ElementPlus.ElMessage.error(e.message || '上传失败'); }
       finally { this.uploadingPhoto = false; }

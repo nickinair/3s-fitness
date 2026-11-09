@@ -91,9 +91,120 @@
     routes,
   });
 
+  // 同步页面标题到 document.title, 使小程序 web-view 顶部原生导航栏显示当前子页面标题(替代固定「3S运动中心」)
+  function setDocTitle(t) {
+    const title = t || '3S运动中心';
+    if (document.title === title) return;
+    document.title = title;
+    if (MP.is() && document.body) {
+      try {
+        const f = document.createElement('iframe');
+        f.style.display = 'none';
+        f.src = '/favicon.ico';
+        f.onload = f.onerror = () => setTimeout(() => f.remove(), 0);
+        document.body.appendChild(f);
+      } catch (e) {}
+    }
+  }
+  window.setDocTitle = setDocTitle;
+
+  const ROUTE_TITLES = {
+    '/': '3S运动中心',
+    '/login': '登录',
+    '/schedule': '约课',
+    '/coaches': '私教教练',
+    '/buy': '购卡',
+    '/mine': '我的',
+    '/complete-profile': '完善档案 · 领专属积分',
+    '/training-photos': '训练风采',
+    '/profile': '编辑资料',
+    '/my-cards': '我的会员卡',
+    '/my-bookings': '我的预约',
+    '/pending-confirms': '待确认消课',
+    '/checkin': '到店签到',
+    '/contracts': '我的合同',
+    '/milestones': '我的里程碑',
+    '/plans': '训练计划',
+    '/security': '账号与安全',
+    '/guide': '使用引导',
+    '/staff': '工作台',
+    '/staff/mine': '我的',
+    '/staff/checkin': '快速签到',
+    '/staff/opencard': '快速开卡',
+    '/staff/book': '代约课',
+    '/staff/members': '会员查询',
+    '/staff/potential': '录入潜客',
+    '/staff/sales': '顾问业绩',
+    '/staff/schedule': '我的课表',
+    '/staff/bookings': '预约管理',
+    '/staff/students': '我的学员',
+    '/staff/perf': '教练业绩',
+    '/staff/rests': '休息设置',
+    '/staff/profile': '我的主页',
+    '/staff/dashboard': '数据看板',
+    '/staff/report': '报表',
+    '/staff/report-detail': '导出明细',
+    '/staff/my-perf': '我的业绩',
+    '/staff/group-today': '今日团课核销',
+    '/staff/today': '今日预约',
+    '/staff/plans': '训练计划',
+    '/staff/plan-edit': '训练计划',
+    '/staff/milestones': '里程碑总结',
+    '/staff/intents': '购卡意向',
+    '/staff/cards': '会员卡列表',
+    '/staff/contracts': '合同管理',
+    '/staff/members-overview': '会员概况',
+    '/staff/finance-monthly': '月度经营报表',
+    '/staff/recharges': '收款明细',
+    '/staff/spends': '耗卡明细',
+    '/staff/card-balance': '剩余卡价值',
+    '/staff/coach-consume': '教练消耗统计',
+    '/staff/pt-records': '消课记录',
+    '/staff/checkin-records': '签到记录',
+    '/staff/checkin-report': '签到报表',
+    '/staff/sms-logs': '短信记录',
+    '/staff/op-logs': '操作日志',
+    '/staff/schedule-admin': '排课表',
+    '/staff/group-courses': '团课课程库',
+    '/staff/classrooms': '教室管理',
+    '/staff/pt-courses': '私教课程',
+    '/staff/card-categories': '卡类型配置',
+    '/staff/training-actions': '动作库',
+    '/staff/coaches': '教练档案',
+    '/staff/sources': '来源渠道',
+    '/staff/settings-club': '门店信息',
+    '/staff/settings-staff': '员工与角色',
+    '/staff/notices': '公告',
+    '/staff/banners': '首页 Banner',
+    '/staff/segment/low_lesson': '课时不足',
+    '/staff/segment/birthday_week': '会员生日',
+    '/staff/segment/trained_10': '当月满10次',
+    '/staff/segment/trained_50': '半年满50次',
+    '/staff/segment/trained_20': '半年满50次',
+    '/staff/segment/timecard_active': '有效期卡',
+    '/staff/segment/timecard_expired': '过期期卡',
+  };
+
+  function resolveRouteTitle(to) {
+    const p = to.path || '/';
+    if (p === '/' && to.query && to.query.edit) return '常用功能管理';
+    if (ROUTE_TITLES[p]) return ROUTE_TITLES[p];
+    if (p.indexOf('/coach/') === 0) return '教练主页';
+    if (p.indexOf('/card/') === 0) return '会员卡详情';
+    if (p.indexOf('/contract/') === 0) return '合同详情';
+    if (p.indexOf('/plan/') === 0) return '计划详情';
+    if (p.indexOf('/staff/member/') === 0) return '会员详情';
+    if (p.indexOf('/staff/segment/') === 0) return '会员名单';
+    if (p.indexOf('/staff/group/') === 0) return '预约名单';
+    if (p.indexOf('/staff/card/') === 0) return '会员卡详情';
+    return '';
+  }
+
+  const TABS = ['/', '/schedule', '/coaches', '/mine', '/staff', '/staff/mine'];
+
   // 地址栏 ?token= 只在首次导航时接管一次; 否则退出登录 / 401 后每次跳转都会把旧 token 写回去
   let searchTokenUsed = false;
-  router.beforeEach((to) => {
+  router.beforeEach((to, from) => {
     const sp = new URLSearchParams(window.location.search);
     const urlToken = (to.query && to.query.token) || (!searchTokenUsed && sp.get('token'));
     searchTokenUsed = true;
@@ -105,18 +216,38 @@
     // 小程序里会员回到「首页」= 切回原生首页(沉浸式视频); ?edit=1 是原生首页「管理」进来的常用功能编辑, 留在 H5
     if (to.path === '/' && Store.token && Store.type !== 'staff' && !(to.query && to.query.edit) && MP.is() && MP.homeWithToken()) return false;
     if (to.path === '/complete-profile') {
-      if (Store.token) return true;
-      return '/login';
-    }
-    if (to.path === '/login') {
+      if (!Store.token) return '/login';
+    } else if (to.path === '/login') {
       if (Store.token) return Store.type === 'staff' ? '/staff' : '/';
       return true;
+    } else {
+      if (!Store.token) return '/login';
+      const isStaffPage = to.path === '/staff' || to.path.startsWith('/staff/');
+      if (isStaffPage && Store.type !== 'staff') return '/';
+      if (!isStaffPage && Store.type === 'staff') return '/staff';
     }
-    if (!Store.token) return '/login';
-    const isStaffPage = to.path === '/staff' || to.path.startsWith('/staff/');
-    if (isStaffPage && Store.type !== 'staff') return '/';
-    if (!isStaffPage && Store.type === 'staff') return '/staff';
+    // 小程序 web-view 内发生跨页面路由跳转时, 走原生页面栈(navigateTo / redirectTo),
+    // 保证顶部原生标题栏 100% 刷新为目标页标题, 且左上角原生返回按钮能逐级返回上一页
+    if (MP.is() && from && from.matched && from.matched.length > 0 && to.path !== from.path) {
+      const isTabSwitch = TABS.includes(to.path) && TABS.includes(from.path);
+      if (MP.go(to.fullPath, isTabSwitch)) return false;
+    }
     return true;
+  });
+
+  // 小程序内页面通过 navigateTo 独立打开时, H5 内部的 $router.back() 转为调用原生 navigateBack 返回上一页
+  const origBack = router.back.bind(router);
+  router.back = function () {
+    if (MP.is() && window.wx && wx.miniProgram && wx.miniProgram.navigateBack && window.history.length <= 1) {
+      wx.miniProgram.navigateBack();
+      return;
+    }
+    origBack();
+  };
+
+  router.afterEach((to) => {
+    const t = resolveRouteTitle(to);
+    if (t) setDocTitle(t);
   });
 
   const App = {
@@ -215,7 +346,16 @@
   if (window.WBGrid) app.component('wb-grid', window.WBGrid);   // 可编辑九宫格(工作台/常用功能自定义)
   app.component('m-nav', {
     props: { title: String, back: { type: Boolean, default: true } },
-    template: '<van-nav-bar class="m-nav" :title="title" :left-arrow="back" @click-left="onBack" :border="false"/>',
+    computed: {
+      isMp() { return MP.is(); },
+    },
+    watch: {
+      title: {
+        immediate: true,
+        handler(v) { if (v) setDocTitle(v); },
+      },
+    },
+    template: '<van-nav-bar v-if="!isMp" class="m-nav" :title="title" :left-arrow="back" @click-left="onBack" :border="false"/>',
     methods: {
       onBack() {
         if (!this.back) return;

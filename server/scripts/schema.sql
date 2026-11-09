@@ -579,6 +579,24 @@ CREATE TABLE IF NOT EXISTS sys_user_widget (
   UNIQUE KEY uk_user_scope (user_id, scope)
 ) ENGINE=InnoDB COMMENT='用户自定义面板布局';
 
+-- ============ 会员卡共享使用人（家庭共用卡） ============
+
+CREATE TABLE IF NOT EXISTS biz_member_card_user (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  merchant_id INT NOT NULL DEFAULT 1,
+  card_id INT NOT NULL COMMENT '关联 biz_member_card.id',
+  vip_id INT NOT NULL COMMENT '共享使用人 biz_vip_user.id',
+  realname VARCHAR(64) NOT NULL DEFAULT '',
+  phone VARCHAR(32) NOT NULL DEFAULT '',
+  relation VARCHAR(32) NOT NULL DEFAULT '' COMMENT '关系备注，如：家属/配偶/子女',
+  ope_user_id INT NOT NULL DEFAULT 0,
+  ope_username VARCHAR(64) NOT NULL DEFAULT '',
+  insert_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_card_vip (card_id, vip_id),
+  KEY idx_vip (vip_id),
+  KEY idx_card (card_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会员卡共享成员表';
+
 -- ============ 用户自定义按钮配置 ============
 
 CREATE TABLE IF NOT EXISTS sys_user_button_configs (

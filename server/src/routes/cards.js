@@ -430,7 +430,88 @@ r.get('/cards/:id', staffAuth(), async (req, res, next) => {
     const recharges = await db.query('SELECT * FROM biz_card_recharge WHERE card_id=? ORDER BY id DESC', [card.id]);
     const spends = await db.query('SELECT * FROM biz_card_spend WHERE card_id=? ORDER BY id DESC LIMIT 100', [card.id]);
     const cat = await db.queryOne('SELECT * FROM biz_card_category WHERE id=?', [card.card_type_id]);
-    res.json(ok({ card, recharges, spends, category: cat }));
+    const shared_users = await db.query(
+      `SELECT u.id, u.card_id, u.vip_id, u.realname, u.phone, u.relation, u.ope_username, u.insert_time,
+              v.gender, v.avatar
+       FROM biz_member_card_user u
+       JOIN biz_vip_user v ON v.id = u.vip_id
+       WHERE u.card_id = ?
+       ORDER BY u.id ASC`,
+      [card.id]
+    );
+    res.json(ok({ card, recharges, spends, category: cat, shared_users }));
+  } catch (e) { next(e); }
+});
+
+// 绑定家庭共享成员 (已有会员 或 一键创建新会员)
+r.post('/cards/:id/shared-users', staffAuth('admin', 'manager', 'membership', 'coach'), async (req, res, next) => {
+  try {
+    const card = await db.queryOne('SELECT * FROM biz_member_card WHERE id=? AND merchant_id=?', [req.params.id, req.user.mid]);
+    if (!card) throw new BizError('会员卡不存在');
+    if ([4, 5].includes(card.status)) throw new BizError('该会员卡已停用或已退卡，无法添加共享成员');
+
+    const { vip_id, new_member, relation } = req.body;
+    let vip = null;
+
+    if (vip_id) {
+      vip = await db.queryOne('SELECT * FROM biz_vip_user WHERE id=? AND merchant_id=?', [vip_id, req.user.mid]);
+      if (!vip) throw new BizError('会员档案不存在');
+    } else if (new_member && new_member.phone) {
+      const nm = new_member;
+      const phone = String(nm.phone || '').trim();
+      const realname = String(nm.realname || '').trim();
+      if (!phone || !/^1\d{10}$/.test(phone)) throw new BizError('请输入正确的11位手机号');
+      if (!realname) throw new BizError('请填写新成员姓名');
+
+      vip = await db.queryOne('SELECT * FROM biz_vip_user WHERE merchant_id=? AND phone=?', [req.user.mid, phone]);
+      if (!vip) {
+        const bcrypt = require('bcryptjs');
+        const vid = await db.insert(
+          `INSERT INTO biz_vip_user (merchant_id,phone,password,realname,nickname,gender,source_id,source_name,membership_id,membership_name,remark)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+          [req.user.mid, phone, await bcrypt.hash('123456', 10), realname, realname, Number(nm.gender) || 0,
+           0, '家庭共享新建', card.membership_id || 0, card.membership_name || '', `主卡人【${card.realname}】(卡#${card.id})共享成员`]);
+        await db.exec('INSERT IGNORE INTO biz_user_club (vip_user_id, club_id) VALUES (?,?)', [vid, card.club_id || req.clubId]);
+        vip = await db.queryOne('SELECT * FROM biz_vip_user WHERE id=?', [vid]);
+      }
+    } else {
+      throw new BizError('请选择已有会员或填写新成员信息');
+    }
+
+    if (vip.id === card.vip_id) throw new BizError('该会员为主卡持卡人，无需重复添加');
+    if (vip.is_black) throw new BizError(`该会员在黑名单中(${vip.black_reason || ''})，禁止绑定`);
+
+    const exist = await db.queryOne('SELECT id FROM biz_member_card_user WHERE card_id=? AND vip_id=?', [card.id, vip.id]);
+    if (exist) throw new BizError('该会员已作为共享用卡人绑定在此卡，请勿重复添加');
+
+    const relStr = (relation || '家属').trim();
+    const id = await db.insert(
+      `INSERT INTO biz_member_card_user (merchant_id, card_id, vip_id, realname, phone, relation, ope_user_id, ope_username)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [req.user.mid, card.id, vip.id, vip.realname, vip.phone, relStr, req.user.uid, req.user.name]);
+
+    await lifecycleTick(true);
+    await logAction(req, '绑定共享用卡人', `卡#${card.id}【${card.card_type_name}】绑定共享人【${vip.realname}】(${vip.phone}) 关系:${relStr}`);
+
+    res.json(ok({ id, vip_id: vip.id, realname: vip.realname, phone: vip.phone, relation: relStr }));
+  } catch (e) { next(e); }
+});
+
+// 解绑家庭共享成员
+r.delete('/cards/:id/shared-users/:vipId', staffAuth('admin', 'manager', 'membership', 'coach'), async (req, res, next) => {
+  try {
+    const card = await db.queryOne('SELECT * FROM biz_member_card WHERE id=? AND merchant_id=?', [req.params.id, req.user.mid]);
+    if (!card) throw new BizError('会员卡不存在');
+
+    const userRecord = await db.queryOne('SELECT * FROM biz_member_card_user WHERE card_id=? AND vip_id=?', [card.id, req.params.vipId]);
+    if (!userRecord) throw new BizError('未找到该共享成员绑定记录');
+
+    await db.exec('DELETE FROM biz_member_card_user WHERE card_id=? AND vip_id=?', [card.id, req.params.vipId]);
+
+    await lifecycleTick(true);
+    await logAction(req, '解绑共享用卡人', `卡#${card.id}【${card.card_type_name}】解绑共享人【${userRecord.realname}】(#${req.params.vipId})`);
+
+    res.json(ok());
   } catch (e) { next(e); }
 });
 
