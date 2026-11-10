@@ -30,6 +30,12 @@ const CFG = {
   base: process.env.DEEPSEEK_BASE_URL || S.deepseek_base_url || 'https://api.deepseek.com',
 };
 const AI_LIMIT = { chats: Number(S.ai_daily_chats) || 50, images: Number(S.ai_daily_images) || 5 };
+// 视觉模型(拍照识别热量): 通义千问 Qwen-VL(OpenAI 兼容接口), 未配置或失败时回落到 deepseek-flash 的图片能力
+const VLM = {
+  key: process.env.VLM_API_KEY || S.vlm_api_key || '',
+  base: process.env.VLM_BASE_URL || S.vlm_base_url || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  model: process.env.VLM_MODEL || S.vlm_model || 'qwen3-vl-plus',
+};
 const BOT_NAME = '小S';
 const WEEK = '日一二三四五六';
 const uploadRoots = ['/data/uploads', path.join(__dirname, '..', '..', 'web', 'uploads')];
@@ -97,6 +103,27 @@ async function llm(messages, { tools, maxTokens = 1200, temperature = 0.6, json 
   }
   console.error('[AI] llm failed:', lastErr && lastErr.message);
   throw new BizError('AI 助手暂时有点忙，请稍后再试');
+}
+
+// 视觉模型调用(Qwen-VL), 失败抛原始错误由调用方决定是否回落
+async function vlm(messages, { maxTokens = 900, temperature = 0.3, json = false, timeout = 45000 } = {}) {
+  const body = { model: VLM.model, messages, max_tokens: maxTokens, temperature };
+  if (json) body.response_format = { type: 'json_object' };
+  const resp = await fetch(`${VLM.base}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${VLM.key}` },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeout),
+  });
+  if (!resp.ok) throw new Error(`VLM HTTP ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
+  const data = await resp.json();
+  return { message: (data.choices && data.choices[0] && data.choices[0].message) || {}, usage: data.usage || {} };
+}
+async function visionChat(messages, opts) {
+  if (VLM.key) {
+    try { return await vlm(messages, opts); } catch (e) { console.error('[AI] vlm failed, fallback deepseek:', e.message); }
+  }
+  return llm(messages, opts);
 }
 
 /* ================= 小工具 ================= */
@@ -715,10 +742,10 @@ async function recognizeMeal(ctx, imageUrl, userText) {
   const profile = await getProfile(ctx);
   const target = dailyTarget(profile);
   const meals = await getMeals(ctx);
-  const { message, usage } = await llm([
+  const { message, usage } = await visionChat([
     { role: 'system', content: `你是专业营养师。识别图片中的食物并估算热量，只输出 JSON：
 {"is_food":true,"foods":[{"name":"食物名","grams":估算克数整数,"kcal":热量整数}],"total_kcal":整数,"protein_g":数字,"carbs_g":数字,"fat_g":数字,"kcal_range":"如 550-700","comment":"点评与建议"}
-要求：按中国常见份量估算；油炸/勾芡/红烧的菜要计入用油；看不清的按常见做法估计。comment 60~120 字：结合会员目标（${target ? target.goal + '，每日建议约' + target.kcal + 'kcal，今天已记录' + meals.total.kcal + 'kcal' : '未设置目标'}）评价这餐（蛋白质是否充足、油脂/精制碳水是否过多），给出 1~2 条可执行的调整建议，口语化，可带 emoji。
+要求：按中国常见份量估算；油炸/勾芡/红烧的菜要计入用油；看不清的按常见做法估计；食物名用简短常用菜名(不超过8个字，不要括号备注)。comment 60~120 字：结合会员目标（${target ? target.goal + '，每日建议约' + target.kcal + 'kcal(这是全天总量，一顿正餐约占三分之一)，今天已记录' + meals.total.kcal + 'kcal' : '未设置目标'}）评价这一餐本身是否合适（蛋白质是否充足、油脂/精制碳水是否过多），不要拿一餐和全天目标直接比较，给出 1~2 条可执行的调整建议，口语化，可带 emoji。
 如果图片里不是食物，返回 {"is_food":false,"comment":"简短说明"}。` },
     { role: 'user', content: [{ type: 'image_url', image_url: { url: dataUrl } }, { type: 'text', text: userText ? `会员说：${String(userText).slice(0, 200)}` : '请识别这餐的热量' }] },
   ], { json: true, maxTokens: 900, temperature: 0.3, timeout: 60000 });
