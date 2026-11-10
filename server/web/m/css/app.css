@@ -1342,8 +1342,12 @@ html.is-mp .staff-hero::after { top: 8px; }
 .aid-send { flex-shrink: 0; height: 36px; line-height: 36px; padding: 0 14px; border-radius: 18px; font-size: 14px; font-weight: 600; background: #e6e6e6; color: #9a9a9a; cursor: pointer; }
 .aid-send.on { background: #111; color: #fff; }
 .aid-send.rec-send { background: #111; color: #B6FF3B; }
-.aid-rec-box { flex: 1; height: 36px; margin: 0 7px; border-radius: 18px; background: #fff1f0; border: 1px solid #ffccc7; display: flex; align-items: center; padding: 0 12px; overflow: hidden; cursor: pointer; min-width: 0; }
+.aid-rec-box { flex: 1; height: 36px; margin: 0 7px; border-radius: 18px; background: #fff1f0; border: 1px solid #ffccc7; display: flex; align-items: center; padding: 0 6px 0 10px; overflow: hidden; cursor: pointer; min-width: 0; }
 .aid-rec-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff4d4f; flex-shrink: 0; animation: aid-blink 1s ease-in-out infinite; }
-.aid-rec-wave { flex: 1; display: flex; align-items: center; justify-content: center; gap: 3px; height: 22px; margin: 0 8px; overflow: hidden; }
+.aid-rec-time { font-size: 11px; color: #cf1322; font-weight: 600; margin-left: 5px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.aid-rec-wave { flex: 1; display: flex; align-items: center; justify-content: center; gap: 3px; height: 22px; margin: 0 6px; overflow: hidden; }
 .aid-rec-wave i { display: block; width: 3px; border-radius: 2px; background: #ff4d4f; transition: height .09s linear; }
+.aid-rec-stop-wrap { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; background: #fff; border: 1px solid #ffa39e; border-radius: 999px; padding: 3px 8px 3px 4px; }
+.aid-rec-stop { width: 18px; height: 18px; border-radius: 50%; background: #ff4d4f; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.aid-rec-stop i { width: 6px; height: 6px; border-radius: 1.5px; background: #fff; display: block; }
 .aid-rec-sec { font-size: 11px; color: #cf1322; font-weight: 600; flex-shrink: 0; white-space: nowrap; }

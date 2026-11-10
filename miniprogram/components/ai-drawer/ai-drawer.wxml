@@ -148,10 +148,14 @@
         <view class="b-cancel" hover-class="tap" bindtap="cancelVoice">✕</view>
         <view class="b-rec-box" hover-class="tap" bindtap="stopVoiceToText">
           <view class="rec-dot"></view>
+          <text class="rec-time">{{recTime}}</text>
           <view class="rec-wave">
             <view wx:for="{{recBars}}" wx:key="index" class="rec-bar" style="height:{{item}}px"></view>
           </view>
-          <text class="rec-sec">{{recTime}} · 转文字</text>
+          <view class="rec-stop-wrap">
+            <view class="rec-stop"><view class="rec-stop-sq"></view></view>
+            <text class="rec-sec">转文字</text>
+          </view>
         </view>
         <view class="b-send on rec-send" hover-class="tap" bindtap="stopVoiceAndSend">发送</view>
       </block>

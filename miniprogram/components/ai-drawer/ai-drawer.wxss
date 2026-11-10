@@ -122,9 +122,13 @@
 .b-send.on { background: #111; color: #fff; }
 .b-send.rec-send { background: #111; color: #B6FF3B; }
 .b-cancel { font-size: 14px; color: #666; font-weight: 600; }
-.b-rec-box { flex: 1; height: 36px; margin: 0 7px; border-radius: 18px; background: #fff1f0; border: 1px solid #ffccc7; display: flex; align-items: center; padding: 0 12px; overflow: hidden; }
+.b-rec-box { flex: 1; height: 36px; margin: 0 7px; border-radius: 18px; background: #fff1f0; border: 1px solid #ffccc7; display: flex; align-items: center; padding: 0 6px 0 10px; overflow: hidden; }
 .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4d4f; flex-shrink: 0; animation: blink 1s ease-in-out infinite; }
-.rec-wave { flex: 1; display: flex; align-items: center; justify-content: center; gap: 3px; height: 22px; margin: 0 8px; overflow: hidden; }
+.rec-time { font-size: 11px; color: #cf1322; font-weight: 600; margin-left: 5px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.rec-wave { flex: 1; display: flex; align-items: center; justify-content: center; gap: 3px; height: 22px; margin: 0 6px; overflow: hidden; }
 .rec-bar { width: 3px; border-radius: 2px; background: #ff4d4f; transition: height .09s linear; }
+.rec-stop-wrap { display: flex; align-items: center; flex-shrink: 0; background: #fff; border: 1px solid #ffa39e; border-radius: 999px; padding: 3px 8px 3px 4px; }
+.rec-stop { width: 18px; height: 18px; border-radius: 50%; background: #ff4d4f; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 4px; }
+.rec-stop-sq { width: 6px; height: 6px; border-radius: 1.5px; background: #fff; }
 .rec-sec { font-size: 11px; color: #cf1322; font-weight: 600; flex-shrink: 0; }
 
