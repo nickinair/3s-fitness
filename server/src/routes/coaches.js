@@ -183,16 +183,16 @@ function parseOpen(openTime) {
 }
 const overlap = (aFrom, aTo, bFrom, bTo) => aFrom < bTo && bFrom < aTo;
 
-// 教练当天的占用区间(对会员脱敏, 不带会员姓名)
+// 教练当天的占用区间(对会员脱敏, 不带会员姓名; 含待确认0、已确认1、已完成3的课程)
 async function getCoachBusy(coachId, date) {
   const busy = [];
   const [bookings, classes, rests] = await Promise.all([
-    db.query('SELECT from_time, to_time FROM biz_ptrain_bespeak_record WHERE coach_id=? AND `date`=? AND status IN (0,1)', [coachId, date]),
+    db.query('SELECT from_time, to_time, status FROM biz_ptrain_bespeak_record WHERE coach_id=? AND `date`=? AND status IN (0,1,3)', [coachId, date]),
     db.query(`SELECT title, DATE_FORMAT(start_time,'%H:%i') from_time, DATE_FORMAT(end_time,'%H:%i') to_time FROM biz_syllabus_group
-     WHERE coach_id=? AND DATE(start_time)=? AND status=1`, [coachId, date]),
+     WHERE coach_id=? AND DATE(start_time)=? AND status IN (1,3)`, [coachId, date]),
     db.query('SELECT from_time, to_time, remark FROM biz_coach_rest WHERE coach_id=? AND rest_date=?', [coachId, date]),
   ]);
-  bookings.forEach(b => busy.push({ from: b.from_time, to: b.to_time, type: 'booked', label: '已约' }));
+  bookings.forEach(b => busy.push({ from: b.from_time, to: b.to_time, type: 'booked', label: b.status === 3 ? '已完课' : '已约' }));
   classes.forEach(c => busy.push({ from: c.from_time, to: c.to_time, type: 'class', label: '团课·' + c.title }));
   rests.forEach(x => busy.push(x.from_time
     ? { from: x.from_time, to: x.to_time, type: 'rest', label: '休息' }
@@ -200,13 +200,13 @@ async function getCoachBusy(coachId, date) {
   return busy.sort((a, b) => toMin(a.from) - toMin(b.from));
 }
 
-// 会员当天自己已有的课(私教+团课), 避免同一时间约两节
+// 会员当天自己已有的课(私教+团课, 含已完成/已核销), 避免同一时间约两节
 async function getMemberBusy(vipId, date, excludeBookingId = 0) {
   const busy = [];
   const [pts, groups] = await Promise.all([
-    db.query('SELECT id, from_time, to_time, coach_name FROM biz_ptrain_bespeak_record WHERE vip_id=? AND `date`=? AND status IN (0,1) AND id<>?', [vipId, date, excludeBookingId]),
+    db.query('SELECT id, from_time, to_time, coach_name FROM biz_ptrain_bespeak_record WHERE vip_id=? AND `date`=? AND status IN (0,1,3) AND id<>?', [vipId, date, excludeBookingId]),
     db.query(`SELECT syllabus_title, DATE_FORMAT(class_start_time,'%H:%i') f, DATE_FORMAT(class_end_time,'%H:%i') t
-     FROM biz_syllabus_subscribe_record WHERE vip_id=? AND DATE(class_start_time)=? AND status IN (0,1)`, [vipId, date]),
+     FROM biz_syllabus_subscribe_record WHERE vip_id=? AND DATE(class_start_time)=? AND status IN (0,1,2)`, [vipId, date]),
   ]);
   pts.forEach(b => busy.push({ from: b.from_time, to: b.to_time, type: 'mine', label: '我的私教·' + b.coach_name }));
   groups.forEach(g => busy.push({ from: g.f, to: g.t, type: 'mine', label: '我的团课·' + g.syllabus_title }));
@@ -405,10 +405,10 @@ async function checkBookingLimits(cat, card, vipId, date, kind) {
   const dayStart = `${date} 00:00:00`; const dayEnd = `${date} 23:59:59`;
   const cnt = async (from, to) => {
     const [{ n: n1 }] = await db.query(
-      `SELECT COUNT(*) n FROM biz_ptrain_bespeak_record WHERE vip_id=? AND card_id=? AND status IN (0,1) AND CONCAT(\`date\`,' ',from_time) BETWEEN ? AND ?`,
+      `SELECT COUNT(*) n FROM biz_ptrain_bespeak_record WHERE vip_id=? AND card_id=? AND status IN (0,1,3) AND CONCAT(\`date\`,' ',from_time) BETWEEN ? AND ?`,
       [vipId, card.id, from, to]);
     const [{ n: n2 }] = await db.query(
-      `SELECT COUNT(*) n FROM biz_syllabus_subscribe_record WHERE vip_id=? AND card_id=? AND status IN (0,1) AND class_start_time BETWEEN ? AND ?`,
+      `SELECT COUNT(*) n FROM biz_syllabus_subscribe_record WHERE vip_id=? AND card_id=? AND status IN (0,1,2) AND class_start_time BETWEEN ? AND ?`,
       [vipId, card.id, from, to]);
     return n1 + n2;
   };

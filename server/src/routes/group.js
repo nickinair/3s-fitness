@@ -138,16 +138,20 @@ r.post('/syllabus', staffAuth('admin', 'manager'), async (req, res, next) => {
     // 教室占用校验
     if (room) {
       const clash = await db.queryOne(
-        `SELECT id,title FROM biz_syllabus_group WHERE classroom_id=? AND status=1 AND start_time<? AND end_time>?`,
+        `SELECT id,title FROM biz_syllabus_group WHERE classroom_id=? AND status IN (1,3) AND start_time<? AND end_time>?`,
         [room.id, et.format('YYYY-MM-DD HH:mm:ss'), st.format('YYYY-MM-DD HH:mm:ss')]);
       if (clash) throw new BizError(`教室在该时段已被「${clash.title}」占用`);
     }
     // 教练冲突校验
     if (coach) {
       const clash2 = await db.queryOne(
-        `SELECT id,title FROM biz_syllabus_group WHERE coach_id=? AND status=1 AND start_time<? AND end_time>?`,
+        `SELECT id,title FROM biz_syllabus_group WHERE coach_id=? AND status IN (1,3) AND start_time<? AND end_time>?`,
         [coach.id, et.format('YYYY-MM-DD HH:mm:ss'), st.format('YYYY-MM-DD HH:mm:ss')]);
       if (clash2) throw new BizError(`教练在该时段已有课程「${clash2.title}」`);
+      const clashPt = await db.queryOne(
+        `SELECT id,from_time,to_time FROM biz_ptrain_bespeak_record WHERE coach_id=? AND \`date\`=? AND status IN (0,1,3) AND from_time<? AND to_time>?`,
+        [coach.id, st.format('YYYY-MM-DD'), et.format('HH:mm'), st.format('HH:mm')]);
+      if (clashPt) throw new BizError(`教练在该时段已有私教课（${clashPt.from_time}-${clashPt.to_time}）`);
     }
     const id = await db.insert(
       `INSERT INTO biz_syllabus_group (merchant_id,club_id,group_id,title,coach_id,coach_name,classroom_id,classroom_name,
@@ -235,8 +239,15 @@ async function createGroupBooking({ mid, clubId, syllabusId, vipId, cardId, user
   const vip = await db.queryOne('SELECT * FROM biz_vip_user WHERE id=? AND merchant_id=?', [vipId, mid]);
   if (!vip) throw new BizError('会员不存在');
   if (vip.is_black) throw new BizError('该会员在黑名单中，禁止预约');
-  const dup = await db.queryOne('SELECT id FROM biz_syllabus_subscribe_record WHERE syllabus_id=? AND vip_id=? AND status IN (0,1)', [s.id, vipId]);
+  const dup = await db.queryOne('SELECT id FROM biz_syllabus_subscribe_record WHERE syllabus_id=? AND vip_id=? AND status IN (0,1,2)', [s.id, vipId]);
   if (dup) throw new BizError('已预约该课程，请勿重复预约');
+  const dateStr = dayjs(s.start_time).format('YYYY-MM-DD');
+  const fStr = dayjs(s.start_time).format('HH:mm');
+  const tStr = dayjs(s.end_time).format('HH:mm');
+  const clashPt = await db.queryOne(
+    `SELECT coach_name, from_time, to_time FROM biz_ptrain_bespeak_record WHERE vip_id=? AND \`date\`=? AND status IN (0,1,3) AND from_time<? AND to_time>?`,
+    [vipId, dateStr, tStr, fStr]);
+  if (clashPt) throw new BizError(`该时段与已有的私教课冲突（${clashPt.coach_name} ${clashPt.from_time}-${clashPt.to_time}）`);
   const card = await db.queryOne(
     `SELECT c.*, IF(c.vip_id=?, 0, 1) AS is_shared, v.realname AS owner_name
      FROM biz_member_card c
