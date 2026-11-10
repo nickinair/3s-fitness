@@ -108,9 +108,9 @@ async function asrRecognize(audioBase64, format = 'wav') {
     const msg = submit.headers.get('x-api-message') || `HTTP ${submit.status}`;
     throw new Error(`语音识别失败: ${msg} (code ${sCode || submit.status})`);
   }
-  // 轮询查询结果 (短录音通常 1-3 秒出)
-  for (let i = 0; i < 25; i++) {
-    await new Promise(r => setTimeout(r, i < 5 ? 600 : 1200));
+  // 轮询查询结果 (短语音通常 300~600ms 出结果)
+  for (let i = 0; i < 28; i++) {
+    await new Promise(r => setTimeout(r, i < 4 ? 280 : (i < 10 ? 500 : 1000)));
     const q = await fetch('https://openspeech.bytedance.com/api/v3/auc/bigmodel/query', {
       method: 'POST', headers: asrHeaders(reqId), body: '{}', signal: AbortSignal.timeout(15000),
     });
@@ -122,7 +122,9 @@ async function asrRecognize(audioBase64, format = 'wav') {
       return text;
     }
     if (code !== '20000001' && code !== '20000002') {
-      throw new Error(`语音识别失败: ${q.headers.get('x-api-message') || code}`);
+      const msg = q.headers.get('x-api-message') || code;
+      if (/silence|no valid speech/i.test(msg)) throw new Error('未识别到说话声，请靠近麦克风重试');
+      throw new Error(`语音识别失败: ${msg}`);
     }
   }
   throw new Error('语音识别超时，请重试');

@@ -4,8 +4,15 @@ const dayjs = require('dayjs');
 const db = require('../db');
 const sms = require('../sms');
 const { parsePlan } = require('../parser');
-const { ok, BizError, page, logAction, sendCsv } = require('../util');
-const { staffAuth } = require('../middleware/auth');
+const { ok, fail, BizError, page, logAction, sendCsv } = require('../util');
+const { staffAuth, parseToken } = require('../middleware/auth');
+
+function anyAuth(req, res, next) {
+  const u = parseToken(req);
+  if (!u) return res.status(401).json(fail('未登录或登录已过期', 401));
+  req.user = u;
+  next();
+}
 
 const r = express.Router();
 
@@ -243,7 +250,7 @@ r.post('/training-plans/parse', staffAuth(), async (req, res, next) => {
 });
 
 // AI 能力状态 (前端据此展示引擎标识/启用录音)
-r.get('/ai/status', staffAuth(), async (req, res, next) => {
+r.get('/ai/status', anyAuth, async (req, res, next) => {
   try {
     const ai = require('../ai');
     res.json(ok({ llm: ai.llmEnabled(), asr: ai.asrEnabled(), model: ai.llmEnabled() ? ai.CFG.arkModel : '' }));
@@ -251,7 +258,7 @@ r.get('/ai/status', staffAuth(), async (req, res, next) => {
 });
 
 // 语音识别 (浏览器录音 WAV → 火山引擎极速识别)
-r.post('/asr/recognize', staffAuth(), async (req, res, next) => {
+r.post('/asr/recognize', anyAuth, async (req, res, next) => {
   try {
     const { audio_base64, format = 'wav' } = req.body;
     if (!audio_base64) throw new BizError('缺少音频数据');

@@ -16,6 +16,7 @@ Component({
   data: {
     visible: false, opened: false,
     msgs: [], quick: [], input: '', loading: false, initing: false, sending: false,
+    recording: false, recognizing: false, recBars: [5, 8, 6, 10, 7, 12, 6, 9, 5, 8], recTime: '0:00',
     scrollId: '', kbH: 0, quota: null, origin: ORIGIN, enabled: true,
   },
   observers: {
@@ -25,6 +26,7 @@ Component({
         setTimeout(() => this.setData({ opened: true }), 20);
         this.init();
       } else if (this.data.visible) {
+        if (this.data.recording) this.cancelVoice();
         this.setData({ opened: false });
         clearTimeout(this.hideT);
         this.hideT = setTimeout(() => this.setData({ visible: false, kbH: 0 }), 280);
@@ -32,7 +34,7 @@ Component({
     },
   },
   lifetimes: {
-    detached() { clearTimeout(this.hideT); clearInterval(this.typeT); },
+    detached() { clearTimeout(this.hideT); clearInterval(this.typeT); clearInterval(this.recT); },
   },
   methods: {
     noop() {},
@@ -131,6 +133,138 @@ Component({
     onBlur() { this.setData({ kbH: 0 }); },
     sendInput() { this.send(this.data.input); },
     onQuick(e) { this.send(e.currentTarget.dataset.q); },
+
+    /* ---------- 语音输入 (豆包火山引擎 ASR) ---------- */
+    ensureRecorder() {
+      if (this._recMgr) return this._recMgr;
+      const mgr = wx.getRecorderManager();
+      mgr.onStart(() => {
+        this._recT0 = Date.now();
+        this._recLv = 0.2;
+        clearInterval(this.recT);
+        this.setData({ recording: true, recTime: '0:00', recBars: [5, 7, 10, 6, 8, 11, 7, 5, 9, 6] });
+        this.recT = setInterval(() => {
+          const sec = Math.floor((Date.now() - this._recT0) / 1000);
+          const m = Math.floor(sec / 60);
+          const s = sec % 60;
+          const lv = this._recLv || (0.2 + Math.random() * 0.35);
+          const bars = (this.data.recBars || []).slice(1);
+          bars.push(Math.round(4 + Math.min(1, lv + (Math.random() - 0.5) * 0.2) * 14));
+          this.setData({ recTime: m + ':' + (s < 10 ? '0' : '') + s, recBars: bars });
+        }, 110);
+      });
+      mgr.onFrameRecorded(({ frameBuffer }) => {
+        if (!frameBuffer || !frameBuffer.byteLength) return;
+        const pcm = new Int16Array(frameBuffer);
+        let sum = 0;
+        const step = Math.max(1, Math.floor(pcm.length / 200));
+        let cnt = 0;
+        for (let i = 0; i < pcm.length; i += step) {
+          const v = pcm[i] / 32768;
+          sum += v * v;
+          cnt++;
+        }
+        const rms = Math.sqrt(sum / Math.max(1, cnt));
+        this._recLv = (this._recLv || 0.2) * 0.5 + Math.min(1, rms * 4.5) * 0.5;
+      });
+      mgr.onStop((res) => {
+        clearInterval(this.recT);
+        const action = this._voiceAction || 'text';
+        this.setData({ recording: false });
+        if (action === 'cancel') return;
+        const dur = (res && res.duration) || (Date.now() - (this._recT0 || Date.now()));
+        if (dur < 500 || !res || !res.tempFilePath) {
+          this.toast('说话时间太短，请重试');
+          return;
+        }
+        this.setData({ recognizing: true });
+        wx.showLoading({ title: '语音识别中…', mask: true });
+        wx.getFileSystemManager().readFile({
+          filePath: res.tempFilePath,
+          encoding: 'base64',
+          success: (r) => {
+            this.request('/member/ai/asr', 'POST', { audio_base64: r.data, format: 'wav' }).then((d) => {
+              wx.hideLoading();
+              this.setData({ recognizing: false });
+              const txt = (d && d.text ? String(d.text).trim() : '');
+              if (!txt) { this.toast('未识别到语音内容'); return; }
+              if (action === 'send') {
+                this.send(txt);
+              } else {
+                const prev = (this.data.input || '').trim();
+                this.setData({ input: prev ? (prev + ' ' + txt) : txt });
+              }
+            }).catch((err) => {
+              wx.hideLoading();
+              this.setData({ recognizing: false });
+              this.toast(err.message || '语音识别失败');
+            });
+          },
+          fail: () => {
+            wx.hideLoading();
+            this.setData({ recognizing: false });
+            this.toast('读取录音失败，请重试');
+          },
+        });
+      });
+      mgr.onError((err) => {
+        clearInterval(this.recT);
+        this.setData({ recording: false, recognizing: false });
+        const msg = (err && err.errMsg) || '';
+        if (/auth|deny|permission/i.test(msg)) {
+          wx.showModal({
+            title: '需要麦克风权限',
+            content: '请在设置中开启麦克风权限，以便使用语音对小S说话',
+            confirmText: '去开启',
+            success: (r) => { if (r.confirm && wx.openSetting) wx.openSetting(); },
+          });
+        } else {
+          this.toast('无法启动录音，请稍后重试');
+        }
+      });
+      this._recMgr = mgr;
+      return mgr;
+    },
+    onMicStart() {
+      if (this.data.sending || this.data.recognizing || this.data.recording) return;
+      this._micTouchStart = Date.now();
+      this._voiceAction = 'text';
+      const mgr = this.ensureRecorder();
+      mgr.start({
+        duration: 60000,
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        encodeBitRate: 48000,
+        format: 'wav',
+        frameSize: 4,
+      });
+    },
+    onMicEnd() {
+      if (!this.data.recording) return;
+      const heldMs = Date.now() - (this._micTouchStart || 0);
+      // 长按超过 600ms 松手即自动停止并识别；轻点则保持录音状态，点「转文字」或「发送」结束
+      if (heldMs >= 600) {
+        this._voiceAction = 'text';
+        this.ensureRecorder().stop();
+      }
+    },
+    stopVoiceToText() {
+      if (!this.data.recording) return;
+      this._voiceAction = 'text';
+      this.ensureRecorder().stop();
+    },
+    stopVoiceAndSend() {
+      if (!this.data.recording) return;
+      this._voiceAction = 'send';
+      this.ensureRecorder().stop();
+    },
+    cancelVoice() {
+      if (!this.data.recording) return;
+      this._voiceAction = 'cancel';
+      clearInterval(this.recT);
+      this.setData({ recording: false });
+      try { this.ensureRecorder().stop(); } catch (e) {}
+    },
     send(text, image) {
       text = String(text || '').trim();
       if ((!text && !image) || this.data.sending) return;

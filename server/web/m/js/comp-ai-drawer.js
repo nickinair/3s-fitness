@@ -18,6 +18,10 @@
     initing: false,
     sending: false,
     uploading: false,
+    recording: false,
+    recognizing: false,
+    recBars: [5, 7, 10, 6, 8, 11, 7, 5, 9, 6],
+    recTime: '0:00',
     enabled: true,
     msgs: [],
     quick: ['下一节课是什么时候', '我的卡还剩几节', '帮我约私教', '本周训练小结', '减脂期晚餐吃什么'],
@@ -177,11 +181,82 @@
       inp.click();
     },
     close() {
+      if (state.recording) this.cancelVoice();
       finishTyping();
       state.opened = false;
       document.body.style.overflow = '';
       clearTimeout(hideTimer);
       hideTimer = setTimeout(() => { state.visible = false; }, 280);
+    },
+    async startVoice() {
+      if (state.sending || state.uploading || state.recognizing || state.recording) return;
+      const hint = window.WavRecorder && WavRecorder.secureHint && WavRecorder.secureHint();
+      if (hint) { vant.showToast(hint); return; }
+      if (!window.WavRecorder || !WavRecorder.supported()) {
+        vant.showToast('当前环境不支持麦克风录音，请使用键盘输入');
+        return;
+      }
+      try {
+        await WavRecorder.start();
+        state.recording = true;
+        state.recTime = '0:00';
+        state.recBars = [5, 7, 10, 6, 8, 11, 7, 5, 9, 6];
+        const t0 = Date.now();
+        clearInterval(this._recTimer);
+        this._recTimer = setInterval(() => {
+          const sec = Math.floor((Date.now() - t0) / 1000);
+          const m = Math.floor(sec / 60);
+          const s = sec % 60;
+          const lv = (window.WavRecorder && WavRecorder.level) || (0.2 + Math.random() * 0.3);
+          const bars = state.recBars.slice(1);
+          bars.push(Math.round(4 + Math.min(1, lv + (Math.random() - 0.5) * 0.16) * 14));
+          state.recBars = bars;
+          state.recTime = m + ':' + (s < 10 ? '0' : '') + s;
+        }, 100);
+      } catch (e) {
+        vant.showToast(e && e.name === 'NotAllowedError' ? '请允许麦克风权限' : '无法开启麦克风，请重试');
+      }
+    },
+    async finishVoice(mode) {
+      if (!state.recording) return;
+      clearInterval(this._recTimer);
+      state.recording = false;
+      if (mode === 'cancel') {
+        try { await WavRecorder.stop(); } catch (e) {}
+        return;
+      }
+      state.recognizing = true;
+      const toast = vant.showLoadingToast({ message: '语音识别中…', forbidClick: true, duration: 0 });
+      try {
+        const { base64, seconds } = await WavRecorder.stop();
+        if (seconds < 0.5) {
+          toast.close();
+          state.recognizing = false;
+          vant.showToast('说话时间太短，请重试');
+          return;
+        }
+        const d = await API.post('/member/ai/asr', { audio_base64: base64, format: 'wav' });
+        toast.close();
+        state.recognizing = false;
+        const txt = (d && d.text ? String(d.text).trim() : '');
+        if (!txt) {
+          vant.showToast('未识别到语音内容');
+          return;
+        }
+        if (mode === 'send') {
+          this.send(txt);
+        } else {
+          const prev = (state.input || '').trim();
+          state.input = prev ? (prev + ' ' + txt) : txt;
+        }
+      } catch (e) {
+        toast.close();
+        state.recognizing = false;
+        vant.showToast((e && e.message) || '语音识别失败');
+      }
+    },
+    cancelVoice() {
+      this.finishVoice('cancel');
     },
     init(force) {
       if (initPromise) return initPromise;
@@ -324,6 +399,10 @@
     methods: {
       close() { AI.close(); },
       choosePhoto() { AI.choosePhoto(); },
+      startVoice() { AI.startVoice(); },
+      stopVoiceToText() { AI.finishVoice('text'); },
+      stopVoiceAndSend() { AI.finishVoice('send'); },
+      cancelVoice() { AI.cancelVoice(); },
       sendInput() { AI.send(this.state.input); },
       onQuick(q) { AI.send(q); },
       preview(u) {
@@ -594,9 +673,26 @@
 
       // 输入栏
       '    <div class="aid-bar">',
-      '      <div class="aid-cam" @click="choosePhoto"><van-icon name="photograph" size="20"/></div>',
-      '      <input class="aid-in" v-model="state.input" placeholder="问问小S，如「约三七教练明晚7点」" maxlength="500" @keyup.enter="sendInput"/>',
-      '      <div class="aid-send" :class="{on: state.input.trim() && !state.sending}" @click="sendInput">发送</div>',
+      '      <template v-if="!state.recording">',
+      '        <div class="aid-cam" @click="choosePhoto" title="拍照/相册"><van-icon name="photograph" size="19"/></div>',
+      '        <div class="aid-mic" @click="startVoice" title="语音输入">',
+      '          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
+      '            <rect x="9" y="2" width="6" height="12" rx="3"/>',
+      '            <path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/>',
+      '          </svg>',
+      '        </div>',
+      '        <input class="aid-in" v-model="state.input" :placeholder="state.recognizing ? \'语音识别中…\' : \'问问小S，或点麦克风说话\'" maxlength="500" @keyup.enter="sendInput"/>',
+      '        <div class="aid-send" :class="{on: state.input.trim() && !state.sending}" @click="sendInput">发送</div>',
+      '      </template>',
+      '      <template v-else>',
+      '        <div class="aid-cancel" @click="cancelVoice" title="取消录音">✕</div>',
+      '        <div class="aid-rec-box" @click="stopVoiceToText">',
+      '          <i class="aid-rec-dot"></i>',
+      '          <div class="aid-rec-wave"><i v-for="(h, idx) in state.recBars" :key="idx" :style="{height: h + \'px\'}"></i></div>',
+      '          <span class="aid-rec-sec">{{ state.recTime }} · 转文字</span>',
+      '        </div>',
+      '        <div class="aid-send on rec-send" @click="stopVoiceAndSend">发送</div>',
+      '      </template>',
       '    </div>',
       '  </div>',
       '  <van-action-sheet v-model:show="state.sheet" :actions="mealActions" cancel-text="取消" description="改为哪一餐" @select="onSelectMealType" teleport="body"/>',
@@ -608,3 +704,4 @@
   window.MComponents['ai-entry'] = AiEntry;
   window.MComponents['ai-drawer'] = AiDrawer;
 })();
+

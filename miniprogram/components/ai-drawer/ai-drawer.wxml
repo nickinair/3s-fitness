@@ -132,13 +132,29 @@
 
     <!-- 输入栏 -->
     <view class="bar" style="{{kbH ? 'padding-bottom:' + (kbH + 8) + 'px' : ''}}">
-      <view class="b-cam" hover-class="tap" bindtap="chooseImage">
-        <image src="/assets/icons/photograph.png" mode="aspectFit" class="b-cam-i" binderror="noop"></image>
-      </view>
-      <input class="b-in" value="{{input}}" placeholder="问问小S，如「约三七教练明晚7点」" placeholder-class="ph" confirm-type="send"
-        adjust-position="{{false}}" maxlength="500" cursor-spacing="20" bindinput="onInput" bindconfirm="sendInput"
-        bindkeyboardheightchange="onKb" bindblur="onBlur" />
-      <view class="b-send {{input && !sending ? 'on' : ''}}" hover-class="tap" bindtap="sendInput">发送</view>
+      <block wx:if="{{!recording}}">
+        <view class="b-cam" hover-class="tap" bindtap="chooseImage">
+          <image src="/assets/icons/photograph.png" mode="aspectFit" class="b-cam-i" binderror="noop"></image>
+        </view>
+        <view class="b-mic" hover-class="tap" bindtouchstart="onMicStart" bindtouchend="onMicEnd" bindtouchcancel="onMicEnd">
+          <view class="mic-ico"><view class="mic-head"></view><view class="mic-cup"></view><view class="mic-stem"></view></view>
+        </view>
+        <input class="b-in" value="{{input}}" placeholder="{{recognizing ? '语音识别中…' : '问问小S，或点左侧麦克风说话'}}" placeholder-class="ph" confirm-type="send"
+          adjust-position="{{false}}" maxlength="500" cursor-spacing="20" bindinput="onInput" bindconfirm="sendInput"
+          bindkeyboardheightchange="onKb" bindblur="onBlur" />
+        <view class="b-send {{input && !sending ? 'on' : ''}}" hover-class="tap" bindtap="sendInput">发送</view>
+      </block>
+      <block wx:else>
+        <view class="b-cancel" hover-class="tap" bindtap="cancelVoice">✕</view>
+        <view class="b-rec-box" hover-class="tap" bindtap="stopVoiceToText">
+          <view class="rec-dot"></view>
+          <view class="rec-wave">
+            <view wx:for="{{recBars}}" wx:key="index" class="rec-bar" style="height:{{item}}px"></view>
+          </view>
+          <text class="rec-sec">{{recTime}} · 转文字</text>
+        </view>
+        <view class="b-send on rec-send" hover-class="tap" bindtap="stopVoiceAndSend">发送</view>
+      </block>
     </view>
   </view>
 </view>

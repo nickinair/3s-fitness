@@ -1333,8 +1333,17 @@ html.is-mp .staff-hero::after { top: 8px; }
 .aid-q.ghost { color: #999; }
 
 .aid-bar { flex-shrink: 0; display: flex; align-items: center; background: #fff; padding: 8px 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom) + var(--kb, 0px)); transition: padding-bottom .18s ease; }
-.aid-cam { width: 36px; height: 36px; border-radius: 50%; background: #f2f2f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #111; cursor: pointer; }
-.aid-in { flex: 1; height: 36px; background: #f2f2f2; border: none; outline: none; border-radius: 18px; padding: 0 14px; margin: 0 8px; font-size: 14px; color: #111; }
+.aid-cam, .aid-mic, .aid-cancel { width: 34px; height: 34px; border-radius: 50%; background: #f2f2f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #111; cursor: pointer; }
+.aid-mic { margin-left: 6px; }
+.aid-cam:active, .aid-mic:active, .aid-cancel:active { opacity: .7; }
+.aid-cancel { font-size: 14px; font-weight: 600; color: #666; }
+.aid-in { flex: 1; height: 36px; background: #f2f2f2; border: none; outline: none; border-radius: 18px; padding: 0 12px; margin: 0 7px; font-size: 14px; color: #111; min-width: 0; }
 .aid-in::placeholder { color: #aaa; font-size: 13px; }
 .aid-send { flex-shrink: 0; height: 36px; line-height: 36px; padding: 0 14px; border-radius: 18px; font-size: 14px; font-weight: 600; background: #e6e6e6; color: #9a9a9a; cursor: pointer; }
 .aid-send.on { background: #111; color: #fff; }
+.aid-send.rec-send { background: #111; color: #B6FF3B; }
+.aid-rec-box { flex: 1; height: 36px; margin: 0 7px; border-radius: 18px; background: #fff1f0; border: 1px solid #ffccc7; display: flex; align-items: center; padding: 0 12px; overflow: hidden; cursor: pointer; min-width: 0; }
+.aid-rec-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff4d4f; flex-shrink: 0; animation: aid-blink 1s ease-in-out infinite; }
+.aid-rec-wave { flex: 1; display: flex; align-items: center; justify-content: center; gap: 3px; height: 22px; margin: 0 8px; overflow: hidden; }
+.aid-rec-wave i { display: block; width: 3px; border-radius: 2px; background: #ff4d4f; transition: height .09s linear; }
+.aid-rec-sec { font-size: 11px; color: #cf1322; font-weight: 600; flex-shrink: 0; white-space: nowrap; }

@@ -108,10 +108,23 @@
 .q.photo { background: #111; color: #B6FF3B; font-weight: 600; margin-left: 12px; }
 .q.ghost { color: #999; }
 .bar { flex-shrink: 0; display: flex; align-items: center; background: #fff; padding: 8px 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
-.b-cam { width: 36px; height: 36px; border-radius: 50%; background: #f2f2f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.b-cam-i { width: 20px; height: 20px; }
-.b-in { flex: 1; height: 36px; background: #f2f2f2; border-radius: 18px; padding: 0 14px; margin: 0 8px; font-size: 14px; color: #111; }
+.b-cam, .b-mic, .b-cancel { width: 34px; height: 34px; border-radius: 50%; background: #f2f2f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.b-mic { margin-left: 6px; }
+.b-cam-i { width: 19px; height: 19px; }
+/* 纯 CSS 麦克风图标 */
+.mic-ico { position: relative; width: 16px; height: 18px; display: flex; flex-direction: column; align-items: center; }
+.mic-head { width: 6px; height: 10px; border: 1.8px solid #111; border-radius: 4px; box-sizing: border-box; }
+.mic-cup { width: 12px; height: 6px; border: 1.8px solid #111; border-top: none; border-radius: 0 0 6px 6px; margin-top: -3px; box-sizing: border-box; }
+.mic-stem { width: 1.8px; height: 3px; background: #111; }
+.b-in { flex: 1; height: 36px; background: #f2f2f2; border-radius: 18px; padding: 0 12px; margin: 0 7px; font-size: 14px; color: #111; }
 .ph { color: #aaa; font-size: 13px; }
 .b-send { flex-shrink: 0; height: 36px; line-height: 36px; padding: 0 14px; border-radius: 18px; font-size: 14px; font-weight: 600; background: #e6e6e6; color: #9a9a9a; }
 .b-send.on { background: #111; color: #fff; }
+.b-send.rec-send { background: #111; color: #B6FF3B; }
+.b-cancel { font-size: 14px; color: #666; font-weight: 600; }
+.b-rec-box { flex: 1; height: 36px; margin: 0 7px; border-radius: 18px; background: #fff1f0; border: 1px solid #ffccc7; display: flex; align-items: center; padding: 0 12px; overflow: hidden; }
+.rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4d4f; flex-shrink: 0; animation: blink 1s ease-in-out infinite; }
+.rec-wave { flex: 1; display: flex; align-items: center; justify-content: center; gap: 3px; height: 22px; margin: 0 8px; overflow: hidden; }
+.rec-bar { width: 3px; border-radius: 2px; background: #ff4d4f; transition: height .09s linear; }
+.rec-sec { font-size: 11px; color: #cf1322; font-weight: 600; flex-shrink: 0; }
 

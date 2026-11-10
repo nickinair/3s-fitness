@@ -1008,6 +1008,22 @@ r.post('/clear', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// 语音识别（复用火山引擎豆包录音文件识别 2.0）
+r.post('/asr', async (req, res, next) => {
+  try {
+    const { audio_base64, format = 'wav' } = req.body || {};
+    if (!audio_base64) throw new BizError('缺少音频数据');
+    if (audio_base64.length > 8 * 1024 * 1024) throw new BizError('录音过长，请控制在1分钟内');
+    const ai = require('../ai');
+    if (!ai.asrEnabled()) throw new BizError('未配置语音识别服务');
+    const text = await ai.asrRecognize(audio_base64, format);
+    res.json(ok({ text }));
+  } catch (e) {
+    if (e.biz) return next(e);
+    next(new BizError(e.message || '语音识别失败'));
+  }
+});
+
 // 小程序原生端 Base64 上传兜底（兼容未单独配置 wx.uploadFile 合法域名的环境）
 r.post('/upload-base64', async (req, res, next) => {
   try {
