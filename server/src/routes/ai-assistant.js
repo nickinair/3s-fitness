@@ -34,7 +34,7 @@ const AI_LIMIT = { chats: Number(S.ai_daily_chats) || 50, images: Number(S.ai_da
 const VLM = {
   key: process.env.VLM_API_KEY || S.vlm_api_key || '',
   base: process.env.VLM_BASE_URL || S.vlm_base_url || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  model: process.env.VLM_MODEL || S.vlm_model || 'qwen3-vl-plus',
+  model: process.env.VLM_MODEL || S.vlm_model || 'qwen3.6-flash',
 };
 const BOT_NAME = '小S';
 const WEEK = '日一二三四五六';
@@ -107,7 +107,7 @@ async function llm(messages, { tools, maxTokens = 1200, temperature = 0.6, json 
 
 // 视觉模型调用(Qwen-VL), 失败抛原始错误由调用方决定是否回落
 async function vlm(messages, { maxTokens = 900, temperature = 0.3, json = false, timeout = 45000 } = {}) {
-  const body = { model: VLM.model, messages, max_tokens: maxTokens, temperature };
+  const body = { model: VLM.model, messages, max_tokens: maxTokens, temperature, enable_thinking: false };
   if (json) body.response_format = { type: 'json_object' };
   const resp = await fetch(`${VLM.base}/chat/completions`, {
     method: 'POST',
