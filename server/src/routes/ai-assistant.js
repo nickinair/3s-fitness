@@ -934,8 +934,68 @@ r.post('/meal-log', async (req, res, next) => {
     await markCard(ctx, b.msg_id, Number(b.card_idx) || 0, { done, meal_type: mealType, meal_name: MEAL_NAMES[mealType] });
     const t = meals.daily_target;
     const text = `🍽 ${done}。今天已摄入约 ${meals.total.kcal} kcal${t ? `，建议总量约 ${t.kcal} kcal，${meals.remaining_kcal >= 0 ? `还可以吃约 ${meals.remaining_kcal} kcal` : `已超出约 ${-meals.remaining_kcal} kcal，晚点可以加一点有氧`}` : ''}。蛋白质 ${meals.total.protein_g}g${t ? ` / 目标 ${t.protein_g}g` : ''}。`;
-    const id = await saveMsg(ctx, 'assistant', text);
-    res.json(ok({ done, message: { id, role: 'assistant', text, cards: [], time: dayjs().format('MM-DD HH:mm') } }));
+    const mealCards = [{ type: 'link', text: '查看饮食日记', path: 'meals' }];
+    const id = await saveMsg(ctx, 'assistant', text, { cards: mealCards });
+    res.json(ok({ done, message: { id, role: 'assistant', text, cards: mealCards, time: dayjs().format('MM-DD HH:mm') } }));
+  } catch (e) { next(e); }
+});
+
+// ---- 饮食日记(H5「我的 → 饮食日记」) ----
+// GET /meals?date=YYYY-MM-DD → 当天各餐 + 合计 + 建议 + 近7天趋势
+r.get('/meals', async (req, res, next) => {
+  try {
+    await ensureTables();
+    const ctx = ctxOf(req);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date || '')) ? req.query.date : dayjs().format('YYYY-MM-DD');
+    const rows = await db.query(
+      'SELECT id, meal_type, image, foods, kcal, protein, carbs, fat, comment, insert_time FROM biz_ai_meal_log WHERE vip_id=? AND meal_date=? ORDER BY FIELD(meal_type,\'breakfast\',\'lunch\',\'dinner\',\'snack\'), id',
+      [ctx.vip, date]);
+    const meals = rows.map(x => {
+      let foods = [];
+      try { foods = JSON.parse(x.foods || '[]'); } catch { foods = []; }
+      return {
+        id: x.id, meal_type: x.meal_type, meal_name: MEAL_NAMES[x.meal_type] || '其他', image: x.image, foods,
+        kcal: x.kcal, protein: Number(x.protein), carbs: Number(x.carbs), fat: Number(x.fat), comment: x.comment,
+        time: dayjs(x.insert_time).format('HH:mm'),
+      };
+    });
+    const total = meals.reduce((s, m) => ({ kcal: s.kcal + m.kcal, protein: s.protein + m.protein, carbs: s.carbs + m.carbs, fat: s.fat + m.fat }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+    ['protein', 'carbs', 'fat'].forEach(k => { total[k] = Math.round(total[k]); });
+    const target = dailyTarget(await getProfile(ctx));
+    const from = dayjs(date).subtract(6, 'day').format('YYYY-MM-DD');
+    const trendRows = await db.query(
+      'SELECT DATE_FORMAT(meal_date, \'%Y-%m-%d\') d, SUM(kcal) kcal FROM biz_ai_meal_log WHERE vip_id=? AND meal_date BETWEEN ? AND ? GROUP BY meal_date',
+      [ctx.vip, from, date]);
+    const map = {}; trendRows.forEach(t => { map[t.d] = Number(t.kcal); });
+    const trend = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = dayjs(date).subtract(i, 'day');
+      trend.push({ date: d.format('YYYY-MM-DD'), label: d.format('M/D'), week: WEEK[d.day()], kcal: map[d.format('YYYY-MM-DD')] || 0 });
+    }
+    const [{ days }] = await db.query('SELECT COUNT(DISTINCT meal_date) days FROM biz_ai_meal_log WHERE vip_id=?', [ctx.vip]);
+    res.json(ok({ date, meals, total, target, trend, logged_days: Number(days) }));
+  } catch (e) { next(e); }
+});
+
+// 修改餐次
+r.put('/meals/:id', async (req, res, next) => {
+  try {
+    await ensureTables();
+    const mt = String(req.body.meal_type || '');
+    if (!MEAL_NAMES[mt]) throw new BizError('餐次不正确');
+    const rst = await db.exec('UPDATE biz_ai_meal_log SET meal_type=? WHERE id=? AND vip_id=?', [mt, req.params.id, req.user.vip]);
+    if (!rst.affectedRows) throw new BizError('记录不存在');
+    res.json(ok());
+  } catch (e) { next(e); }
+});
+
+// 删除一餐
+r.delete('/meals/:id', async (req, res, next) => {
+  try {
+    await ensureTables();
+    const rst = await db.exec('DELETE FROM biz_ai_meal_log WHERE id=? AND vip_id=?', [req.params.id, req.user.vip]);
+    if (!rst.affectedRows) throw new BizError('记录不存在');
+    res.json(ok());
   } catch (e) { next(e); }
 });
 

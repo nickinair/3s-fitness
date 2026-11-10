@@ -95,6 +95,8 @@ Page({
       if (cap && cap.top) this.setData({ capTop: cap.top, capH: cap.height, capRight: win.windowWidth - cap.left + 8 });
     } catch (e) { /* 用默认值 */ }
     this.renderQuicks(QUICK_DEFAULT, {});
+    // H5「饮食日记 → 拍照记一餐」reLaunch 回首页时带 ai=1: 自动打开小S
+    if (options.ai && this.token()) setTimeout(() => this.setData({ aiShow: true }), 450);
   },
 
   onReady() {

@@ -11,6 +11,7 @@ window.Pages.MemberMine = {
       cards: null,            // 会员卡列表
       upcoming: null,         // 近 7 天预约
       contractTotal: null,    // 合同总数
+      mealKcal: 0,            // 饮食日记: 今日已摄入热量
     };
   },
   computed: {
@@ -66,6 +67,12 @@ window.Pages.MemberMine = {
     '      <div class="flex1"><div class="mn-it">训练计划</div>',
     '        <div class="mn-is">{{ planCount ? (\'教练已推送 \' + planCount + \' 份计划\') : \'教练推送训练计划后将展示在这里\' }}</div></div>',
     '      <van-badge :content="newPlan || \'\'" :show-zero="false"><div class="mn-pill">查看</div></van-badge>',
+    '    </div>',
+    '    <div class="mn-item" @click="$router.push(\'/meals\')">',
+    '      <div class="mn-thumb"><van-icon name="fire-o"/></div>',
+    '      <div class="flex1"><div class="mn-it">饮食日记</div>',
+    '        <div class="mn-is">{{ mealKcal ? (\'今天已摄入约 \' + mealKcal + \' kcal\') : \'拍照记录每餐热量，小S 帮你算\' }}</div></div>',
+    '      <div class="mn-pill">查看</div>',
     '    </div>',
     '  </div>',
 
@@ -143,10 +150,11 @@ window.Pages.MemberMine = {
     } catch (e) { return; /* toast 已提示 */ }
     // 各卡片的数字互不依赖, 并行取; 单项失败只影响那张卡, 不弹提示
     const q = (u) => API.get(u, { silent: true }).catch(() => null);
-    const [b, ph, ms, plans, cards, home, contracts] = await Promise.all([
+    const [b, ph, ms, plans, cards, home, contracts, meals] = await Promise.all([
       q('/member/badges'), q('/member/training-photos'), q('/member/milestones'), q('/member/training-plans'),
-      q('/member/my-cards'), q('/member/home'), q('/member/my-contracts'),
+      q('/member/my-cards'), q('/member/home'), q('/member/my-contracts'), q('/member/ai/meals'),
     ]);
+    if (meals && meals.total) this.mealKcal = meals.total.kcal || 0;
     if (b) { this.pending = b.confirm || 0; this.pendingContract = b.contract || 0; this.newPlan = b.plan || 0; }
     if (ph) this.photo = ph;
     if (ms) this.totalLessons = ms.totalLessons || 0;

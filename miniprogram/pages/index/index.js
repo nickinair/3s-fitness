@@ -14,6 +14,7 @@ const PATH_TITLES = {
   '/checkin': '到店签到',
   '/contracts': '我的合同',
   '/milestones': '我的里程碑',
+  '/meals': '饮食日记',
   '/plans': '训练计划',
   '/security': '账号与安全',
   '/guide': '使用引导',
@@ -101,7 +102,7 @@ Page({
     // 支持通过路径参数或扫码 scene 参数直达指定页面
     // 例如: pages/index/index?path=checkin 或 scene=checkin -> https://3s-fitness.cn/m/#/checkin
     let base = config.H5_URL;
-    const query = ['mp=1', '_v=20261106_25'];      // 告诉 H5: 运行在小程序里 + 版本号防 web-view 缓存旧 HTML
+    const query = ['mp=1', '_v=20261110_1'];      // 告诉 H5: 运行在小程序里 + 版本号防 web-view 缓存旧 HTML
     if (options.token) {
       query.push('token=' + encodeURIComponent(decodeURIComponent(options.token)));
       query.push('type=' + (options.type || 'member'));
