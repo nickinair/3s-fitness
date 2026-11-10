@@ -26,6 +26,7 @@ window.Pages.MemberMine = {
   },
   template: [
     '<div class="page has-tabbar mn-page">',
+    '  <m-nav title="我的" :back="false"></m-nav>',
     // ---- 抬头: 头像 + 姓名(无卡片, 直接在页面底色上) ----
     '  <div class="mn-head">',
     '    <m-avatar :name="profile && (profile.realname||profile.nickname)" :size="64" class="mn-avatar"></m-avatar>',
@@ -143,8 +144,23 @@ window.Pages.MemberMine = {
       if (MP.is() && MP.home('?logout=1')) return;
       this.$router.replace('/login');
     },
+    async refreshStats() {
+      const q = (u) => API.get(u, { silent: true }).catch(() => null);
+      const [meals, home] = await Promise.all([q('/member/ai/meals'), q('/member/home')]);
+      if (meals && meals.total) this.mealKcal = meals.total.kcal || 0;
+      if (home) this.upcoming = home.upcoming || 0;
+    },
+  },
+  unmounted() {
+    if (this._onAiRefresh) {
+      window.removeEventListener('ai-meal-logged', this._onAiRefresh);
+      window.removeEventListener('ai-booking-changed', this._onAiRefresh);
+    }
   },
   async mounted() {
+    this._onAiRefresh = () => this.refreshStats();
+    window.addEventListener('ai-meal-logged', this._onAiRefresh);
+    window.addEventListener('ai-booking-changed', this._onAiRefresh);
     try {
       this.profile = await API.get('/member/profile');
     } catch (e) { return; /* toast 已提示 */ }

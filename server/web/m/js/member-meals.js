@@ -79,7 +79,14 @@
     watch: {
       '$route.query.date'(v) { if (v && v !== this.date) { this.date = v; this.load(); } },
     },
-    created() { this.load(); },
+    created() {
+      this._onMealLogged = () => this.load();
+      window.addEventListener('ai-meal-logged', this._onMealLogged);
+      this.load();
+    },
+    unmounted() {
+      if (this._onMealLogged) window.removeEventListener('ai-meal-logged', this._onMealLogged);
+    },
     methods: {
       async load() {
         this.loading = !this.d;
@@ -119,22 +126,27 @@
         vant.showToast('已删除');
         this.load();
       },
-      // 拍照记一餐: 小程序里回到原生首页并自动打开小S; 浏览器里提示入口
+      // 拍照记一餐: 直接在当前页侧边滑出小S AI抽屉，并同步拉起手机相册/相机上传识别
       snap() {
+        if (window.AI && window.AI.openWithPhoto) {
+          window.AI.openWithPhoto();
+          return;
+        }
         if (window.MP && MP.ready() && MP.home('?ai=1')) return;
-        vant.showDialog({ title: '拍照记一餐', message: '请在小程序首页点击左上角的机器人「小S」，拍一张餐食照片即可自动识别热量并记录。', confirmButtonColor: '#000' });
       },
     },
     template: [
       '<div class="page ml-page">',
-      '  <m-nav title="饮食日记"></m-nav>',
+      '  <m-nav title="饮食日记" :inline-ai="true"></m-nav>',
 
-      // 日期切换
+      // 日期切换 (左侧内置 [🏠] [🤖 小S] 入口)
       '  <div class="ml-date">',
+      '    <div class="ml-ai-left"><ai-entry :home="true"/></div>',
       '    <div class="ml-arrow" @click="shift(-1)"><van-icon name="arrow-left"/></div>',
       '    <div class="ml-dt" @click="calShow=true">{{ dateText }} <van-icon name="calendar-o"/></div>',
       '    <div class="ml-arrow" :class="{dis:isToday}" @click="shift(1)"><van-icon name="arrow"/></div>',
       '    <div v-if="!isToday" class="ml-today" @click="go(today)">回到今天</div>',
+      '    <div v-else class="ml-today cam" @click="snap">📷 记一餐</div>',
       '  </div>',
 
       '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
@@ -163,11 +175,11 @@
       '    </div>',
 
       // 各餐
-      '    <div class="sec-title">{{ isToday ? \'今日饮食\' : \'当天饮食\' }}</div>',
-      '    <div v-if="!groups.length" class="ml-empty">',
+      '    <div class="sec-title"><span>{{ isToday ? \'今日饮食\' : \'当天饮食\' }}</span><span class="ml-add-pill" @click="snap">📷 拍照记一餐</span></div>',
+      '    <div v-if="!groups.length" class="ml-empty" @click="snap">',
       '      <div class="e1">🍽</div>',
       '      <div class="e2">{{ isToday ? \'今天还没有记录\' : \'这天没有饮食记录\' }}</div>',
-      '      <div class="e3">拍一张餐食照片，小S 帮你估算热量</div>',
+      '      <div class="e3">点此拍一张餐食照片，小S 帮你估算热量 ›</div>',
       '    </div>',
       '    <div v-for="g in groups" :key="g.key" class="ml-group">',
       '      <div class="ml-gh"><span>{{ g.icon }} {{ g.name }}</span><span class="k">{{ g.kcal }} kcal</span></div>',

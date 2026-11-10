@@ -27,8 +27,10 @@ window.Pages.MemberSchedule = {
   },
   template: [
     '<div class="page has-tabbar">',
-    '  <m-nav title="约课" :back="false"></m-nav>',
+    '  <m-nav title="约课" :back="false" :inline-ai="true"></m-nav>',
     '  <van-tabs v-model:active="tab" color="var(--brand)" title-active-color="var(--brand)" line-width="28" @change="onTab">',
+    '    <template #nav-left><div class="ai-tab-side"><ai-entry/></div></template>',
+    '    <template #nav-right><div class="ai-tab-side right"><span class="ai-cam-mini" @click="openAiPhoto">📷 算热量</span></div></template>',
     '    <van-tab title="私教课" name="pt"></van-tab>',
     '    <van-tab title="团课" name="group"></van-tab>',
     '  </van-tabs>',
@@ -337,6 +339,17 @@ window.Pages.MemberSchedule = {
         this.load();
       } finally { this.submitting = false; }
     },
+    openAiPhoto() {
+      if (window.AI && window.AI.openWithPhoto) window.AI.openWithPhoto();
+    },
   },
-  mounted() { this.load(); this.scrollDay(); },
+  mounted() {
+    this._onAiBook = () => this.load();
+    window.addEventListener('ai-booking-changed', this._onAiBook);
+    this.load();
+    this.scrollDay();
+  },
+  unmounted() {
+    if (this._onAiBook) window.removeEventListener('ai-booking-changed', this._onAiBook);
+  },
 };

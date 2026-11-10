@@ -9,10 +9,11 @@
     contracts: { t: '我的合同', s: '在线签署', icon: 'notes-o', to: '/contracts' },
     plans: { t: '训练计划', s: '教练专属定制', icon: 'todo-list-o', to: '/plans' },
     milestones: { t: '里程碑', s: '成长记录', icon: 'medal-o', to: '/milestones' },
+    meals: { t: '饮食日记', s: '拍照算热量', icon: 'fire-o', to: '/meals' },
     pending: { t: '待确认消课', s: '私教课确认', icon: 'passed', to: '/pending-confirms' },
     photos: { t: '训练风采', s: '蜕变相册', icon: 'photograph', to: '/training-photos' },
   };
-  const QUICK_DEFAULT = ['checkin', 'bookings', 'cards', 'contracts', 'plans', 'milestones', 'pending'];
+  const QUICK_DEFAULT = ['checkin', 'bookings', 'cards', 'contracts', 'plans', 'milestones', 'meals', 'pending'];
 
   /* 首屏轮播视频: 每段最多播 CLIP_SEC 秒后淡入下一段, 两个 <video> 交替做交叉淡化 */
   const VIDEOS = ['dumbbell', 'hanteln2', 'MR8_8170', '21Run01'].map(n => ({
@@ -88,7 +89,7 @@
       '      :preload="k===layer ? \'auto\' : \'metadata\'" @timeupdate="onTime(k, $event)" @ended="onEnded(k)"></video>',
       '    <div class="mh-shade"></div>',
       '    <div class="mh-top">',
-      '      <m-avatar :name="displayName" :size="34"></m-avatar>',
+      '      <ai-entry :dark="true"/>',
       '      <div class="flex1" style="margin-left:9px;min-width:0">',
       '        <div class="mh-hello">Hi，{{ displayName }}</div>',
       '        <div class="mh-next" v-if="home && home.nextLesson" @click="$router.push(\'/my-bookings\')">',

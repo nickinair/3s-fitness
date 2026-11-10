@@ -316,6 +316,7 @@
       '    </template>',
       '  </van-tabbar>',
       '</div>',
+      '<ai-drawer/>',
     ].join('\n'),
   };
 
@@ -347,9 +348,17 @@
   Object.entries(window.MComponents || {}).forEach(([n, c]) => app.component(n, c));
   if (window.WBGrid) app.component('wb-grid', window.WBGrid);   // 可编辑九宫格(工作台/常用功能自定义)
   app.component('m-nav', {
-    props: { title: String, back: { type: Boolean, default: true } },
+    props: {
+      title: String,
+      back: { type: Boolean, default: true },
+      inlineAi: { type: Boolean, default: false },
+    },
     computed: {
       isMp() { return MP.is(); },
+      isMember() {
+        const p = (this.$route && this.$route.path) || '';
+        return Store.type !== 'staff' && p !== '/login' && !p.startsWith('/staff');
+      },
     },
     watch: {
       title: {
@@ -357,20 +366,39 @@
         handler(v) { if (v) setDocTitle(v); },
       },
     },
-    template: '<van-nav-bar v-if="!isMp" class="m-nav" :title="title" :left-arrow="back" @click-left="onBack" :border="false"/>',
+    template: [
+      '<van-nav-bar v-if="!isMp" class="m-nav" :title="title" :border="false">',
+      '  <template #left>',
+      '    <div class="m-nav-left">',
+      '      <div v-if="back" class="m-nav-ic" @click.stop="onBack"><van-icon name="arrow-left"/></div>',
+      '      <div v-if="isMember && back" class="m-nav-ic" @click.stop="onHome"><van-icon name="wap-home-o"/></div>',
+      '      <ai-entry v-if="isMember"/>',
+      '    </div>',
+      '  </template>',
+      '</van-nav-bar>',
+      '<div v-else-if="isMember && !inlineAi" class="mp-ai-bar">',
+      '  <ai-entry :home="back"/>',
+      '  <div class="mp-ai-cam" @click="onPhoto">📷 拍照算热量</div>',
+      '</div>',
+    ].join('\n'),
     methods: {
       onBack() {
         if (!this.back) return;
         const home = Store.type === 'staff' ? '/staff' : '/';
-        // 尝试 router.back(); 如果回退后仍在当前页(说明无有效历史), 则直接跳转首页
         const current = this.$route.fullPath;
         this.$router.back();
-        // 用 setTimeout 检测: 如果 50ms 后路由没变化, 说明 back 无效, 手动跳首页
         setTimeout(() => {
           if (this.$route.fullPath === current) {
             this.$router.replace(home);
           }
         }, 80);
+      },
+      onHome() {
+        if (MP.is() && MP.homeWithToken()) return;
+        this.$router.push(Store.type === 'staff' ? '/staff' : '/');
+      },
+      onPhoto() {
+        if (window.AI && window.AI.openWithPhoto) window.AI.openWithPhoto();
       },
     },
   });

@@ -1008,4 +1008,21 @@ r.post('/clear', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// 小程序原生端 Base64 上传兜底（兼容未单独配置 wx.uploadFile 合法域名的环境）
+r.post('/upload-base64', async (req, res, next) => {
+  try {
+    const raw = String((req.body && req.body.base64) || '');
+    const m = raw.match(/^(?:data:image\/(\w+);base64,)?([A-Za-z0-9+/=\s]+)$/);
+    if (!m) throw new BizError('图片数据格式不正确');
+    const ext = (m[1] || 'jpg').toLowerCase().replace('jpeg', 'jpg');
+    const buf = Buffer.from(m[2], 'base64');
+    if (!buf.length || buf.length > 12 * 1024 * 1024) throw new BizError('图片大小超出限制');
+    const dir = fs.existsSync('/data') ? '/data/uploads' : path.join(__dirname, '..', '..', 'web', 'uploads');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const filename = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    fs.writeFileSync(path.join(dir, filename), buf);
+    res.json(ok({ url: '/uploads/' + filename }));
+  } catch (e) { next(e); }
+});
+
 module.exports = r;

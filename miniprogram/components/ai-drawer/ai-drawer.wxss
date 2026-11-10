@@ -114,3 +114,4 @@
 .ph { color: #aaa; font-size: 13px; }
 .b-send { flex-shrink: 0; height: 36px; line-height: 36px; padding: 0 14px; border-radius: 18px; font-size: 14px; font-weight: 600; background: #e6e6e6; color: #9a9a9a; }
 .b-send.on { background: #111; color: #fff; }
+

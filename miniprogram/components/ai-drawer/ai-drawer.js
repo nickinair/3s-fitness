@@ -158,18 +158,42 @@ Component({
     },
     upload(filePath) {
       wx.showLoading({ title: '上传中', mask: true });
+      const onUploaded = (url) => {
+        wx.hideLoading();
+        const text = this.data.input.trim();
+        this.send(text || '帮我算算这餐的热量', url);
+      };
+      const fallbackBase64 = () => {
+        try {
+          wx.getFileSystemManager().readFile({
+            filePath,
+            encoding: 'base64',
+            success: (r) => {
+              this.request('/member/ai/upload-base64', 'POST', { base64: r.data }).then(d => {
+                if (d && d.url) onUploaded(d.url);
+                else { wx.hideLoading(); this.toast('上传失败'); }
+              }).catch(e => { wx.hideLoading(); this.toast(e.message || '上传失败'); });
+            },
+            fail: () => { wx.hideLoading(); this.toast('上传失败，请重试'); },
+          });
+        } catch (e) {
+          wx.hideLoading();
+          this.toast('上传失败，请重试');
+        }
+      };
       wx.uploadFile({
         url: config.API_BASE + '/upload', filePath, name: 'file',
         header: { Authorization: 'Bearer ' + this.token() },
         success: (res) => {
-          wx.hideLoading();
           let body = {};
           try { body = JSON.parse(res.data || '{}'); } catch (e) { body = {}; }
-          if (body.code !== 0 || !body.data) { this.toast(body.msg || '上传失败'); return; }
-          const text = this.data.input.trim();
-          this.send(text || '帮我算算这餐的热量', body.data.url);
+          if (body.code === 0 && body.data && body.data.url) {
+            onUploaded(body.data.url);
+          } else {
+            fallbackBase64();
+          }
         },
-        fail: () => { wx.hideLoading(); this.toast('上传失败，请重试'); },
+        fail: () => fallbackBase64(),
       });
     },
     previewImg(e) {
@@ -275,3 +299,4 @@ Component({
     },
   },
 });
+
