@@ -68,6 +68,7 @@ Page({
     capTop: 24, capH: 32, capRight: 100, heroH: 0,
     videos: VIDEOS, layerIdx: [0, 1], layer: 0, vIdx: 0, played: false,
     icoRatio: 1, thumbW: 100, thumbX: 0,
+    aiShow: false, aiDot: false,
   },
 
   onLoad(options) {
@@ -153,6 +154,7 @@ Page({
       this.renderQuicks(this.layout || QUICK_DEFAULT, this.badges || {});
     }).catch(() => {});
     this.request('/member/home').then(h => this.renderHome(h)).catch(() => {});
+    this.request('/member/ai/dot').then(d => this.setData({ aiDot: !!(d && d.dot) })).catch(() => {});
   },
 
   setLoggedOut() {
@@ -334,6 +336,19 @@ Page({
     wx.navigateTo({ url: '/pages/index/index?path=login' });
   },
   onHiTap() { this.goPath({ currentTarget: { dataset: { path: 'my-bookings' } } }); },
+  /* ---------- AI 助手「小S」 ---------- */
+  openAi() {
+    if (!this.token()) { this.openLogin(); return; }
+    this.setData({ aiShow: true });
+  },
+  closeAi() { this.setData({ aiShow: false }); },
+  onAiRead() { this.setData({ aiDot: false }); },
+  onAiLogout() { this.setData({ aiShow: false }); this.setLoggedOut(); this.openLogin(); },
+  onAiNav(e) {
+    const p = String((e.detail && e.detail.path) || '').replace(/^\//, '');
+    this.setData({ aiShow: false });
+    if (p) setTimeout(() => wx.navigateTo({ url: this.h5Url(p) }), 200);
+  },
   onClubBar() {
     if (!this.token()) { this.openLogin(); return; }
     wx.navigateTo({ url: this.h5Url(this.data.isMember ? 'my-cards' : 'buy') });

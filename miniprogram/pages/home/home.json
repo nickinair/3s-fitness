@@ -5,6 +5,7 @@
   "backgroundColorTop": "#000000",
   "backgroundTextStyle": "light",
   "usingComponents": {
-    "login-sheet": "/components/login-sheet/login-sheet"
+    "login-sheet": "/components/login-sheet/login-sheet",
+    "ai-drawer": "/components/ai-drawer/ai-drawer"
   }
 }

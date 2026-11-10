@@ -10,6 +10,7 @@ app.use(express.json({ limit: '15mb' }));
 // API 路由
 app.use('/api/auth', require('./routes/auth'));
 // 会员端 / 平台端路由自带整体鉴权(r.use), 必须挂在独立前缀下, 不能挂到 /api 根上
+app.use('/api/member/ai', require('./routes/ai-assistant'));   // AI 健身助手「小S」, 须在 /api/member 之前
 app.use('/api/member', require('./routes/member'));
 app.use('/api/platform', require('./routes/platform'));
 app.use('/api', require('./routes/common'));

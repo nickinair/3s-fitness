@@ -1,3 +1,4 @@
+<page-meta page-style="{{aiShow ? 'overflow:hidden;' : ''}}"></page-meta>
 <!-- 会员首页(原生页): web-view 页面无法去掉原生导航栏, 所以首页用原生实现, 视频才能铺到状态栏 -->
 <view class="page" wx:if="{{!staff}}">
 
@@ -13,7 +14,10 @@
     <view class="shade"></view>
 
     <view class="top" style="top:{{capTop}}px;height:{{capH}}px;right:{{capRight}}px">
-      <view class="avatar">{{initial}}</view>
+      <view class="bot-wrap" hover-class="tap" bindtap="openAi">
+        <image class="bot" src="/assets/ai-bot.png" mode="aspectFit"></image>
+        <view class="bot-dot" wx:if="{{aiDot}}"></view>
+      </view>
       <view class="hi" bindtap="onHiTap">
         <view class="hello">Hi，{{name}}</view>
         <view class="next">{{nextText}} ›</view>
@@ -153,5 +157,9 @@
 
   <!-- 未登录时点任意会员功能: 底部弹出登录层 -->
   <login-sheet show="{{loginShow}}" bind:success="onLoginOk" bind:skip="closeLogin" bind:password="goPwdLogin"></login-sheet>
+
+  <!-- AI 健身助手「小S」: 左上角机器人点击后从左侧滑出 -->
+  <ai-drawer show="{{aiShow}}" cap-top="{{capTop}}" cap-h="{{capH}}" bind:close="closeAi" bind:nav="onAiNav"
+    bind:read="onAiRead" bind:changed="load" bind:logout="onAiLogout"></ai-drawer>
 </view>
 

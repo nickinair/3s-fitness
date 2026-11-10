@@ -1,0 +1,144 @@
+<view class="ai-root" wx:if="{{visible}}">
+  <view class="mask {{opened ? 'on' : ''}}" bindtap="close" catchtouchmove="noop"></view>
+
+  <view class="panel {{opened ? 'on' : ''}}">
+    <!-- 顶栏: 与胶囊按钮同一高度 -->
+    <view class="head" style="padding-top:{{capTop}}px;height:{{capH}}px" bindtouchstart="onTouchStart" bindtouchend="onTouchEnd">
+      <view class="h-close" hover-class="tap" bindtap="close">
+        <view class="chev"></view>
+      </view>
+      <image class="h-bot" src="/assets/ai-bot.png" mode="aspectFit"></image>
+      <view class="h-txt">
+        <view class="h-name">小S <text class="h-tag">AI 健身助手</text></view>
+        <view class="h-sub"><text class="dot-on"></text>{{sending ? '正在思考…' : '在线 · 随时为你服务'}}</view>
+      </view>
+    </view>
+
+    <!-- 对话 -->
+    <scroll-view class="body" scroll-y scroll-into-view="{{scrollId}}" scroll-with-animation enhanced show-scrollbar="{{false}}"
+      bindtouchstart="onTouchStart" bindtouchend="onTouchEnd">
+      <view class="loading-init" wx:if="{{initing && !msgs.length}}">
+        <image class="li-bot" src="/assets/ai-bot.png" mode="aspectFit"></image>
+        <view class="li-t">小S 正在为你准备今日简报…</view>
+        <view class="dots"><view></view><view></view><view></view></view>
+      </view>
+
+      <block wx:for="{{msgs}}" wx:for-item="m" wx:for-index="mi" wx:key="id">
+        <view class="row {{m.role === 'user' ? 'me' : 'bot'}}" id="m{{mi}}">
+          <image wx:if="{{m.role !== 'user'}}" class="r-av" src="/assets/ai-bot.png" mode="aspectFit"></image>
+          <view class="r-main">
+            <image wx:if="{{m.image}}" class="r-img" src="{{m.image}}" mode="aspectFill" data-url="{{m.image}}" bindtap="previewImg"></image>
+
+            <!-- 简报卡头 -->
+            <block wx:for="{{m.cards}}" wx:for-item="c" wx:for-index="ci" wx:key="ci">
+              <view wx:if="{{c.type === 'brief'}}" class="brief-head">
+                <text class="bh-t">☀️ {{c.title}}</text>
+                <text class="bh-w" wx:if="{{c.weather}}">{{c.weather}}</text>
+              </view>
+            </block>
+
+            <view wx:if="{{m.show || m.typing}}" class="bubble">
+              <text user-select decode>{{m.show}}</text><text wx:if="{{m.typing}}" class="caret">▍</text>
+            </view>
+
+            <!-- 结构化卡片 -->
+            <block wx:if="{{!m.typing}}" wx:for="{{m.cards}}" wx:for-item="c" wx:for-index="ci" wx:key="ci">
+              <!-- 周报 -->
+              <view wx:if="{{c.type === 'weekly'}}" class="card">
+                <view class="c-title">📊 {{c.title}}</view>
+                <view class="wk-row" wx:for="{{c.rows}}" wx:for-item="w" wx:key="label">
+                  <view class="wk-l">{{w.label}}</view>
+                  <view class="wk-bars">
+                    <view class="wk-bar cur" style="width:{{w.curW < 4 ? 4 : w.curW}}%"><text>{{w.cur}}</text></view>
+                    <view class="wk-bar prev" style="width:{{w.prevW < 4 ? 4 : w.prevW}}%"><text>{{w.prev}}</text></view>
+                  </view>
+                  <view class="wk-d {{w.diff > 0 ? 'up' : (w.diff < 0 ? 'down' : '')}}">{{w.diffText}}</view>
+                </view>
+                <view class="wk-legend"><text class="lg cur"></text>上周 <text class="lg prev"></text>再上周</view>
+              </view>
+
+              <!-- 约课确认 -->
+              <view wx:elif="{{c.type === 'booking'}}" class="card">
+                <view class="c-title">📅 {{c.title}}</view>
+                <view class="kv"><text class="k">教练</text><text class="v">{{c.draft.coach_name}}</text></view>
+                <view class="kv"><text class="k">课程</text><text class="v">{{c.draft.course_title}}</text></view>
+                <view class="kv"><text class="k">时间</text><text class="v strong">{{c.day}} {{c.draft.from_time}}-{{c.draft.to_time}}</text></view>
+                <view class="kv"><text class="k">门店</text><text class="v">{{c.draft.club_name}}</text></view>
+                <view class="kv"><text class="k">用卡</text><text class="v">{{c.draft.card_name}} · {{c.draft.card_left}}</text></view>
+                <view wx:if="{{c.done}}" class="c-done">{{c.done}}</view>
+                <view wx:else class="c-btns">
+                  <view class="btn ghost" hover-class="tap" data-mi="{{mi}}" data-ci="{{ci}}" bindtap="dismissCard">不用了</view>
+                  <view class="btn" hover-class="tap" data-mi="{{mi}}" data-ci="{{ci}}" bindtap="confirmBooking">确认预约</view>
+                </view>
+              </view>
+
+              <!-- 取消确认 -->
+              <view wx:elif="{{c.type === 'cancel'}}" class="card">
+                <view class="c-title">⚠️ {{c.title}}</view>
+                <view class="kv"><text class="k">课程</text><text class="v">{{c.draft.course_title}}</text></view>
+                <view class="kv"><text class="k">时间</text><text class="v strong">{{c.day}} {{c.draft.from_time}}-{{c.draft.to_time}}</text></view>
+                <view class="kv"><text class="k">教练</text><text class="v">{{c.draft.coach_name}}</text></view>
+                <view wx:if="{{c.done}}" class="c-done">{{c.done}}</view>
+                <view wx:else class="c-btns">
+                  <view class="btn ghost" hover-class="tap" data-mi="{{mi}}" data-ci="{{ci}}" bindtap="dismissCard">保留课程</view>
+                  <view class="btn danger" hover-class="tap" data-mi="{{mi}}" data-ci="{{ci}}" bindtap="confirmCancel">确认取消</view>
+                </view>
+              </view>
+
+              <!-- 热量识别 -->
+              <view wx:elif="{{c.type === 'meal'}}" class="card">
+                <view class="meal-top">
+                  <view>
+                    <view class="meal-k"><text class="num">{{c.kcal}}</text> kcal</view>
+                    <view class="meal-r" wx:if="{{c.range}}">估算区间 {{c.range}}</view>
+                  </view>
+                  <view class="meal-type" data-mi="{{mi}}" data-ci="{{ci}}" bindtap="pickMealType">{{c.meal_name}} ▾</view>
+                </view>
+                <view class="macro">
+                  <view class="mc-bar"><view class="p" style="width:{{c.pP}}%"></view><view class="c" style="width:{{c.pC}}%"></view><view class="f" style="width:{{c.pF}}%"></view></view>
+                  <view class="mc-lg"><text><text class="d p"></text>蛋白 {{c.protein}}g</text><text><text class="d c"></text>碳水 {{c.carbs}}g</text><text><text class="d f"></text>脂肪 {{c.fat}}g</text></view>
+                </view>
+                <view class="food" wx:for="{{c.foods}}" wx:for-item="f" wx:key="name">
+                  <text class="fn">{{f.name}}</text><text class="fg">约{{f.grams}}g</text><text class="fk">{{f.kcal}} kcal</text>
+                </view>
+                <view class="meal-tip" wx:if="{{c.target}}">今日建议 {{c.target}} kcal · 已记录 {{c.eaten}} kcal</view>
+                <view wx:if="{{c.done}}" class="c-done">{{c.done}}</view>
+                <view wx:else class="c-btns">
+                  <view class="btn" hover-class="tap" data-mi="{{mi}}" data-ci="{{ci}}" bindtap="saveMeal">记入今日{{c.meal_name}}</view>
+                </view>
+              </view>
+
+              <!-- 跳转 -->
+              <view wx:elif="{{c.type === 'link'}}" class="link" hover-class="tap" data-mi="{{mi}}" data-ci="{{ci}}" bindtap="goLink">{{c.text}} ›</view>
+            </block>
+          </view>
+        </view>
+      </block>
+
+      <view class="row bot" wx:if="{{sending}}">
+        <image class="r-av" src="/assets/ai-bot.png" mode="aspectFit"></image>
+        <view class="bubble thinking"><view class="dots"><view></view><view></view><view></view></view></view>
+      </view>
+      <view class="disclaim" wx:if="{{msgs.length}}">AI 生成内容仅供参考，热量为估算值；伤病问题请咨询教练或医生</view>
+      <view id="bottom" style="height:8px"></view>
+    </scroll-view>
+
+    <!-- 快捷问题 -->
+    <scroll-view class="quick" scroll-x enhanced show-scrollbar="{{false}}" wx:if="{{quick.length}}">
+      <view class="q photo" hover-class="tap" bindtap="chooseImage">📷 拍照算热量</view>
+      <view class="q" hover-class="tap" wx:for="{{quick}}" wx:key="*this" data-q="{{item}}" bindtap="onQuick">{{item}}</view>
+      <view class="q ghost" hover-class="tap" bindtap="clearAll">清空对话</view>
+    </scroll-view>
+
+    <!-- 输入栏 -->
+    <view class="bar" style="{{kbH ? 'padding-bottom:' + (kbH + 8) + 'px' : ''}}">
+      <view class="b-cam" hover-class="tap" bindtap="chooseImage">
+        <image src="/assets/icons/photograph.png" mode="aspectFit" class="b-cam-i" binderror="noop"></image>
+      </view>
+      <input class="b-in" value="{{input}}" placeholder="问问小S，如「约三七教练明晚7点」" placeholder-class="ph" confirm-type="send"
+        adjust-position="{{false}}" maxlength="500" cursor-spacing="20" bindinput="onInput" bindconfirm="sendInput"
+        bindkeyboardheightchange="onKb" bindblur="onBlur" />
+      <view class="b-send {{input && !sending ? 'on' : ''}}" hover-class="tap" bindtap="sendInput">发送</view>
+    </view>
+  </view>
+</view>
