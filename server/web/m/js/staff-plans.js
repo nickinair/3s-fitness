@@ -163,6 +163,7 @@
       '            <div v-for="s in sugs" :key="s.id" class="sug-item" @mousedown.prevent="pickSug(i,s)">{{ s.name }}<span class="muted" style="margin-left:6px">{{ s.part }}</span></div>',
       '          </div>',
       '        </div>',
+      '        <action-fig :name="it.action_name" :size="40" style="margin-right:6px"/>',
       '        <van-icon name="cross" color="var(--c-text-4)" size="18" @click="items.splice(i,1)"/>',
       '      </div>',
       '      <div class="flex mt8" style="gap:10px;flex-wrap:wrap">',

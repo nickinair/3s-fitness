@@ -24,6 +24,9 @@ window.AppPages.TrainingActions = {
         <el-button type="primary" plain @click="openAdd">新增自定义动作</el-button>
       </div>
       <el-table border :data="list" v-loading="loading" stripe>
+        <el-table-column label="示意图" width="116">
+          <template #default="{ row }"><span v-if="figHtml(row.name)" class="afig-thumb" style="width:80px;height:60px;cursor:pointer" v-html="figHtml(row.name)" @click="showFig(row)"></span><span v-else class="text-muted" style="font-size:12px">—</span></template>
+        </el-table-column>
         <el-table-column prop="name" label="动作名称" min-width="150">
           <template #default="{ row }"><span style="font-weight:600">{{ row.name }}</span></template>
         </el-table-column>
@@ -71,6 +74,15 @@ window.AppPages.TrainingActions = {
     </el-dialog>
   </div>`,
   methods: {
+    // 动作示意图(线条小人, /static/action-figs.js), 匹配不到动作名时不显示
+    figHtml(name) { const m = window.ActionFig && ActionFig.match(name); return m ? ActionFig.svg(m, { anim: false }) : ''; },
+    showFig(row) {
+      const m = window.ActionFig && ActionFig.match(row.name);
+      if (!m) return;
+      const esc = t => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      ElementPlus.ElMessageBox.alert('<div class="afig-big">' + ActionFig.svg(m) + '</div><div class="afig-cue"><b>动作要领</b>' + esc(m.cue) + '</div>'
+        + (row.description ? '<div class="afig-desc">' + esc(row.description) + '</div>' : ''), row.name, { dangerouslyUseHTMLString: true, confirmButtonText: '知道了' });
+    },
     async load() {
       this.loading = true;
       try {

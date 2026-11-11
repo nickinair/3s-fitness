@@ -146,6 +146,8 @@
         ctx.fillStyle = H.color('--c-text-3'); ctx.font = F(20);
         ctx.fillText('备注：' + it.remark, 24 + 88, y + 110);
       }
+      // 右侧动作示意图(匹配得到才画)
+      if (window.ActionFig) ActionFig.draw(ctx, it.action_name, W - 24 - 132, y + 4, 124, 88, H.color('--c-title'));
       y += h + 16;
     });
 
@@ -165,6 +167,35 @@
     return cv.toDataURL('image/jpeg', 0.86);
   };
   window.PlanImage.ready = planReady;
+
+  /* 动作示意图: 缩略图组件 + 点开放大(动画 + 动作要领) —— 图形由 /static/action-figs.js 生成 */
+  window.showActionFig = function (name, desc) {
+    const m = window.ActionFig && ActionFig.match(name);
+    if (!m) return;
+    const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    vant.showDialog({
+      title: name,
+      allowHtml: true,
+      className: 'afig-dialog',
+      message: '<div class="afig-big">' + ActionFig.svg(m) + '</div>'
+        + '<div class="afig-cue"><b>动作要领</b>' + esc(m.cue) + '</div>'
+        + (desc ? '<div class="afig-desc">' + esc(desc) + '</div>' : '')
+        + '<div class="afig-tip">示意图仅供参考，具体动作以教练现场指导为准</div>',
+      confirmButtonText: '知道了',
+      confirmButtonColor: H.color('--brand'),
+    });
+  };
+  (window.MComponents = window.MComponents || {})['action-fig'] = {
+    props: { name: String, desc: String, size: { type: Number, default: 56 }, anim: { type: Boolean, default: false } },
+    computed: {
+      html() {
+        const m = window.ActionFig && ActionFig.match(this.name);
+        return m ? ActionFig.svg(m, { anim: this.anim }) : '';
+      },
+    },
+    template: '<span v-if="html" class="afig-thumb" :style="{width: size + \'px\', height: Math.round(size * 0.75) + \'px\'}" v-html="html" @click.stop="open" title="查看动作示意"></span>',
+    methods: { open() { window.showActionFig(this.name, this.desc); } },
+  };
 
   /* 解析 items (JSON 字符串) */
   window.parsePlanItems = function (s) {
@@ -315,7 +346,7 @@
       '    </div>',
       '    <div class="plan-legacy-card">',
       '      <div class="plan-items-title">{{ parsed.title || "训练计划" }}</div>',
-      '      <div v-for="(it, i) in parsed.items" :key="i" class="plan-items-row">{{ i + 1 }}. {{ it.action_name }} {{ it.sets }}组×{{ it.reps }}{{ it.unit || "次" }}<span v-if="it.weight"> · {{ it.weight }}{{ /kg|公斤/i.test(String(it.weight)) ? "" : "kg" }}</span></div>',
+      '      <div v-for="(it, i) in parsed.items" :key="i" class="plan-items-row"><action-fig :name="it.action_name" :size="28" style="vertical-align:middle;margin-right:4px"/>{{ i + 1 }}. {{ it.action_name }} {{ it.sets }}组×{{ it.reps }}{{ it.unit || "次" }}<span v-if="it.weight"> · {{ it.weight }}{{ /kg|公斤/i.test(String(it.weight)) ? "" : "kg" }}</span></div>',
       '      <div v-if="parsed.note" class="plan-items-note">叮嘱：{{ parsed.note }}</div>',
       '    </div>',
       '  </template>',
@@ -718,6 +749,7 @@
       '            <div v-for="s in sugs" :key="s.id" class="sug-item" @mousedown.prevent="pickSug(i,s)">{{ s.name }}<span class="muted" style="margin-left:6px">{{ s.part }}</span></div>',
       '          </div>',
       '        </div>',
+      '        <action-fig :name="it.action_name" :size="40" style="margin-right:6px"/>',
       '        <van-icon name="cross" color="var(--c-text-4)" size="18" @click="items.splice(i,1)"/>',
       '      </div>',
       '      <div class="flex mt8" style="gap:10px;flex-wrap:wrap">',
@@ -810,7 +842,9 @@
       '        </div>',
       '        <div class="muted mt4" v-if="it.remark">备注：{{ it.remark }}</div>',
       '      </div>',
+      '      <action-fig :name="it.action_name" :size="72" anim/>',
       '    </div>',
+      '    <div class="muted" style="font-size:11px;text-align:center;margin:4px 0 0">点动作示意图可放大查看动作要领</div>',
       '    <div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#fff;box-shadow:0 -2px 10px rgba(0,0,0,.05);z-index:110">',
       '      <van-button type="primary" block round icon="photo-o" @click="genImage">生成图片分享</van-button>',
       '    </div>',
