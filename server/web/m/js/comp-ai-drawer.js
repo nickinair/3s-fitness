@@ -52,9 +52,10 @@
     const inp = document.createElement('input');
     inp.type = 'file';
     inp.accept = 'image/*';
-    // 锚定在抽屉左下角「📷 拍照算热量」胶囊正上方: iOS WebKit(WKFileUploadPanel) 检测到 input 在视口内时,
-    // 会以该元素的 elementRect 代替手指点击位置弹出「照片图库 / 拍照 / 选取文件」菜单
-    inp.style.cssText = 'position:fixed;left:12px;bottom:calc(86px + env(safe-area-inset-bottom, 0px));width:108px;height:2px;opacity:0;pointer-events:none;z-index:-1';
+    // 锚定在抽屉输入栏最左侧的相机按钮上: iOS WebKit(WKFileUploadPanel) 检测到 input 在视口内时,
+    // 会以该元素的 elementRect 代替手指点击位置弹出「照片图库 / 拍照 / 选取文件」菜单。
+    // 默认位置与相机按钮一致(输入栏左内边距 10px、下内边距 8px、按钮 34px), 打开前再按按钮实际位置校准
+    inp.style.cssText = 'position:fixed;left:10px;bottom:calc(8px + env(safe-area-inset-bottom, 0px));width:34px;height:34px;opacity:0;pointer-events:none;z-index:-1';
     inp.addEventListener('change', (e) => {
       const f = e.target && e.target.files && e.target.files[0];
       inp.value = '';
@@ -63,6 +64,19 @@
     document.body.appendChild(inp);
     fileInputEl = inp;
     return inp;
+  }
+
+  // 把文件选择框挪到相机按钮当前所在位置(键盘弹起等情况下输入栏会上移); 抽屉还没渲染时保持默认位置
+  function anchorToCam(inp) {
+    const cam = document.querySelector('.aid-panel .aid-cam');
+    if (!cam) return;
+    const r = cam.getBoundingClientRect();
+    if (!r.width) return;
+    inp.style.left = r.left + 'px';
+    inp.style.top = r.top + 'px';
+    inp.style.bottom = 'auto';
+    inp.style.width = r.width + 'px';
+    inp.style.height = r.height + 'px';
   }
 
   function normMsg(m) {
@@ -190,6 +204,7 @@
     choosePhoto() {
       if (state.sending || state.uploading) return;
       const inp = ensureFileInput();
+      anchorToCam(inp);
       inp.value = '';
       inp.click();
     },
