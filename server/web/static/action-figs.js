@@ -87,9 +87,28 @@
     rdl: { load: 'bb', still: 0, frames: [S({ torso: -30, thigh: 82, shin: 92 }), S({})], cue: '膝盖微屈，臀部向后推，感受大腿后侧拉伸，背部始终挺直' },
     bench_press: { load: 'bb', props: BENCH, frames: [lying({ uarm: -90, farm: -90 }), lying({ uarm: 52, farm: -88 })], cue: '肩胛骨收紧贴住凳面，下放到胸部，向上推起时不要锁死手肘' },
     incline_press: { load: 'db', props: [{ t: 'p', pts: [[38, 60], [92, 84], [92, 89], [36, 65]], o: 0.22 }, ...SEAT(86, 84, 30)], frames: [{ torso: -152, thigh: 8, shin: 85, uarm: -70, farm: -70, at: ['hp', 94, 82] }, { torso: -152, thigh: 8, shin: 85, uarm: 70, farm: -80, at: ['hp', 94, 82] }], cue: '凳面上斜 30°左右，推起时重量在上胸正上方' },
+    // 坐姿斜上推胸(器械): 靠背和上身向后倾斜约 35°, 双手沿垂直于上身的方向斜向上推出
+    incline_seated: (() => {
+      // 靠背: 沿上身方向、向身体后方偏移的一块斜板
+      const hip = [70, 80]; const d = [Math.cos(rad(-125)), Math.sin(rad(-125))];
+      const back = [d[1], -d[0]];   // 上身方向逆时针转 90°, 指向身体后方
+      const p1 = [hip[0] + back[0] * 5, hip[1] + back[1] * 5]; const p2 = [hip[0] + d[0] * 40 + back[0] * 5, hip[1] + d[1] * 40 + back[1] * 5];
+      const p3 = [p2[0] + back[0] * 6, p2[1] + back[1] * 6]; const p4 = [p1[0] + back[0] * 6, p1[1] + back[1] * 6];
+      return {
+        props: [{ t: 'p', pts: [p1, p2, p3, p4], o: 0.22 }, ...SEAT(58, 82, 30)],
+        frames: [
+          { torso: -125, thigh: 0, shin: 88, uarm: 120, farm: -40, at: ['hp', 70, 79] },
+          { torso: -125, thigh: 0, shin: 88, uarm: -35, farm: -35, at: ['hp', 70, 79] },
+        ],
+        props2: (J) => [line([J.wr[0] - 3, J.wr[1] + 4], [J.wr[0] + 3, J.wr[1] - 4], 3.2, 0.5)],
+        cue: '背部贴紧倾斜的靠背，握住把手从胸前沿斜上方推出，推到手臂接近伸直，感受上胸发力，慢慢回放',
+      };
+    })(),
+    // 坐姿推肩: 坐在带靠背的凳上, 从肩部向正上方推起
+    seated_ohp: { view: 'front', load: 'db', props: [rect(68, 40, 24, 46, 0.18), rect(64, 82, 32, 5), line([80, 87], [80, GROUND], 2, 0.3)], frames: [{ torso: -90, thigh: 70, shin: 90, len: { thigh: 10, shin: 21 }, uarm: 8, farm: -86, at: ['hp', 80, 80] }, { torso: -90, thigh: 70, shin: 90, len: { thigh: 10, shin: 21 }, uarm: -78, farm: -86, at: ['hp', 80, 80] }], cue: '背部贴紧靠背，核心收紧，哑铃从肩部两侧向正上方推起，不要耸肩，慢慢下放到耳朵高度' },
     chest_press: { props: [...SEAT(58, 80), rect(52, 40, 5, 42)], frames: [{ torso: -90, thigh: 0, shin: 88, uarm: 170, farm: -5, at: ['hp', 70, 79] }, { torso: -90, thigh: 0, shin: 88, uarm: 2, farm: 0, at: ['hp', 70, 79] }], cue: '背部贴紧靠垫，向前推到手臂接近伸直，慢慢回放' },
     fly_top: { view: 'front', props: [rect(66, 30, 28, 80, 0.16)], load: 'db', frames: [{ torso: -90, thigh: 90, shin: 90, uarm: 8, farm: 12, at: ['hp', 80, 82], len: { thigh: 14, shin: 14 } }, { torso: -90, thigh: 90, shin: 90, uarm: -55, farm: -110, at: ['hp', 80, 82], len: { thigh: 14, shin: 14, uarm: 11, farm: 9 } }], cue: '躺在凳上，手肘微屈，像抱大树一样把哑铃从两侧合拢到胸前' },
-    cable_fly: { view: 'front', frames: [S({ uarm: -18, farm: -8 }), S({ uarm: 125, farm: 160 })], props2: (J) => [line([10, 14], J.wr2, 1.3, 0.4), line([150, 14], J.wr, 1.3, 0.4)], cue: '身体微前倾，手肘微屈，双手从两侧向身体前下方合拢' },
+    cable_fly: { view: 'front', frames: [S({ uarm: -14, farm: -32 }), S({ uarm: 35, farm: 178 })], props2: (J) => [line([10, 14], J.wr2, 1.3, 0.4), line([150, 14], J.wr, 1.3, 0.4)], cue: '身体微前倾，手肘微屈，双手从两侧向身体前下方合拢' },
     pec_deck: { view: 'front', props: [rect(66, 80, 28, 5)], frames: [{ torso: -90, thigh: 90, shin: 90, uarm: 0, farm: -90, at: ['hp', 80, 80], len: { thigh: 12, shin: 18 } }, { torso: -90, thigh: 90, shin: 90, uarm: 178, farm: -90, at: ['hp', 80, 80], len: { thigh: 12, shin: 18, uarm: 6 } }], cue: '坐直，前臂贴住挡板，用胸部发力把双臂向中间夹拢' },
     pushup: { frames: [{ torso: 208, thigh: 28, shin: 28, foot: 5, uarm: 90, farm: 90, at: ['wr', 52, 108] }, { torso: 199, thigh: 19, shin: 19, foot: 5, uarm: 45, farm: 135, at: ['wr', 52, 108] }], cue: '身体从头到脚保持一条直线，下放到胸部接近地面，核心收紧' },
     pullup: { view: 'front', props: [line([36, 8], [124, 8], 3, 0.5)], frames: [{ torso: -90, thigh: 90, shin: 90, len: { shin: 16 }, uarm: -50, farm: -80, at: ['wr', 101.4, 8] }, { torso: -90, thigh: 90, shin: 90, len: { shin: 16 }, uarm: 6, farm: -100, at: ['wr', 102, 8] }], cue: '双手正握略宽于肩，用背部发力把身体拉起到下巴过杠（手肘向下向外打开），再慢慢下放' },
@@ -170,6 +189,8 @@
   const RULES = [
     [/伟大.*(伸展|拉伸)|最伟大的?(伸展|拉伸)/, 'greatest_stretch'],
     // 带限定词的先匹配(否则会被后面宽泛的「划船」「弯举」等吃掉)
+    [/坐[姿式].*(推肩|肩推|推举|肩上推)|坐[姿式].*(哑铃|杠铃).*推肩/, 'seated_ohp'],
+    [/(坐[姿式]|器械).*(斜上|上斜).*推|斜上推胸|上斜推胸/, 'incline_seated'],
     [/直立划船|直立提拉/, 'upright_row'], [/划船机/, 'rower'], [/腿弯举|俯卧弯举/, 'leg_curl'], [/腿屈伸/, 'leg_ext'],
     [/上斜.*(推|卧|固定)|哑铃上斜/, 'incline_press'], [/反向飞鸟|俯身.*飞鸟|反飞鸟/, 'rear_fly'], [/哑铃飞鸟|仰卧飞鸟|平板飞鸟/, 'fly_top'],
     [/绳索夹胸|龙门架|飞鸟/, 'cable_fly'], [/蝴蝶机|夹胸/, 'pec_deck'],
@@ -327,7 +348,7 @@
   // 每种图形的中文说明(管理端下拉选择 / 服务端让 AI 归类时用)
   const LABELS = {
     squat_bb: '杠铃深蹲(杠铃扛肩下蹲)', squat: '徒手/哑铃深蹲', lunge: '箭步蹲/弓步/分腿蹲', deadlift: '硬拉(屈膝从地面拉起)', rdl: '罗马尼亚硬拉(直腿屈髋)',
-    bench_press: '平板卧推(躺凳上推)', incline_press: '上斜卧推', chest_press: '坐姿器械推胸', fly_top: '仰卧飞鸟', cable_fly: '绳索夹胸/站姿飞鸟',
+    bench_press: '平板卧推(躺凳上推)', incline_press: '上斜卧推', chest_press: '坐姿器械推胸', incline_seated: '坐姿斜上推胸(靠背倾斜的器械)', seated_ohp: '坐姿推肩(带靠背)', fly_top: '仰卧飞鸟', cable_fly: '绳索夹胸/站姿飞鸟',
     pec_deck: '蝴蝶机夹胸', pushup: '俯卧撑', pullup: '引体向上', big_scissors: '大剪刀(坐姿分动式高位下拉/划船器械)', pulldown: '高位下拉', seated_row: '坐姿划船(绳索/器械)',
     bent_row: '俯身划船(杠铃/哑铃/T杠)', one_arm_row: '单臂哑铃划船(单膝单手撑凳)', greatest_stretch: '伟大伸展(弓步+单手撑地+单臂上举旋转)', straight_pulldown: '直臂下压', ohp: '肩上推举', lateral_raise: '侧平举', front_raise: '前平举',
     rear_fly: '俯身反向飞鸟', face_pull: '面拉', upright_row: '直立划船', curl: '二头弯举', pushdown: '三头下压',
