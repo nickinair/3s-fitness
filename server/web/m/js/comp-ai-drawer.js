@@ -52,7 +52,9 @@
     const inp = document.createElement('input');
     inp.type = 'file';
     inp.accept = 'image/*';
-    inp.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none';
+    // 锚定在抽屉左下角「📷 拍照算热量」胶囊正上方: iOS WebKit(WKFileUploadPanel) 检测到 input 在视口内时,
+    // 会以该元素的 elementRect 代替手指点击位置弹出「照片图库 / 拍照 / 选取文件」菜单
+    inp.style.cssText = 'position:fixed;left:12px;bottom:calc(86px + env(safe-area-inset-bottom, 0px));width:108px;height:2px;opacity:0;pointer-events:none;z-index:-1';
     inp.addEventListener('change', (e) => {
       const f = e.target && e.target.files && e.target.files[0];
       inp.value = '';
