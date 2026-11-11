@@ -105,6 +105,7 @@
         loading: false, saving: false,
         form: { title: '', vip_id: 0, realname: '', plan_date: H.today(), note: '' },
         items: [],
+        pickShow: false,   // 动作库选择器
         // AI 解析
         aiText: '', aiLoading: false, listening: false, aiStatus: { llm: false, asr: false },
         recBars: [], recSec: 0,   // 声纹柱高(0~1) 与录音秒数
@@ -153,7 +154,7 @@
       '    </div>',
 
       '    <div class="sec-title">动作列表（{{ items.length }}）<span class="more brand-text" @click="addItem"><van-icon name="add-o"/> 添加动作</span></div>',
-      '    <van-empty v-if="!items.length" description="用上方 AI 解析，或手动添加动作" image-size="60"/>',
+      '    <van-empty v-if="!items.length" description="用上方 AI 解析，或点「添加动作」从动作库选择" image-size="60"/>',
       '    <div v-for="(it,i) in items" :key="i" class="rec-item" style="padding:10px 12px">',
       '      <div class="flex">',
       '        <div class="plan-idx">{{ i+1 }}</div>',
@@ -197,6 +198,7 @@
       '      <van-empty v-if="!filteredStudents.length" :description="stuKw ? \'没有匹配的学员\' : \'暂无私教学员\'" image-size="60"/>',
       '    </div>',
       '  </van-popup>',
+      '  <action-picker v-model:show="pickShow" @pick="onPick" @manual="addManual"/>',
       '</div>',
     ].join('\n'),
     beforeUnmount() { clearInterval(this._waveTimer); },
@@ -215,7 +217,12 @@
       },
     },
     methods: {
-      addItem() { this.items.push({ action_name: '', sets: 4, reps: 12, unit: '次', weight: '', rest: '', remark: '' }); },
+      addItem() { this.pickShow = true; },
+      addManual() { this.items.push({ action_name: '', sets: 4, reps: 12, unit: '次', weight: '', rest: '', remark: '' }); },
+      onPick(list) {
+        list.forEach(a => this.items.push(window.planItemFromAction(a)));
+        vant.showToast({ message: '已添加 ' + list.length + ' 个动作', icon: 'success' });
+      },
       openStu() { this.stuKw = ''; this.stuShow = true; },
       pickStu(s) {
         if (s) { this.form.vip_id = s.id; this.form.realname = s.realname; }

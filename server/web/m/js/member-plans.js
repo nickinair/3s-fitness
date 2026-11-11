@@ -212,6 +212,82 @@
     methods: { open() { window.showActionFig(this.name, this.desc, this.fig); } },
   };
 
+  /* 动作库选择器: 训练计划编辑器里点「添加动作」弹出, 按部位筛选/搜索, 带示意图, 可多选;
+     找不到的动作点「手动输入」加一行空白自己填 */
+  window.planItemFromAction = function (a) {
+    const n = String(a.name || '');
+    const base = { action_name: n, sets: 4, reps: 12, unit: '次', weight: '', rest: '', remark: '', part: a.part || '' };
+    if (a.part === '有氧') return Object.assign(base, { sets: 1, reps: 20, unit: '分钟' });
+    if (a.part === '拉伸') return Object.assign(base, { sets: 2, reps: 30, unit: '秒' });
+    if (/平板|支撑|靠墙/.test(n)) return Object.assign(base, { sets: 3, reps: 45, unit: '秒' });
+    return base;
+  };
+  (window.MComponents = window.MComponents || {})['action-picker'] = {
+    props: { show: Boolean },
+    emits: ['update:show', 'pick', 'manual'],
+    data() {
+      return { parts: ['全部', '胸', '背', '肩', '手臂', '腿', '臀', '核心', '有氧', '拉伸'], part: '全部', keyword: '', list: [], loading: false, picked: [] };
+    },
+    watch: {
+      show(v) { if (v) { this.picked = []; if (!this.list.length) this.load(); } },
+    },
+    computed: {
+      pickedIds() { return this.picked.map(a => a.id); },
+    },
+    methods: {
+      async load() {
+        this.loading = true;
+        try {
+          const qs = [];
+          if (this.part !== '全部') qs.push('part=' + encodeURIComponent(this.part));
+          if (this.keyword.trim()) qs.push('keyword=' + encodeURIComponent(this.keyword.trim()));
+          this.list = (await API.get('/training-actions' + (qs.length ? '?' + qs.join('&') : ''), { silent: true })) || [];
+        } catch (e) { this.list = []; } finally { this.loading = false; }
+      },
+      toggle(a) {
+        const i = this.pickedIds.indexOf(a.id);
+        if (i >= 0) this.picked.splice(i, 1); else this.picked.push(a);
+      },
+      close() { this.$emit('update:show', false); },
+      confirm() {
+        if (!this.picked.length) return vant.showToast('请先勾选动作');
+        this.$emit('pick', this.picked.slice());
+        this.close();
+      },
+      manual() { this.$emit('manual'); this.close(); },
+    },
+    template: [
+      '<van-popup :show="show" @update:show="$emit(\'update:show\', $event)" position="bottom" round safe-area-inset-bottom teleport="body" style="height:82vh;display:flex;flex-direction:column;background:var(--c-bg)">',
+      '  <div class="apk-head"><b>从动作库添加</b><van-icon name="cross" size="20" color="var(--c-text-3)" @click="close"/></div>',
+      '  <van-tabs v-model:active="part" color="var(--brand)" shrink @change="load" style="flex-shrink:0">',
+      '    <van-tab v-for="p in parts" :key="p" :title="p" :name="p"></van-tab>',
+      '  </van-tabs>',
+      '  <van-search v-model="keyword" placeholder="搜索动作名称" @search="load" @clear="load" @update:model-value="kwChanged" style="flex-shrink:0"/>',
+      '  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 12px">',
+      '    <div v-if="loading" style="text-align:center;padding:40px 0"><van-loading color="var(--brand)"/></div>',
+      '    <van-empty v-else-if="!list.length" description="动作库里没有找到，可以点下方「手动输入」" image-size="60"/>',
+      '    <div v-else v-for="a in list" :key="a.id" class="apk-item" :class="{on: pickedIds.indexOf(a.id) >= 0}" @click="toggle(a)">',
+      '      <action-fig :name="a.name" :fig="a.fig_key" :size="56"/>',
+      '      <div class="flex1" style="min-width:0">',
+      '        <div class="n">{{ a.name }}</div>',
+      '        <div class="s">{{ [a.part, a.equipment].filter(Boolean).join(\' · \') }}</div>',
+      '      </div>',
+      '      <i class="apk-ck"><b v-if="pickedIds.indexOf(a.id) >= 0">{{ pickedIds.indexOf(a.id) + 1 }}</b></i>',
+      '    </div>',
+      '  </div>',
+      '  <div class="apk-foot">',
+      '    <van-button round plain style="flex:.8" @click="manual">手动输入</van-button>',
+      '    <van-button round type="primary" style="flex:1.2" @click="confirm">{{ picked.length ? \'添加 \' + picked.length + \' 个动作\' : \'请勾选动作\' }}</van-button>',
+      '  </div>',
+      '</van-popup>',
+    ].join('\n'),
+  };
+  // 搜索框输入时防抖查询
+  window.MComponents['action-picker'].methods.kwChanged = function () {
+    clearTimeout(this._kt);
+    this._kt = setTimeout(() => this.load(), 350);
+  };
+
   /* 解析 items (JSON 字符串) */
   window.parsePlanItems = function (s) {
     if (Array.isArray(s)) return s;
@@ -398,6 +474,7 @@
         recSec: 0,
         sugFor: -1,
         sugs: [],
+        pickShow: false,
         tplShow: false,
         tplLoading: false,
         tplList: [],
@@ -526,8 +603,13 @@
         this.tplShow = false;
         vant.showToast({ message: '已带入 ' + this.items.length + ' 个动作，可继续修改', icon: 'success' });
       },
-      addItem() {
+      addItem() { this.pickShow = true; },
+      addManual() {
         this.items.push({ action_name: '', sets: 4, reps: 12, unit: '次', weight: '', rest: '', remark: '', part: '' });
+      },
+      onPick(list) {
+        list.forEach(a => this.items.push(window.planItemFromAction(a)));
+        vant.showToast({ message: '已添加 ' + list.length + ' 个动作', icon: 'success' });
       },
       hideSug() { setTimeout(() => { this.sugFor = -1; }, 150); },
       async suggest(i) {
@@ -757,7 +839,7 @@
       '    </div>',
       /* 动作列表 (图二下部) */
       '    <div class="sec-title" style="margin:12px 4px 8px">动作列表（{{ items.length }}）<span class="more brand-text" @click="addItem"><van-icon name="add-o"/> 添加动作</span></div>',
-      '    <van-empty v-if="!items.length" description="用上方 AI 解析，或手动添加动作" image-size="60"/>',
+      '    <van-empty v-if="!items.length" description="用上方 AI 解析，或点「添加动作」从动作库选择" image-size="60"/>',
       '    <div v-for="(it,i) in items" :key="i" class="rec-item" style="padding:10px 12px;margin-bottom:8px">',
       '      <div class="flex">',
       '        <div class="plan-idx">{{ i+1 }}</div>',
@@ -806,6 +888,7 @@
       '      </template>',
       '    </div>',
       '  </van-popup>',
+      '  <action-picker v-model:show="pickShow" @pick="onPick" @manual="addManual"/>',
       '</van-popup>',
     ].join('\n'),
   };
