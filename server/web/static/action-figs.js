@@ -105,10 +105,10 @@
           const ux = dx / l; const uy = dy / l;
           const top = [w[0] - ux * 9, w[1] - uy * 9];          // 把手上方露出的一截力臂
           const end = [PIV[0] + ux * 54, PIV[1] + uy * 54];    // 对侧下端: 配重片
-          return [line(top, end, 5, 0.42), circ(end, 10, false, 0.5, 3), circ(end, 2.5, true, 0.5),
-            line([w[0] - ux * 2 - 3, w[1] + 4], [w[0] + 3 - ux * 2, w[1] - 4], 3.2, 0.7)];   // 把手
+          return [line(top, end, 5, 0.2), circ(end, 10, false, 0.26, 3), circ(end, 2.5, true, 0.26),
+            line([w[0] - ux * 2 - 3, w[1] + 4], [w[0] + 3 - ux * 2, w[1] - 4], 3.2, 0.4)];   // 把手
         };
-        return [...lever(J.wr2), ...lever(J.wr), circ(PIV, 3, true, 0.55)];
+        return [...lever(J.wr2), ...lever(J.wr), circ(PIV, 3, true, 0.3)];
       },
       frames: [
         { torso: -90, thigh: 70, shin: 90, len: { thigh: 10, shin: 21 }, uarm: -55, farm: -72, at: ['hp', 80, 80] },
