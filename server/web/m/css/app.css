@@ -1357,8 +1357,9 @@ html.is-mp .staff-hero::after { top: 8px; }
 .aid-btn.busy { opacity: .6; }
 .aid-pick { display: flex; align-items: center; gap: 8px; padding: 9px 2px; border-bottom: 1px solid var(--c-line-2); cursor: pointer; font-size: 13px; color: var(--c-text-4); }
 .aid-pick:last-child { border-bottom: none; }
-.aid-pick .n { font-weight: 600; color: var(--c-title); }
-.aid-pick .s { flex: 1; font-size: 12px; color: var(--c-text-3); }
+.aid-pick .t { flex: 1; min-width: 0; }
+.aid-pick .n { font-weight: 600; color: var(--c-title); line-height: 1.45; }
+.aid-pick .s { font-size: 12px; color: var(--c-text-3); line-height: 1.45; margin-top: 1px; }
 .aid-pick.on .n::after { content: ' ✓'; }
 .aid-pick.off { opacity: .45; }
 .aid-copy { font-size: 13px; line-height: 1.7; color: var(--c-text); background: var(--c-panel); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }

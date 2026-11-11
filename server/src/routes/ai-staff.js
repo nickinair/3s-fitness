@@ -656,26 +656,81 @@ async function parsePlanText(ctx, text) {
 }
 const itemText = (x) => `${x.action_name} ${x.sets || ''}组×${x.reps || ''}${x.unit || '次'}${x.weight ? ' ' + x.weight + (/kg/i.test(x.weight) ? '' : 'kg') : ''}`;
 
-async function proposeLessonPlan(ctx, { booking_id, text, note }) {
+/* ---- 训练计划来源: 模板 / 会员上次的计划 / 新建(口述) ---- */
+const parseItems = (raw) => { try { const a = JSON.parse(raw || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
+
+// 可选的计划: 我的模板(教练只看自己的, 管理者看全店) + 该会员最近 3 份计划
+async function planChoices(ctx, vipId, keyword) {
+  const cond = ['merchant_id=?', 'status=1', 'is_template=1']; const p = [ctx.mid];
+  if (ctx.isCoach) { cond.push('coach_id=?'); p.push(ctx.coachId || -1); }
+  if (keyword) { cond.push('title LIKE ?'); p.push(`%${String(keyword).slice(0, 20)}%`); }
+  const templates = await db.query(`SELECT id, title, coach_name, items FROM biz_training_plan WHERE ${cond.join(' AND ')} ORDER BY id DESC LIMIT 8`, p);
+  const recent = vipId ? await db.query(
+    'SELECT id, title, plan_date, coach_name, items FROM biz_training_plan WHERE merchant_id=? AND vip_id=? AND status=1 AND is_template=0 ORDER BY plan_date DESC, id DESC LIMIT 3',
+    [ctx.mid, vipId]) : [];
+  const brief = (items) => `${items.length}个动作：${items.slice(0, 3).map(x => x.action_name).join('、')}${items.length > 3 ? '…' : ''}`;
+  return {
+    templates: templates.map(t => ({ plan_id: t.id, title: t.title, coach: t.coach_name, actions: brief(parseItems(t.items)) })),
+    recent: recent.map(t => ({ plan_id: t.id, title: t.title, date: fmtD(t.plan_date), actions: brief(parseItems(t.items)) })),
+  };
+}
+async function askPlanSource(ctx, vipId, keyword, forWhat) {
+  const c = await planChoices(ctx, vipId, keyword);
+  ctx.cards.push({
+    type: 'pick', title: `${forWhat}用哪份训练计划？`,
+    options: [
+      ...c.templates.map(t => ({ label: `模板「${t.title}」`, sub: t.actions, send: `用模板「${t.title}」（计划ID ${t.plan_id}）` })),
+      ...c.recent.map(t => ({ label: `沿用 ${dayjs(t.date).format('M月D日')}「${t.title}」`, sub: t.actions, send: `沿用${dayjs(t.date).format('M月D日')}的「${t.title}」（计划ID ${t.plan_id}）` })),
+      { label: '新建一份计划', sub: '直接说动作安排，比如：卧推4组12次，深蹲5组8次60公斤', send: '新建一份计划' },
+    ],
+  });
+  return {
+    need_choice: true, ...c,
+    message: `已给员工出了选择卡片（${c.templates.length}个模板、${c.recent.length}份该会员之前的计划、新建）。请问一句「用之前的模板，还是新建？」，等员工选择：选了模板/之前的计划就带 plan_id 再调用；说新建就请他说出动作安排后带 text 调用`,
+  };
+}
+async function loadPlan(ctx, planId, vipId) {
+  const t = await db.queryOne('SELECT * FROM biz_training_plan WHERE id=? AND merchant_id=? AND status=1', [planId, ctx.mid]);
+  if (!t) throw new BizError('这份训练计划不存在或已删除');
+  // 教练只能用自己的模板, 或该会员自己的历史计划
+  if (ctx.isCoach && t.coach_id !== ctx.coachId && !(vipId && t.vip_id === vipId)) throw new BizError('只能使用自己的训练计划模板');
+  const items = parseItems(t.items);
+  if (!items.length) throw new BizError('这份计划里没有动作');
+  return { title: t.title, items, note: t.note || '', source: t.is_template ? `模板「${t.title}」` : `沿用 ${dayjs(t.plan_date).format('M月D日')} 的计划` };
+}
+// 新建(口述)的计划可以顺手存为模板, 下次直接选
+const SAVE_TPL_OPTS = [{ value: 'once', label: '只用这一次' }, { value: 'template', label: '同时存为我的模板' }];
+
+async function proposeLessonPlan(ctx, { booking_id, text, plan_id, note }) {
   const bk = await getBooking(ctx, booking_id);
   if (![0, 1, 3].includes(bk.status)) return { error: `这节课已${PT_STATUS[bk.status]}，不能再写课程计划` };
-  const plan = await parsePlanText(ctx, text);
+  if (!plan_id && !String(text || '').trim()) return askPlanSource(ctx, bk.vip_id, '', `给 ${bk.realname} ${dayLabel(bk.date)} ${bk.from_time} 的课`);
+  const plan = plan_id ? await loadPlan(ctx, Number(plan_id), bk.vip_id) : { ...(await parsePlanText(ctx, text)), source: '新建' };
   return pushAction(ctx, {
     act: 'lesson_plan', title: '确认本节课训练计划', btn: '保存计划',
-    rows: [['课程', `${bk.realname} · ${dayLabel(bk.date)} ${bk.from_time}`], ['计划', plan.title]],
-    list: plan.items.map(itemText), draft: { booking_id: bk.id, title: plan.title, items: plan.items, note: note || '' },
+    rows: [['课程', `${bk.realname} · ${dayLabel(bk.date)} ${bk.from_time}`], ['来源', plan.source], ['计划', plan.title]],
+    list: plan.items.map(itemText),
+    ...(plan_id ? {} : { options: SAVE_TPL_OPTS, option: 'once' }),
+    draft: { booking_id: bk.id, title: plan.title, items: plan.items, note: note || plan.note || '' },
   });
 }
 
-async function proposePushPlan(ctx, { vip_id, text, plan_date, note }) {
+async function proposePushPlan(ctx, { vip_id, text, plan_id, plan_date, note }) {
   const v = await getMember(ctx, vip_id);
-  const plan = await parsePlanText(ctx, text);
+  if (!plan_id && !String(text || '').trim()) return askPlanSource(ctx, v.id, '', `给 ${vname(v)} 推送`);
+  const plan = plan_id ? await loadPlan(ctx, Number(plan_id), v.id) : { ...(await parsePlanText(ctx, text)), source: '新建' };
   const d = fmtD(plan_date) || dayjs().format('YYYY-MM-DD');
   return pushAction(ctx, {
     act: 'push_plan', title: '确认推送训练计划', btn: '保存并推送',
-    rows: [['会员', `${vname(v)}（尾号${tail(v.phone)}）`], ['日期', dayLabel(d)], ['标题', plan.title]],
-    list: plan.items.map(itemText), draft: { vip_id: v.id, title: plan.title, items: plan.items, plan_date: d, note: note || '' },
+    rows: [['会员', `${vname(v)}（尾号${tail(v.phone)}）`], ['日期', dayLabel(d)], ['来源', plan.source], ['标题', plan.title]],
+    list: plan.items.map(itemText),
+    ...(plan_id ? {} : { options: SAVE_TPL_OPTS, option: 'once' }),
+    draft: { vip_id: v.id, title: plan.title, items: plan.items, plan_date: d, note: note || plan.note || '' },
   });
+}
+
+async function saveAsTemplate(ctx, d) {
+  await callApi(ctx, 'POST', '/training-plans', { title: d.title, items: d.items, vip_id: 0, note: d.note || '', is_template: 1 });
 }
 
 async function proposeBody(ctx, a) {
@@ -863,8 +918,8 @@ function toolDefs(ctx) {
     { name: 'propose_noshow', description: '生成标记爽约草稿', parameters: P({ booking_ids: ids() }, ['booking_ids']) },
     { name: 'propose_group_checkin', description: '生成团课签到草稿: 传 syllabus_id 签到整节课已约学员, 或传 group_booking_ids 指定几个人', parameters: P({ syllabus_id: int(), group_booking_ids: ids() }) },
     { name: 'propose_rest', description: '生成请假草稿, 会自动检查该时段已有的课并提示。不填时间=全天', parameters: P({ date: str('YYYY-MM-DD'), from_time: str('HH:mm'), to_time: str('HH:mm'), remark: str('事由'), coach_name: COACH }, ['date']) },
-    { name: 'propose_lesson_plan', description: '把口述的动作安排解析成「本节课训练计划」草稿, 挂到某节私教预约上(待确认/已确认/已完成的课都可以)', parameters: P({ booking_id: int(), text: str('口述内容, 如: 卧推4组12次 深蹲5组8次60公斤'), note: str() }, ['booking_id', 'text']) },
-    { name: 'propose_push_plan', description: '把口述内容解析成训练计划并推送给会员(会员小程序可见+短信)', parameters: P({ vip_id: int(), text: str(), plan_date: str('YYYY-MM-DD'), note: str() }, ['vip_id', 'text']) },
+    { name: 'propose_lesson_plan', description: '给某节私教预约挂「本节课训练计划」(待确认/已确认/已完成的课都可以)。三种来源: 传 plan_id 用模板或会员之前的计划; 传 text 把口述动作新建; 两者都不传则给员工出选择卡片(模板/之前的计划/新建)', parameters: P({ booking_id: int(), plan_id: int('模板或之前计划的 计划ID'), text: str('新建时的口述内容, 如: 卧推4组12次 深蹲5组8次60公斤'), note: str() }, ['booking_id']) },
+    { name: 'propose_push_plan', description: '给会员推送训练计划(会员小程序可见+短信)。传 plan_id 用模板或之前的计划; 传 text 口述新建; 都不传则先给员工出选择卡片', parameters: P({ vip_id: int(), plan_id: int('模板或之前计划的 计划ID'), text: str('新建时的口述内容'), plan_date: str('YYYY-MM-DD'), note: str() }, ['vip_id']) },
     { name: 'propose_body_record', description: '生成体测录入草稿', parameters: P({ vip_id: int(), record_date: str('YYYY-MM-DD'), height: { type: 'number' }, weight: { type: 'number' }, body_fat: { type: 'number', description: '体脂率%' }, muscle: { type: 'number' }, bust: { type: 'number' }, waist: { type: 'number' }, hip: { type: 'number' }, remark: str() }, ['vip_id']) },
     { name: 'propose_maintain', description: '生成会员维护(跟进)记录草稿, 可带下次跟进时间(待办)', parameters: P({ vip_id: int(), content: str(), record_type: { type: 'string', enum: ['电话', '到店', '微信', '其他'] }, todo_time: str('YYYY-MM-DD HH:mm') }, ['vip_id', 'content']) },
     { name: 'propose_potential', description: '生成录入潜在客户草稿', parameters: P({ realname: str(), phone: str(), gender: str('男/女'), remark: str() }, ['phone']) },
@@ -931,6 +986,7 @@ async function systemPrompt(ctx) {
    员工只说「代约课」没给信息时，问一句「给哪位会员约？哪天几点？」${ctx.isCoach ? '' : '（不说教练就默认会员的主教练）'}；只说「代消课」时直接调用 propose_finish（不传 booking_ids，会列出${ctx.isCoach ? '你' : '全店'}已上完还没消课的课，员工在卡片上勾选），没有待消课的就如实说。
 6. 你办不了的事（开卡、续卡、退卡、储值充值/扣费、补录消课、改卡/延期/暂停、合同、团课排课、各种设置等），一句话说明原因，并且必须调用 open_page 给出最相关的页面入口（涉及具体会员时带上 vip_id），回复里说「点下方按钮去办理」。
    课程计划可以写在「待确认」或「已确认」的课上，不需要先确认预约。
+   挂/推送训练计划时，员工没说具体动作、也没指定模板，就先只传 booking_id（或 vip_id）调用，系统会列出模板和会员之前的计划，然后问「用之前的模板，还是新建？」；员工选了就带 plan_id，说新建就请他口述动作后带 text。不要默认新建。
 7. 批量操作一次最多20条，超过时告诉员工分批处理。
 8. 写话术、课后反馈、生日祝福、里程碑总结前，先查会员画像，结合真实数据写，语气真诚自然、不夸张不承诺效果；写好用 make_copy_card（里程碑总结用 propose_milestone_summary）。
 9. 回复简洁口语化，一般不超过120字，不要用 Markdown 标题、表格、加粗；列清单时用「・」。
@@ -1169,15 +1225,19 @@ async function execAction(ctx, card, input) {
     case 'lesson_plan': {
       const bk = await getBooking(ctx, d.booking_id);
       await callApi(ctx, 'PUT', `/ptrain-bookings/${bk.id}/lesson-plan`, { lesson_plan: JSON.stringify({ title: d.title, items: d.items, note: d.note || '' }) });
-      await logAction(ctx.req, '[AI助手]课程计划', `${bk.realname} ${fmtD(bk.date)} ${bk.from_time} ${d.items.length}个动作`);
-      return `已保存 ${bk.realname} 这节课的训练计划，会员在小程序里能看到`;
+      const tpl = option === 'template';
+      if (tpl) await saveAsTemplate(ctx, d);
+      await logAction(ctx.req, '[AI助手]课程计划', `${bk.realname} ${fmtD(bk.date)} ${bk.from_time} ${d.items.length}个动作${tpl ? ' 并存为模板' : ''}`);
+      return `已保存 ${bk.realname} 这节课的训练计划，会员在小程序里能看到${tpl ? `；「${d.title}」已存为模板，下次可以直接选` : ''}`;
     }
     case 'push_plan': {
       await getMember(ctx, d.vip_id);
       const res = await callApi(ctx, 'POST', '/training-plans', { title: d.title, items: d.items, vip_id: d.vip_id, plan_date: d.plan_date, note: d.note || '' });
       await callApi(ctx, 'POST', `/training-plans/${res.id}/push`);
-      await logAction(ctx.req, '[AI助手]推送训练计划', `会员#${d.vip_id} ${d.title}`);
-      return '训练计划已保存并推送给会员';
+      const tpl = option === 'template';
+      if (tpl) await saveAsTemplate(ctx, d);
+      await logAction(ctx.req, '[AI助手]推送训练计划', `会员#${d.vip_id} ${d.title}${tpl ? ' 并存为模板' : ''}`);
+      return `训练计划已保存并推送给会员${tpl ? `；「${d.title}」已存为模板` : ''}`;
     }
     case 'body': {
       await getMember(ctx, d.vip_id);
@@ -1278,7 +1338,7 @@ r.post('/chat', async (req, res, next) => {
     if (note) reply = reply.replace(/[，,。]?\s*(请)?(点|在)下方(按钮|卡片)[^。]*。?/g, '。').replace(/[，,]?\s*只能给你(页面)?入口[。]?/g, '。').replace(/。。/g, '。') + note;
     // 同一类卡片只保留最后一张(模型重复调用时)
     const seen = new Set();
-    const cards = ctx.cards.reverse().filter((c) => { const k = `${c.type}:${c.act || ''}:${c.path || ''}`; if (seen.has(k)) return false; seen.add(k); return true; }).reverse();
+    const cards = ctx.cards.reverse().filter((c) => { const k = `${c.type}:${c.act || c.title || ''}:${c.path || ''}`; if (seen.has(k)) return false; seen.add(k); return true; }).reverse();
     const id = await saveMsg(ctx, 'assistant', reply, { cards, tokens });
     await markRead(ctx);
     res.json(ok({ messages: [msgOut({ id, role: 'assistant', content: reply, cards: JSON.stringify(cards), insert_time: new Date() })] }));

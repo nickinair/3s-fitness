@@ -781,7 +781,7 @@
       '              <div v-else-if="c.type === \'pick\'" class="aid-card">',
       '                <div class="aid-ctitle">{{ c.title }}</div>',
       '                <div v-for="o in c.options" :key="o.send" class="aid-pick" :class="{on: c.picked === o.label, off: c.picked && c.picked !== o.label}" @click="pickPerson(c, o)">',
-      '                  <span class="n">{{ o.label }}</span><span class="s">{{ o.sub }}</span><van-icon name="arrow"/>',
+      '                  <div class="t"><div class="n">{{ o.label }}</div><div v-if="o.sub" class="s">{{ o.sub }}</div></div><van-icon name="arrow"/>',
       '                </div>',
       '              </div>',
 
