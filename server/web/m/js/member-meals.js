@@ -146,7 +146,6 @@
       '    <div class="ml-dt" @click="calShow=true">{{ dateText }} <van-icon name="calendar-o"/></div>',
       '    <div class="ml-arrow" :class="{dis:isToday}" @click="shift(1)"><van-icon name="arrow"/></div>',
       '    <div v-if="!isToday" class="ml-today" @click="go(today)">回到今天</div>',
-      '    <div v-else class="ml-today cam" @click="snap">📷 记一餐</div>',
       '  </div>',
 
       '  <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',

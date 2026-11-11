@@ -699,7 +699,6 @@
       '        <div class="aid-hname">小S <span class="aid-htag">{{ state.staff ? \'教练版\' : \'AI 健身助手\' }}</span></div>',
       '        <div class="aid-hsub"><i class="aid-dot-on"></i>{{ state.uploading ? \'正在上传照片…\' : (state.sending ? \'正在思考…\' : (state.staff ? \'在线 · 说一句话就能办事\' : \'在线 · 随时为你服务\')) }}</div>',
       '      </div>',
-      '      <div v-if="!state.staff" class="aid-hcam" @click="choosePhoto">📷 拍餐食</div>',
       '    </div>',
 
       // 消息流
