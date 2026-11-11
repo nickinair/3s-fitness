@@ -639,7 +639,7 @@
         AI.send(o.send);
       },
       copyText(c) {
-        const t = c.text || '';
+        const t = typeof c === 'string' ? c : (c.text || '');
         const done = () => vant.showToast({ message: '已复制', icon: 'success' });
         if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(t).then(done).catch(() => this.copyFallback(t, done));
@@ -823,6 +823,17 @@
       '                <div class="aid-ctitle">{{ c.title }}</div>',
       '                <div class="aid-copy">{{ c.text }}</div>',
       '                <div class="aid-cbtns"><div class="aid-btn" @click="copyText(c)">复制文案</div></div>',
+      '              </div>',
+
+      // 教练版: 话术库(门店沉淀 + 标准话术, 逐条复制)
+      '              <div v-else-if="c.type === \'scripts\'" class="aid-card">',
+      '                <div class="aid-ctitle">{{ c.title }}</div>',
+      '                <div v-if="c.tips" class="aid-sc-tips">💡 {{ c.tips }}</div>',
+      '                <div v-for="(it, ii) in c.items" :key="ii" class="aid-sc">',
+      '                  <div class="aid-sc-h"><span class="t">{{ it.title }}</span><span v-if="it.by" class="by">{{ it.by }}</span><span class="cp" @click="copyText(it.content)">复制</span></div>',
+      '                  <div class="aid-sc-c">{{ it.content }}</div>',
+      '                </div>',
+      '                <div class="aid-sc-foot">{会员}等占位词复制后替换；说「给某某写一份」可以按会员数据填好</div>',
       '              </div>',
 
       // 跳转胶囊

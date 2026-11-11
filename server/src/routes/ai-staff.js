@@ -16,6 +16,7 @@ const { ok, BizError, logAction, cardBlockReason } = require('../util');
 const { staffAuth } = require('../middleware/auth');
 const { getCoachBusy, getMemberBusy, checkTimeRange, parseOpen } = require('./coaches');
 const { shared } = require('./ai-assistant');
+const SCRIPT_LIB = require('../ai-scripts');
 
 const { CFG, S, llm, cleanText, dayLabel, fmtD, toMin, fromMin, PT_STATUS, GROUP_STATUS, KIND, parseLessonPlan, getClubs } = shared;
 let pinyin = null;
@@ -43,6 +44,11 @@ function ensureTables() {
       await db.exec(`CREATE TABLE IF NOT EXISTS biz_ai_staff_event (
         id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, type VARCHAR(16) NOT NULL, ref VARCHAR(32) NOT NULL,
         insert_time DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uk_user_type_ref (user_id, type, ref)) DEFAULT CHARSET=utf8mb4`);
+      // 门店话术库: 员工在小S里沉淀的话术(内置话术在 src/ai-scripts.js)
+      await db.exec(`CREATE TABLE IF NOT EXISTS biz_ai_script (
+        id INT AUTO_INCREMENT PRIMARY KEY, merchant_id INT NOT NULL DEFAULT 1, scene VARCHAR(32) NOT NULL, title VARCHAR(100) NOT NULL DEFAULT '',
+        content TEXT, user_id INT NOT NULL DEFAULT 0, username VARCHAR(32) NOT NULL DEFAULT '', status TINYINT NOT NULL DEFAULT 1,
+        insert_time DATETIME DEFAULT CURRENT_TIMESTAMP, KEY idx_scene (merchant_id, scene)) DEFAULT CHARSET=utf8mb4`);
       await db.exec(`CREATE TABLE IF NOT EXISTS biz_ai_staff_state (
         user_id INT PRIMARY KEY, last_read_id INT NOT NULL DEFAULT 0, use_date DATE NULL, chats INT NOT NULL DEFAULT 0
         ) DEFAULT CHARSET=utf8mb4`);
@@ -783,6 +789,108 @@ async function proposeMilestoneSummary(ctx, { milestone_id, summary }) {
   });
 }
 
+/* ================= 话术库 ================= */
+const { SCENES, sceneOf } = SCRIPT_LIB;
+async function getScripts(ctx, { scene, keyword }) {
+  const sc = sceneOf(scene) || sceneOf(keyword);
+  if (!sc) {
+    ctx.cards.push({
+      type: 'pick', title: '要看哪类话术？',
+      options: Object.entries(SCENES).map(([k, v]) => ({ label: v.name, sub: v.desc, send: `${v.name}话术` })),
+    });
+    return { scenes: Object.entries(SCENES).map(([k, v]) => ({ scene: k, name: v.name })), message: '已给出话术分类卡片，请员工选一类' };
+  }
+  const S0 = SCENES[sc];
+  await ensureTables();
+  const mine = await db.query('SELECT id, title, content, username FROM biz_ai_script WHERE merchant_id=? AND scene=? AND status=1 ORDER BY id DESC LIMIT 10', [ctx.mid, sc]);
+  const items = [
+    ...mine.map(x => ({ title: x.title || '门店话术', content: x.content, by: `门店 · ${x.username}` })),
+    ...S0.scripts.map(x => ({ title: x.title, content: x.content, by: '' })),
+  ];
+  ctx.cards.push({ type: 'scripts', title: `话术库 · ${S0.name}`, tips: S0.tips, items });
+  return {
+    scene: sc, name: S0.name, tips: S0.tips, count: items.length, scripts: items.map(x => `【${x.title}】${x.content}`),
+    message: '话术卡片已展示给员工(可逐条复制)。回复只需一句话；如果员工提到具体会员，先 get_member_profile，再参照这些话术的结构写一份填好真实数据的，用 make_copy_card 给出',
+  };
+}
+
+// 需要跟进的会员: expiring 卡快到期/课时快用完, inactive 长期未到店, trial 体验客户
+async function listFollowup(ctx, { kind = 'expiring', days }) {
+  const [sc, sp] = studentSql(ctx);
+  let rows = [];
+  let sceneName = '';
+  if (kind === 'expiring') {
+    sceneName = SCENES.expiring.name;
+    const d = Math.min(90, Number(days) || 30);
+    rows = await db.query(
+      `SELECT v.id, v.realname, v.phone, c.card_type_name, c.card_kind, c.left_counts, c.expire_time
+         FROM biz_member_card c JOIN biz_vip_user v ON v.id=c.vip_id
+        WHERE c.merchant_id=? AND c.status=1 AND v.status=1${sc}
+          AND ((c.expire_time BETWEEN NOW() AND ?) OR (c.card_kind IN (1,4) AND c.left_counts<=2))
+        ORDER BY c.expire_time LIMIT 30`, [ctx.mid, ...sp, dayjs().add(d, 'day').format('YYYY-MM-DD 23:59:59')]);
+    rows = rows.map(r => ({
+      vip_id: r.id, name: r.realname, phone_tail: tail(r.phone), card: r.card_type_name,
+      left: [1, 4].includes(r.card_kind) ? `剩${r.left_counts}次` : '', expire: fmtD(r.expire_time),
+      why: [1, 4].includes(r.card_kind) && r.left_counts <= 2 ? `课时剩${r.left_counts}节` : `${fmtD(r.expire_time)}到期`,
+    }));
+  } else if (kind === 'inactive') {
+    sceneName = SCENES.inactive.name;
+    const d = Math.min(180, Number(days) || 21);
+    const since = dayjs().subtract(d, 'day').format('YYYY-MM-DD');
+    rows = await db.query(
+      `SELECT v.id, v.realname, v.phone,
+              GREATEST(COALESCE((SELECT MAX(DATE(ck.check_in_time)) FROM biz_checkin_record ck WHERE ck.vip_id=v.id),'2000-01-01'),
+                       COALESCE((SELECT MAX(pb2.\`date\`) FROM biz_ptrain_bespeak_record pb2 WHERE pb2.vip_id=v.id AND pb2.status=3),'2000-01-01')) last_day
+         FROM biz_vip_user v
+        WHERE v.merchant_id=? AND v.status=1${sc}
+          AND EXISTS (SELECT 1 FROM biz_member_card lc WHERE lc.vip_id=v.id AND lc.status IN (0,1))
+       HAVING last_day < ? ORDER BY last_day DESC LIMIT 30`, [ctx.mid, ...sp, since]);
+    rows = rows.map(r => ({
+      vip_id: r.id, name: r.realname, phone_tail: tail(r.phone),
+      last: fmtD(r.last_day) === '2000-01-01' ? '从未到店' : fmtD(r.last_day),
+      why: fmtD(r.last_day) === '2000-01-01' ? '办卡后还没来过' : `${dayjs().diff(dayjs(r.last_day), 'day')}天没来`,
+    }));
+  } else {
+    sceneName = SCENES.trial.name;
+    const since = dayjs().subtract(60, 'day').format('YYYY-MM-DD');
+    const vs = await db.query(
+      `SELECT DISTINCT v.id, v.realname, v.phone, c.card_type_name, c.insert_time
+         FROM biz_member_card c JOIN biz_vip_user v ON v.id=c.vip_id
+        WHERE c.merchant_id=? AND c.card_type_name LIKE '%体验%' AND c.status IN (0,1,2) AND c.insert_time>=? AND v.status=1${sc}
+          AND NOT EXISTS (SELECT 1 FROM biz_member_card o WHERE o.vip_id=v.id AND o.status IN (0,1) AND o.card_type_name NOT LIKE '%体验%')
+        ORDER BY c.insert_time DESC LIMIT 20`, [ctx.mid, since, ...sp]);
+    const pc = ['merchant_id=?', 'status=1', 'is_vip_user=0', 'insert_time>=?']; const pp = [ctx.mid, since];
+    if (ctx.isCoach) { pc.push('coach_id=?'); pp.push(ctx.coachId || -1); }
+    const pts = await db.query(`SELECT id, realname, phone, remark FROM biz_user_potential WHERE ${pc.join(' AND ')} ORDER BY id DESC LIMIT 20`, pp).catch(() => []);
+    rows = [
+      ...vs.map(r => ({ vip_id: r.id, name: r.realname, phone_tail: tail(r.phone), why: `体验卡 ${r.card_type_name}` })),
+      ...pts.map(r => ({ potential_id: r.id, name: r.realname || '潜客', phone_tail: tail(r.phone), why: `潜在客户${r.remark ? ' · ' + String(r.remark).slice(0, 12) : ''}` })),
+    ];
+  }
+  if (rows.length) {
+    ctx.cards.push({
+      type: 'pick', title: `需要跟进的会员（${sceneName}）`,
+      options: rows.slice(0, 8).map(r => ({
+        label: `${r.name}（尾号${r.phone_tail}）`, sub: r.why,
+        send: `给${r.name}写一份「${sceneName}」话术（${r.vip_id ? `会员ID ${r.vip_id}` : `潜客ID ${r.potential_id}`}）`,
+      })),
+    });
+  }
+  return { kind, scene: sceneName, count: rows.length, members: rows, message: rows.length ? '已出选人卡片，员工点谁就给谁写个性化话术' : '目前没有需要跟进的会员' };
+}
+
+function proposeSaveScript(ctx, { scene, title, content }) {
+  const sc = sceneOf(scene) || sceneOf(title) || sceneOf(content);
+  if (!sc) return { error: `请说明归到哪一类：${Object.values(SCENES).map(v => v.name).join('、')}` };
+  if (!String(content || '').trim()) return { error: '话术内容为空' };
+  return pushAction(ctx, {
+    act: 'save_script', title: '存入门店话术库', btn: '存入话术库',
+    rows: [['分类', SCENES[sc].name], ['标题', title || '门店话术']],
+    text: String(content).slice(0, 1000), text_label: '话术内容（可修改，会员姓名等建议写成{会员}）',
+    draft: { scene: sc, title: String(title || '门店话术').slice(0, 60) },
+  });
+}
+
 /* 小S 办不了的事, 一律给出对应功能页的引导按钮。roles 与工作台「全部功能」菜单一致, 没权限的页面不给 */
 const ALL = ['admin', 'manager', 'membership', 'reception', 'coach'];
 const MGR = ['admin', 'manager'];
@@ -924,6 +1032,9 @@ function toolDefs(ctx) {
     { name: 'propose_maintain', description: '生成会员维护(跟进)记录草稿, 可带下次跟进时间(待办)', parameters: P({ vip_id: int(), content: str(), record_type: { type: 'string', enum: ['电话', '到店', '微信', '其他'] }, todo_time: str('YYYY-MM-DD HH:mm') }, ['vip_id', 'content']) },
     { name: 'propose_potential', description: '生成录入潜在客户草稿', parameters: P({ realname: str(), phone: str(), gender: str('男/女'), remark: str() }, ['phone']) },
     { name: 'propose_milestone_summary', description: '把你写好的里程碑训练总结生成提交草稿(员工可在卡片上修改后提交)', parameters: P({ milestone_id: int(), summary: str() }, ['milestone_id', 'summary']) },
+    { name: 'get_scripts', description: `话术库: 门店标准话术+门店沉淀话术, 会以可复制卡片展示。scene 可选: ${Object.entries(SCENES).map(([k, v]) => `${k}=${v.name}`).join('，')}; 不传 scene 则出分类选择卡片`, parameters: P({ scene: { type: 'string', enum: Object.keys(SCENES) } }) },
+    { name: 'list_followup', description: '需要跟进的会员名单并出选人卡片: expiring 卡快到期/课时快用完(days 默认30), inactive 长期未到店(days 默认21), trial 体验客户/潜客(近60天)。教练只看自己的学员', parameters: P({ kind: { type: 'string', enum: ['expiring', 'inactive', 'trial'] }, days: int() }, ['kind']) },
+    { name: 'propose_save_script', description: '把一段话术存进门店话术库(员工确认后保存, 全店可见)', parameters: P({ scene: { type: 'string', enum: Object.keys(SCENES) }, title: str(), content: str() }, ['scene', 'content']) },
     { name: 'make_copy_card', description: '把你写好的续卡/召回话术、课后反馈、生日祝福等文案放进可一键复制的卡片', parameters: P({ title: str(), text: str() }, ['text']) },
     { name: 'open_page', description: `给出功能页入口按钮。凡是你办不了的事都必须调用它。可选页面：${Object.entries(PAGES).map(([k, p]) => `${k}=${p.name}(${p.desc})`).join('；')}`, parameters: P({ page: { type: 'string', enum: Object.keys(PAGES) }, vip_id: int('涉及具体会员时填写, 开卡/代约/会员详情会自动带上该会员') }, ['page']) },
   ];
@@ -962,6 +1073,9 @@ async function runTool(ctx, name, a) {
     case 'propose_potential': return proposePotential(ctx, a);
     case 'propose_milestone_summary': return proposeMilestoneSummary(ctx, a);
     case 'make_copy_card': return makeCopyCard(ctx, a);
+    case 'get_scripts': return getScripts(ctx, a);
+    case 'list_followup': return listFollowup(ctx, a);
+    case 'propose_save_script': return proposeSaveScript(ctx, a);
     case 'open_page': return openPage(ctx, a);
     default: return { error: `未知工具 ${name}` };
   }
@@ -989,6 +1103,7 @@ async function systemPrompt(ctx) {
    挂/推送训练计划时，员工没说具体动作、也没指定模板，就先只传 booking_id（或 vip_id）调用，系统会列出模板和会员之前的计划，然后问「用之前的模板，还是新建？」；员工选了就带 plan_id，说新建就请他口述动作后带 text。不要默认新建。
 7. 批量操作一次最多20条，超过时告诉员工分批处理。
 8. 写话术、课后反馈、生日祝福、里程碑总结前，先查会员画像，结合真实数据写，语气真诚自然、不夸张不承诺效果；写好用 make_copy_card（里程碑总结用 propose_milestone_summary）。
+   话术库：员工说「话术库」或某类话术（体验课、续卡/快过期、沉睡激活、课后反馈、生日）时调用 get_scripts；问「该跟进谁」「哪些卡快过期」「谁好久没来」「体验客户」时调用 list_followup。给具体会员写话术时：get_member_profile + get_scripts(对应场景) 后，参照标准话术的结构写一份填好真实数据（剩余课时、到期日、训练次数、体测变化等）的，用 make_copy_card 给出。员工说「把这段存进话术库」时用 propose_save_script，内容里的会员姓名换成{会员}。
 9. 回复简洁口语化，一般不超过120字，不要用 Markdown 标题、表格、加粗；列清单时用「・」。
 10. 与门店工作无关的话题，礼貌说明你只负责门店工作相关的事。`;
 }
@@ -1259,6 +1374,13 @@ async function execAction(ctx, card, input) {
       await logAction(ctx.req, '[AI助手]录入潜客', `${d.realname} ${d.phone}`);
       return `潜在客户 ${d.realname || d.phone} 已录入`;
     }
+    case 'save_script': {
+      if (!text) throw new BizError('话术内容不能为空');
+      await db.insert('INSERT INTO biz_ai_script (merchant_id, scene, title, content, user_id, username) VALUES (?,?,?,?,?,?)',
+        [ctx.mid, d.scene, d.title, text, ctx.uid, ctx.name]);
+      await logAction(ctx.req, '[AI助手]存入话术库', `${SCENES[d.scene].name} · ${d.title}`);
+      return `已存入门店话术库「${SCENES[d.scene].name}」，全店员工都能用`;
+    }
     case 'milestone': {
       if (!text) throw new BizError('总结内容不能为空');
       await callApi(ctx, 'POST', `/milestones/${d.milestone_id}/summary`, { summary: text });
@@ -1271,7 +1393,7 @@ async function execAction(ctx, card, input) {
 
 /* ================= 路由 ================= */
 // 代约课、代消课是教练和管理员最高频的操作, 固定排在最前面
-const QUICK_MAIN = ['代约课', '代消课'];
+const QUICK_MAIN = ['代约课', '代消课', '话术库'];
 const QUICK_COACH = ['今天有哪些课', '确认待确认的预约', '明天下午请假', '查一下学员', '这个月业绩', '课时快用完的学员'];
 const QUICK_MGR = ['今天营收多少', '全店今天的课', '待确认的预约', '教练课时排名', '卡余额负债', '课时快用完的会员'];
 
