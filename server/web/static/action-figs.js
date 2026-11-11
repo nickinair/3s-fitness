@@ -74,6 +74,8 @@
 
   /* ---------- 动作库 ---------- */
   const S = (o) => Object.assign({}, STAND, o);
+  // 跪撑基础姿势: 远侧膝盖跪地在髋部正下方、小腿贴地, 双手直臂撑地在肩膀正下方
+  const QUAD = (o) => Object.assign({ torso: -20, thigh: 90, shin: 180, foot: 180, thigh2: 90, shin2: 180, foot2: 180, uarm: 90, farm: 90, uarm2: 90, farm2: 90, at: ['kn2', 62, 105] }, o);
   const BENCH = [rect(40, 82, 74, 5), line([50, 87], [50, GROUND], 2, 0.3), line([104, 87], [104, GROUND], 2, 0.3)];
   const SEAT = (x, y, w) => [rect(x, y, w || 26, 5), line([x + (w || 26) / 2, y + 5], [x + (w || 26) / 2, GROUND], 2, 0.3)];
   const lying = (o) => Object.assign({ torso: 180, thigh: 8, shin: 82, foot: 0, at: ['hp', 98, 79] }, o);
@@ -158,6 +160,11 @@
     glute_bridge: { frames: [{ torso: 180, thigh: -45, shin: 70, foot: 0, uarm: 8, farm: 2, at: ['nk', 44, 102] }, { torso: 160, thigh: -10, shin: 82, foot: 0, uarm: 18, farm: 2, at: ['nk', 44, 102] }], cue: '双脚踩实，用臀部发力把髋部顶起到身体成一条直线，顶端夹紧臀部' },
     hip_thrust: { load: 'bb', loadAt: 'hp', props: [rect(24, 80, 26, 5), line([37, 85], [37, GROUND], 2, 0.3)], frames: [{ torso: -150, thigh: -40, shin: 76, uarm: 40, farm: 20, at: ['nk', 44, 80] }, { torso: 180, thigh: -2, shin: 90, uarm: 40, farm: 20, at: ['nk', 44, 80] }], cue: '上背靠住凳子，杠铃放在髋部，用臀部把髋部顶起到与地面平行' },
     hip_abduction: { view: 'front', props: [rect(64, 80, 32, 5)], frames: [{ torso: -90, thigh: 92, shin: 90, len: { thigh: 9 }, uarm: 95, farm: 80, at: ['hp', 80, 80] }, { torso: -90, thigh: 22, shin: 96, len: { thigh: 15 }, uarm: 95, farm: 80, at: ['hp', 80, 80] }], cue: '坐直，膝盖抵住挡板向外打开，感受臀部外侧发力' },
+    // 跪撑抬腿系列(双手撑在肩膀正下方、双膝跪在髋部正下方): 小狗=抬起的腿屈膝约 90° 脚底朝上; 大狗=腿向后伸直;
+    // 猎鸟狗=腿向后伸直同时对侧手臂向前伸直。近侧(黑)为动作腿/动作手, 远侧(灰)为支撑
+    dog_bent: { props: [rect(26, 107, 104, 3, 0.16)], frames: [QUAD({}), QUAD({ thigh: 186, shin: -88, foot: 180 })], cue: '跪撑，手在肩下、膝在髋下，背部平直，一条腿保持屈膝约 90° 向后上方抬起，脚底朝向天花板，臀部发力，不要塌腰' },
+    dog_straight: { props: [rect(26, 107, 104, 3, 0.16)], frames: [QUAD({}), QUAD({ thigh: 188, shin: 188, foot: 188 })], cue: '跪撑，手在肩下、膝在髋下，一条腿向后伸直抬到与身体同高，臀部收紧，骨盆保持水平不要转动' },
+    bird_dog: { props: [rect(26, 107, 104, 3, 0.16)], frames: [QUAD({}), QUAD({ thigh: 186, shin: 186, foot: 186, uarm: 6, farm: 2 })], cue: '跪撑，同时把一侧手臂向前、对侧腿向后伸直，身体保持稳定一条直线，停顿后换边' },
     kickback: { props: [rect(126, 40, 5, 69)], frames: [S({ torso: -55, thigh: 95, shin: 92, thigh2: 90, shin2: 90, uarm: 20, farm: 10, at: ['an', 76, 108] }), S({ torso: -55, thigh: 150, shin: 150, foot: 60, thigh2: 90, shin2: 90, uarm: 20, farm: 10, at: ['an2', 76, 108] })], cue: '上身稳定，支撑腿微屈，用臀部把腿向后上方踢，不要塌腰' },
     plank: { frames: [{ torso: -168, thigh: 12, shin: 12, foot: 30, uarm: 90, farm: 180, at: ['el', 52, 107] }, { torso: -167, thigh: 13, shin: 12, foot: 30, uarm: 90, farm: 180, at: ['el', 52, 107] }], cue: '前臂撑地，从头到脚一条直线，收紧腹部和臀部，不要塌腰撅臀' },
     side_plank: { frames: [{ torso: -165, thigh: 15, shin: 15, foot: 10, uarm: 90, farm: 180, uarm2: -95, farm2: -95, at: ['el', 52, 107] }, { torso: -170, thigh: 10, shin: 10, foot: 10, uarm: 90, farm: 180, uarm2: -95, farm2: -95, at: ['el', 52, 107] }], cue: '侧身前臂撑地，髋部抬起使身体成一条直线，保持呼吸' },
@@ -202,7 +209,7 @@
     [/推举|肩推|推肩|过头推|实力推|火箭推|上推|抓推|抓举/, 'ohp'], [/弯举/, 'curl'], [/下压|臂屈伸|曲臂伸|曲伸|绳索三头/, 'pushdown'],
     [/腿举|倒蹬/, 'leg_press'], [/腿屈伸/, 'leg_ext'], [/腿弯举|俯卧弯举/, 'leg_curl'], [/提踵/, 'calf_raise'],
     [/保加利亚|箭步|[弓公]步|分腿蹲/, 'lunge'], [/杠铃深蹲|颈后深蹲|哈克|史密斯.*蹲/, 'squat_bb'], [/深蹲|高脚杯|蹲|螃蟹步/, 'squat'],
-    [/臀推/, 'hip_thrust'], [/臀桥/, 'glute_bridge'], [/髋?[外内][展收]/, 'hip_abduction'], [/后踢|驴踢|俯身抬腿|小狗|大狗|猎鸟狗/, 'kickback'],
+    [/臀推/, 'hip_thrust'], [/臀桥/, 'glute_bridge'], [/髋?[外内][展收]/, 'hip_abduction'], [/猎鸟狗|鸟狗/, 'bird_dog'], [/大狗/, 'dog_straight'], [/小狗|驴踢/, 'dog_bent'], [/后踢|俯身抬腿/, 'kickback'],
     [/侧平板|侧板支撑|侧桥|哥本哈根/, 'side_plank'], [/平板支撑|平板|四足|交替摸肩|摸肩|熊爬|超人式/, 'plank'], [/卷腹|仰卧起坐|仰卧抬腿|交替抬腿|左右抬腿|支撑抬腿|死虫/, 'crunch'], [/举腿/, 'hanging_raise'],
     [/俄罗斯转体|转体|炮筒.*(横移|翻转)/, 'russian_twist'], [/登山/, 'mountain_climber'], [/健腹轮|腹轮/, 'ab_wheel'],
     [/高抬腿/, 'high_knees'], [/跑|慢跑|快走/, 'run'], [/椭圆/, 'elliptical'], [/单车|骑行|动感/, 'bike'], [/爬楼|台阶机|跳箱|上箱|跳台阶/, 'stair'],
@@ -353,7 +360,7 @@
     bent_row: '俯身划船(杠铃/哑铃/T杠)', one_arm_row: '单臂哑铃划船(单膝单手撑凳)', greatest_stretch: '伟大伸展(弓步+单手撑地+单臂上举旋转)', straight_pulldown: '直臂下压', ohp: '肩上推举', lateral_raise: '侧平举', front_raise: '前平举',
     rear_fly: '俯身反向飞鸟', face_pull: '面拉', upright_row: '直立划船', curl: '二头弯举', pushdown: '三头下压',
     skull_crusher: '仰卧臂屈伸', dips: '双杠臂屈伸', leg_press: '腿举', leg_ext: '腿屈伸', leg_curl: '俯卧腿弯举',
-    calf_raise: '提踵', glute_bridge: '臀桥', hip_thrust: '杠铃臀推', hip_abduction: '髋外展', kickback: '后踢腿',
+    calf_raise: '提踵', glute_bridge: '臀桥', hip_thrust: '杠铃臀推', hip_abduction: '髋外展', kickback: '绳索后踢腿(站姿)', dog_bent: '小狗/驴踢(跪撑屈膝抬腿)', dog_straight: '大狗(跪撑直腿后抬)', bird_dog: '猎鸟狗(跪撑对侧手脚伸直)',
     plank: '平板支撑', side_plank: '侧平板支撑', crunch: '卷腹', hanging_raise: '悬垂举腿', russian_twist: '俄罗斯转体',
     mountain_climber: '登山跑', ab_wheel: '健腹轮', run: '跑步/跑步机', high_knees: '高抬腿', elliptical: '椭圆机',
     bike: '单车/骑行', rower: '划船机', stair: '爬楼/台阶', jump_rope: '跳绳', burpee: '波比跳',
