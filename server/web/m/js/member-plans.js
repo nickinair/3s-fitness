@@ -216,12 +216,52 @@
       canEdit: { type: Boolean, default: false },
     },
     emits: ['edit'],
+    data() {
+      return { localImg: '' };
+    },
     computed: {
       parsed() {
         return window.parseLessonPlan(this.plan);
       },
+      imgUrl() {
+        return (this.parsed && this.parsed.img_url) || this.localImg;
+      },
+    },
+    watch: {
+      plan: { immediate: true, handler() { this.ensurePoster(); } },
     },
     methods: {
+      /* 只有动作、还没有海报的计划(如小S写入的): 用与「制定计划」同一套 canvas 生成海报显示;
+         员工端顺手上传并回写 img_url, 之后会员端也直接看到这张图 */
+      async ensurePoster() {
+        const p = this.parsed;
+        this.localImg = '';
+        if (!p || p.img_url || !Array.isArray(p.items) || !p.items.length || !window.PlanImage) return;
+        const bk = this.booking || {};
+        const raw = bk.rawBooking || {};
+        const id = bk.id || raw.id;
+        try {
+          await window.PlanImage.ready;
+          const dataUrl = window.PlanImage({
+            title: p.title || '训练计划',
+            member: bk.realname || bk.studentName || raw.realname || '',
+            coach: bk.coach_name || raw.coach_name || '',
+            date: H.dateOf(bk.date || bk.dateStr || raw.date) || H.today(),
+            note: p.note || '',
+            items: p.items,
+          });
+          this.localImg = dataUrl;
+          const done = window.__planPosterSaved || (window.__planPosterSaved = {});
+          if (Store.type !== 'staff' || !id || done[id]) return;
+          done[id] = true;
+          const blob = window.dataURLtoBlob(dataUrl);
+          const imgUrl = await API.upload(new File([blob], 'plan-' + id + '-' + Date.now() + '.jpg', { type: 'image/jpeg' }));
+          if (!imgUrl) return;
+          await API.put('/ptrain-bookings/' + id + '/lesson-plan', {
+            lesson_plan: JSON.stringify(Object.assign({}, p, { img_url: imgUrl, updated_at: new Date().toISOString() })),
+          }, { silent: true });
+        } catch (e) { /* 生成失败时退回动作清单显示 */ }
+      },
       preview(url) {
         if (!url) return;
         vant.showImagePreview({
@@ -237,14 +277,14 @@
     template: [
       '<div class="lesson-plan-box" v-if="parsed || canEdit">',
       // 情况1: 包含生成的计划海报图片 (图片缩略图卡片)
-      '  <template v-if="parsed && parsed.img_url">',
+      '  <template v-if="parsed && imgUrl">',
       '    <div class="lesson-plan-head">',
       '      <span class="lesson-plan-head-title"><van-icon name="notes-o"/> 本节课训练计划</span>',
       '      <van-button v-if="canEdit" size="mini" round plain type="primary" @click.stop="onEdit">编辑计划</van-button>',
       '    </div>',
-      '    <div class="plan-thumb-card" @click="preview(parsed.img_url)">',
+      '    <div class="plan-thumb-card" @click="preview(imgUrl)">',
       '      <div class="plan-thumb-media">',
-      '        <img :src="parsed.img_url" class="plan-thumb-img" alt="训练计划"/>',
+      '        <img :src="imgUrl" class="plan-thumb-img" alt="训练计划"/>',
       '        <div class="plan-thumb-zoom-tag">点击放大</div>',
       '      </div>',
       '      <div class="plan-thumb-desc">',
