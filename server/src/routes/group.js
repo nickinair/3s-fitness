@@ -343,7 +343,8 @@ r.post('/syllabus/:id/book', staffAuth(), async (req, res, next) => {
 // 员工取消
 r.post('/syllabus-bookings/:id/cancel', staffAuth(), async (req, res, next) => {
   try {
-    res.json(ok(await cancelGroupBooking(req.params.id, { byMember: false, reason: req.body.reason || `${req.user.name}取消` })));
+    const defaultReason = req.user.role === 'coach' ? `${req.user.name}代取消` : '管理员代取消';
+    res.json(ok(await cancelGroupBooking(req.params.id, { byMember: false, reason: req.body.reason || defaultReason })));
   } catch (e) { next(e); }
 });
 

@@ -259,10 +259,11 @@ r.post('/ptrain-bookings', staffAuth('admin', 'manager', 'coach'), async (req, r
       if (!req.user.coachId) throw new BizError('当前账号未绑定教练档案，无法代约');
       coachId = req.user.coachId;
     }
+    const defaultRemark = req.user.role === 'coach' ? `${req.user.name}代预约` : '管理员代预约';
     const result = await createPtBooking({
       mid: req.user.mid, clubId: b.club_id || req.clubId, vipId: b.vip_id, coachId, courseId: b.course_id,
       date: b.date, fromTime: b.from_time, cardId: b.card_id,
-      recordType: 3, remark: b.remark || `代约(${req.user.name})`,
+      recordType: 3, remark: b.remark || defaultRemark,
       autoConfirm: true,
       allowPast: true,   // 员工代约支持补录历史课程
     });
@@ -497,7 +498,8 @@ r.post('/ptrain-bookings/:id/cancel', staffAuth(), async (req, res, next) => {
     const bk = await db.queryOne('SELECT * FROM biz_ptrain_bespeak_record WHERE id=? AND merchant_id=?', [req.params.id, req.user.mid]);
     if (!bk) throw new BizError('预约不存在');
     if (![0, 1].includes(bk.status)) throw new BizError('该预约不可取消');
-    await db.exec('UPDATE biz_ptrain_bespeak_record SET status=2, cancel_reason=? WHERE id=?', [req.body.reason || `${req.user.name}取消`, bk.id]);
+    const defaultReason = req.user.role === 'coach' ? `${req.user.name}代取消` : '管理员代取消';
+    await db.exec('UPDATE biz_ptrain_bespeak_record SET status=2, cancel_reason=? WHERE id=?', [req.body.reason || defaultReason, bk.id]);
     res.json(ok());
   } catch (e) { next(e); }
 });
