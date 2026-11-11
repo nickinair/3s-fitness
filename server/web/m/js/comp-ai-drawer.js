@@ -364,6 +364,23 @@
 
   window.AI = AI;
 
+  /* 抽屉层级是 2200, 而 Vant 弹窗/提示默认从 2000 起算, 抽屉打开时弹出的二次确认框、Toast、图片预览
+     会被压在抽屉下面看不见(表现为「点确认取消没反应」)。抽屉打开期间统一把它们抬到抽屉之上。 */
+  const TOP_Z = 3000;
+  ['showToast', 'showLoadingToast', 'showSuccessToast', 'showFailToast', 'showDialog', 'showConfirmDialog', 'showImagePreview'].forEach((fn) => {
+    const orig = window.vant && vant[fn];
+    if (typeof orig !== 'function') return;
+    vant[fn] = function (opt, ...rest) {
+      if (!state.visible) return orig.call(this, opt, ...rest);
+      let o;
+      if (fn === 'showImagePreview' && Array.isArray(opt)) o = { images: opt };
+      else if (typeof opt === 'string' || typeof opt === 'number') o = { message: String(opt) };
+      else o = Object.assign({}, opt);
+      if (o.zIndex == null) o.zIndex = TOP_Z;
+      return orig.call(this, o, ...rest);
+    };
+  });
+
   /* 顶栏「小S」图标入口组件: 可选带左侧小房子主页按钮 */
   const AiEntry = {
     props: {
@@ -855,7 +872,7 @@
       '      </template>',
       '    </div>',
       '  </div>',
-      '  <van-action-sheet v-model:show="state.sheet" :actions="mealActions" cancel-text="取消" description="改为哪一餐" @select="onSelectMealType" teleport="body"/>',
+      '  <van-action-sheet v-model:show="state.sheet" :actions="mealActions" cancel-text="取消" description="改为哪一餐" @select="onSelectMealType" teleport="body" :z-index="3000"/>',
       '</div>',
     ].join('\n'),
   };
