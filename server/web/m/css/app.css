@@ -1332,6 +1332,42 @@ html.is-mp .staff-hero::after { top: 8px; }
 .aid-q.photo { background: #111; color: #B6FF3B; font-weight: 600; }
 .aid-q.ghost { color: #999; }
 
+/* ---- 小S · 教练版: 操作确认 / 选人 / 复制文案卡片 + tabbar 入口 ---- */
+.aid-act.off { opacity: .92; }
+.aid-warn { font-size: 12px; line-height: 1.55; color: var(--danger); background: var(--danger-soft); border-radius: 8px; padding: 6px 9px; margin-bottom: 8px; }
+.aid-alist { font-size: 13px; line-height: 1.7; color: var(--c-text); background: var(--c-panel); border-radius: 8px; padding: 6px 10px; margin-top: 6px; }
+.aid-items { margin-top: 4px; }
+.aid-item { display: flex; align-items: center; gap: 9px; padding: 8px 2px; border-bottom: 1px solid var(--c-line-2); cursor: pointer; }
+.aid-item:last-child { border-bottom: none; }
+.aid-ck { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--c-text-4); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; color: var(--c-card); }
+.aid-item.on .aid-ck { background: var(--brand); border-color: var(--brand); }
+.aid-it-t { flex: 1; min-width: 0; font-size: 13px; color: var(--c-title); line-height: 1.45; }
+.aid-it-t .s { font-size: 11px; color: var(--c-text-3); }
+.aid-item:not(.on) .aid-it-t { color: var(--c-text-3); }
+.aid-opts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.aid-opt { font-size: 12px; padding: 5px 11px; border-radius: var(--radius-pill); background: var(--c-bg-2); color: var(--c-title); border: 1px solid transparent; cursor: pointer; }
+.aid-opt.on { background: var(--brand); color: var(--c-card); font-weight: 600; }
+.aid-tlabel { font-size: 12px; color: var(--c-text-3); margin: 8px 0 4px; }
+.aid-ta { width: 100%; box-sizing: border-box; border: 1px solid var(--c-line); border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 1.6; color: var(--c-title); background: var(--c-panel); resize: vertical; outline: none; font-family: inherit; }
+.aid-ta:focus { border-color: var(--brand); background: var(--c-card); }
+.aid-cerr { margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--danger); white-space: pre-wrap; }
+.aid-cdone.muted { color: var(--c-text-3); font-weight: 400; }
+.aid-act .aid-cdone { height: auto; line-height: 1.5; padding: 8px 14px; border-radius: 12px; white-space: pre-wrap; text-align: left; }
+.aid-act.off .aid-opt:not(.on), .aid-act.off .aid-item:not(.on) { display: none; }
+.aid-btn.busy { opacity: .6; }
+.aid-pick { display: flex; align-items: center; gap: 8px; padding: 9px 2px; border-bottom: 1px solid var(--c-line-2); cursor: pointer; font-size: 13px; color: var(--c-text-4); }
+.aid-pick:last-child { border-bottom: none; }
+.aid-pick .n { font-weight: 600; color: var(--c-title); }
+.aid-pick .s { flex: 1; font-size: 12px; color: var(--c-text-3); }
+.aid-pick.on .n::after { content: ' ✓'; }
+.aid-pick.off { opacity: .45; }
+.aid-copy { font-size: 13px; line-height: 1.7; color: var(--c-text); background: var(--c-panel); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
+.aid-mic.main { background: var(--brand); color: var(--c-card); margin-left: 0; }
+.aid-mic.main svg { stroke: var(--c-card); }
+.tab-ai-ic { position: relative; display: inline-block; width: 22px; height: 22px; vertical-align: middle; }
+.tab-ai-ic img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; background: var(--c-card); }
+.tab-ai-dot { position: absolute; right: -3px; top: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--badge); border: 1.5px solid var(--c-card); }
+
 .aid-bar { flex-shrink: 0; display: flex; align-items: center; background: #fff; padding: 8px 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom) + var(--kb, 0px)); transition: padding-bottom .18s ease; }
 .aid-cam, .aid-mic, .aid-cancel { width: 34px; height: 34px; border-radius: 50%; background: #f2f2f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #111; cursor: pointer; }
 .aid-mic { margin-left: 6px; }

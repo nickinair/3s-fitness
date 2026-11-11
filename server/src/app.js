@@ -12,6 +12,7 @@ app.use('/api/auth', require('./routes/auth'));
 // 会员端 / 平台端路由自带整体鉴权(r.use), 必须挂在独立前缀下, 不能挂到 /api 根上
 app.use('/api/member/ai', require('./routes/ai-assistant'));   // AI 健身助手「小S」, 须在 /api/member 之前
 app.use('/api/member', require('./routes/member'));
+app.use('/api/staff/ai', require('./routes/ai-staff'));         // 小S · 教练版(员工端 AI 工作助手), 须在通用 /api 路由之前
 app.use('/api/platform', require('./routes/platform'));
 app.use('/api', require('./routes/common'));
 app.use('/api', require('./routes/members'));

@@ -1042,3 +1042,5 @@ r.post('/upload-base64', async (req, res, next) => {
 });
 
 module.exports = r;
+// 教练端「小S · 教练版」复用的底层能力(模型调用、文本清洗、日期工具)
+module.exports.shared = { CFG, S, llm, cleanText, dayLabel, fmtD, toMin, fromMin, PT_STATUS, GROUP_STATUS, KIND, parseLessonPlan, getClubs };

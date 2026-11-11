@@ -253,6 +253,13 @@
   });
 
   const App = {
+    data() {
+      return { ai: window.AI ? AI.state : { unread: false } };
+    },
+    methods: {
+      // 教练版小S: tabbar 最左侧入口, 不切换路由, 直接从左侧拉出抽屉
+      openAi() { if (window.AI) AI.open(); },
+    },
     computed: {
       tabbar() {
         const p = this.$route.path;
@@ -297,6 +304,12 @@
       '      </van-tabbar-item>',
       '    </template>',
       '    <template v-else>',
+      '      <van-tabbar-item class="tab-ai" @click="openAi">',
+      '        <span>小S</span>',
+      '        <template #icon>',
+      '          <span class="tab-ai-ic"><img src="/static/ai-bot.png" alt="小S"/><i class="ai-bot-ring"></i><i v-if="ai.unread" class="tab-ai-dot"></i></span>',
+      '        </template>',
+      '      </van-tabbar-item>',
       '      <van-tabbar-item replace to="/staff">',
       '        <span>工作台</span>',
       '        <template #icon="props">',

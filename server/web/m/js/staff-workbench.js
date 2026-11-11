@@ -296,10 +296,27 @@
           vant.showToast({ message: '工作台已保存', icon: 'success' });
         } catch (e) { /* API 层已 toast 错误 */ }
       },
+      async loadPending() {
+        if (this.role === 'coach' || this.role === 'manager' || this.role === 'admin') {
+          try {
+            const d = await API.get('/ptrain-bookings?status=0&size=1', { silent: true });
+            this.pendingPt = d.total || 0;
+          } catch (e) { /* ignore */ }
+        }
+        if (this.role === 'coach') {
+          try {
+            const d = await API.get('/milestones/pending-count', { silent: true });
+            this.pendingMilestone = (d && d.count) || 0;
+          } catch (e) { /* ignore */ }
+        }
+      },
       async resetLayout() {
         try { await vant.showConfirmDialog({ title: '恢复默认', message: '将恢复为当前角色的默认布局，确定吗？', confirmButtonColor: 'var(--brand)' }); } catch (e) { return; }
         this.layout = [...(ROLE_MENUS[this.role] || [])];
       },
+    },
+    beforeUnmount() {
+      if (this._onAi) window.removeEventListener('ai-staff-changed', this._onAi);
     },
     async mounted() {
       // 自定义布局: 先用本地缓存即时渲染避免闪变, 再以后端为准
@@ -318,18 +335,10 @@
       if (this.role !== 'coach') {
         try { this.dash = await API.get('/finance/dashboard', { silent: true }); } catch (e) { /* ignore */ }
       }
-      if (this.role === 'coach' || this.role === 'manager' || this.role === 'admin') {
-        try {
-          const d = await API.get('/ptrain-bookings?status=0&size=1', { silent: true });
-          this.pendingPt = d.total || 0;
-        } catch (e) { /* ignore */ }
-      }
-      if (this.role === 'coach') {
-        try {
-          const d = await API.get('/milestones/pending-count', { silent: true });
-          this.pendingMilestone = (d && d.count) || 0;
-        } catch (e) { /* ignore */ }
-      }
+      await this.loadPending();
+      // 小S · 教练版在抽屉里办完事(确认预约/写里程碑等)后, 刷新工作台角标
+      this._onAi = () => this.loadPending();
+      window.addEventListener('ai-staff-changed', this._onAi);
       if (['membership', 'reception', 'manager', 'admin'].includes(this.role)) {
         try {
           const d = await API.get('/card-intents/pending-count', { silent: true });

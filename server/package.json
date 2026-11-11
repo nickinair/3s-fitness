@@ -19,6 +19,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.3.0",
     "mysql2": "^3.24.3",
+    "pinyin-pro": "^3.29.5",
     "xlsx": "^0.18.5"
   }
 }

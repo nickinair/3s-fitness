@@ -1,6 +1,8 @@
 /* H5 全局 AI 健身助手「小S」: 左侧滑出抽屉 + 顶栏小S图标入口
  * 接口复用 /api/member/ai/* ; 拍照上传直接走 API.upload (客户端自动压缩 + /api/upload)
- * 支持在任意会员页原地弹出抽屉、原地调起相册/相机识别餐食热量并记入饮食日记 */
+ * 支持在任意会员页原地弹出抽屉、原地调起相册/相机识别餐食热量并记入饮食日记
+ * 员工登录时为「小S · 教练版」: 接口走 /api/staff/ai/*, 入口在底部 tabbar 最左侧,
+ * 所有改动先出确认卡片(action), 点确认后由服务端执行; 另有选人(pick)、可复制文案(copy)卡片 */
 (function () {
   const TYPE_STEP = 3;
   const TYPE_MS = 26;
@@ -29,7 +31,13 @@
     quota: null,
     sheet: false,
     sheetTarget: null,
+    staff: false,
+    mode: '',
   });
+
+  const isStaff = () => Store.type === 'staff';
+  const base = () => (isStaff() ? '/staff/ai' : '/member/ai');
+  const STAFF_POLL_MS = 3 * 60 * 1000;   // 教练版: 每 3 分钟检查课前提醒/漏消课
 
   let loadedDay = '';
   let initPromise = null;
@@ -144,10 +152,13 @@
   const AI = {
     state,
     async checkDot() {
-      if (!Store.token || Store.type === 'staff') return;
+      if (!Store.token) return;
+      // 会员端红点只在顶栏入口显示; 员工端红点显示在 tabbar 的小S上
       try {
-        const d = await API.get('/member/ai/dot', { silent: true });
-        state.unread = !!(d && d.unread);
+        const d = await API.get(base() + '/dot', { silent: true });
+        state.unread = isStaff() ? !!(d && (d.dot || d.unread)) : !!(d && d.unread);
+        // 抽屉开着时有新提醒(课前/漏消课), 直接拉取最新消息
+        if (isStaff() && state.visible && d && d.unread > 0) this.init(true);
       } catch (e) { /* ignore */ }
     },
     open() {
@@ -235,7 +246,7 @@
           vant.showToast('说话时间太短，请重试');
           return;
         }
-        const d = await API.post('/member/ai/asr', { audio_base64: base64, format: 'wav' });
+        const d = await API.post(base() + '/asr', { audio_base64: base64, format: 'wav' });
         toast.close();
         state.recognizing = false;
         const txt = (d && d.text ? String(d.text).trim() : '');
@@ -260,13 +271,22 @@
     },
     init(force) {
       if (initPromise) return initPromise;
+      // 同一页面里切换了会员/员工身份: 清掉上一个身份的对话
+      const mode = isStaff() ? 'staff' : 'member';
+      if (state.mode !== mode) {
+        state.mode = mode;
+        state.staff = mode === 'staff';
+        state.msgs = [];
+        state.quick = [];
+        loadedDay = '';
+      }
       const today = new Date().toDateString();
       if (!force && loadedDay === today && state.msgs.length) {
         scrollBottom();
         return Promise.resolve();
       }
       state.initing = true;
-      initPromise = API.get('/member/ai/init', { silent: true }).then((d) => {
+      initPromise = API.get(base() + '/init', { silent: true }).then((d) => {
         loadedDay = today;
         const pendingOptimistic = state.msgs.filter(m => m.optimistic);
         const serverMsgs = (d.messages || []).map(m => normMsg(m));
@@ -324,7 +344,7 @@
       state.msgs.push(userMsg);
       scrollBottom();
 
-      API.post('/member/ai/chat', { message: text, image: image || '' }, { silent: true }).then((d) => {
+      API.post(base() + '/chat', { message: text, image: image || '' }, { silent: true }).then((d) => {
         userMsg.optimistic = false;
         state.sending = false;
         if (d.quota) state.quota = d.quota;
@@ -394,8 +414,11 @@
     mounted() {
       ensureFileInput();
       scrollElGetter = () => this.$refs.bodyEl;
-      if (Store.token && Store.type !== 'staff') AI.checkDot();
+      state.staff = isStaff();
+      if (Store.token) AI.checkDot();
+      this._poll = setInterval(() => { if (Store.token && isStaff()) AI.checkDot(); }, STAFF_POLL_MS);
     },
+    beforeUnmount() { clearInterval(this._poll); },
     methods: {
       close() { AI.close(); },
       choosePhoto() { AI.choosePhoto(); },
@@ -521,6 +544,80 @@
         }
         this.$router.push(target);
       },
+      /* ---- 教练版卡片 ---- */
+      toggleItem(c, it) {
+        if (c.status || c.busy) return;
+        it.checked = !it.checked;
+      },
+      pickOption(c, o) {
+        if (c.status || c.busy) return;
+        c.option = o.value;
+      },
+      async confirmAction(mi, ci) {
+        const m = this.state.msgs[mi];
+        const c = m && m.cards && m.cards[ci];
+        if (!c || c.status || c.busy || busyAction) return;
+        const picked = c.items ? c.items.filter(i => i.checked).map(i => i.id) : undefined;
+        if (c.items && !picked.length) { vant.showToast('请至少勾选一项'); return; }
+        if (c.danger) {
+          try {
+            await vant.showConfirmDialog({
+              title: c.title,
+              message: c.items ? '共 ' + picked.length + ' 项，确认后立即生效' : '确认后立即生效',
+              confirmButtonText: c.btn || '确认',
+              confirmButtonColor: H.color('--danger'),
+            });
+          } catch (e) { return; }
+        }
+        busyAction = true;
+        c.busy = true;
+        try {
+          const d = await API.post('/staff/ai/confirm', { msg_id: m.id, idx: ci, items: picked, option: c.option, text: c.text });
+          const r = (d && d.card) || {};
+          c.status = r.status || '';
+          c.result = r.result || '';
+          c.error = r.error || '';
+          if (c.status === 'done') {
+            vant.showToast({ message: '已完成', icon: 'success' });
+            window.dispatchEvent(new CustomEvent('ai-staff-changed', { detail: { act: c.act } }));
+          }
+        } catch (e) {
+          c.error = (e && e.message) || '执行失败';
+        } finally {
+          busyAction = false;
+          c.busy = false;
+        }
+      },
+      async dismissAction(mi, ci) {
+        const m = this.state.msgs[mi];
+        const c = m && m.cards && m.cards[ci];
+        if (!c || c.status || c.busy) return;
+        c.status = 'cancelled';
+        c.result = '已取消，未做任何改动';
+        try { await API.post('/staff/ai/confirm', { msg_id: m.id, idx: ci, cancel: true }, { silent: true }); } catch (e) { /* 本地已标记 */ }
+      },
+      pickPerson(c, o) {
+        if (c.picked || this.state.sending) return;
+        c.picked = o.label;
+        AI.send(o.send);
+      },
+      copyText(c) {
+        const t = c.text || '';
+        const done = () => vant.showToast({ message: '已复制', icon: 'success' });
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(t).then(done).catch(() => this.copyFallback(t, done));
+        } else this.copyFallback(t, done);
+      },
+      copyFallback(t, done) {
+        const ta = document.createElement('textarea');
+        ta.value = t;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) { vant.showToast('复制失败，请长按文字手动复制'); }
+        document.body.removeChild(ta);
+      },
       async clearAll() {
         try {
           await vant.showConfirmDialog({
@@ -530,7 +627,7 @@
             confirmButtonColor: '#000',
           });
         } catch (e) { return; }
-        await API.post('/member/ai/clear', {});
+        await API.post(base() + '/clear', {});
         loadedDay = '';
         this.state.msgs = [];
         AI.init(true);
@@ -545,17 +642,17 @@
       '      <div class="aid-close" @click="close"><van-icon name="arrow-left"/></div>',
       '      <img class="aid-bot" src="/static/ai-bot.png" alt="小S"/>',
       '      <div class="aid-htxt">',
-      '        <div class="aid-hname">小S <span class="aid-htag">AI 健身助手</span></div>',
-      '        <div class="aid-hsub"><i class="aid-dot-on"></i>{{ state.uploading ? \'正在上传照片…\' : (state.sending ? \'正在思考…\' : \'在线 · 随时为你服务\') }}</div>',
+      '        <div class="aid-hname">小S <span class="aid-htag">{{ state.staff ? \'教练版\' : \'AI 健身助手\' }}</span></div>',
+      '        <div class="aid-hsub"><i class="aid-dot-on"></i>{{ state.uploading ? \'正在上传照片…\' : (state.sending ? \'正在思考…\' : (state.staff ? \'在线 · 说一句话就能办事\' : \'在线 · 随时为你服务\')) }}</div>',
       '      </div>',
-      '      <div class="aid-hcam" @click="choosePhoto">📷 拍餐食</div>',
+      '      <div v-if="!state.staff" class="aid-hcam" @click="choosePhoto">📷 拍餐食</div>',
       '    </div>',
 
       // 消息流
       '    <div class="aid-body" ref="bodyEl">',
       '      <div v-if="state.initing && !state.msgs.length" class="aid-init">',
       '        <img class="aid-init-bot" src="/static/ai-bot.png" alt="小S"/>',
-      '        <div class="aid-init-t">小S 正在为你准备今日简报…</div>',
+      '        <div class="aid-init-t">{{ state.staff ? \'小S 正在整理今日早报…\' : \'小S 正在为你准备今日简报…\' }}</div>',
       '        <div class="aid-dots"><i></i><i></i><i></i></div>',
       '      </div>',
 
@@ -649,6 +746,48 @@
       '                </div>',
       '              </div>',
 
+      // 教练版: 操作确认卡片(代约/取消/改约/确认/消课/爽约/签到/请假/计划/体测/维护/潜客/里程碑)
+      '              <div v-else-if="c.type === \'action\'" class="aid-card aid-act" :class="{off: c.status}">',
+      '                <div class="aid-ctitle">{{ c.title }}</div>',
+      '                <div v-if="c.warn" class="aid-warn">{{ c.warn }}</div>',
+      '                <div v-for="(r, ri) in c.rows" :key="\'r\'+ri" class="aid-kv"><span class="k">{{ r[0] }}</span><span class="v">{{ r[1] }}</span></div>',
+      '                <div v-if="c.list && c.list.length" class="aid-alist"><div v-for="(t, ti) in c.list" :key="ti">{{ ti + 1 }}. {{ t }}</div></div>',
+      '                <div v-if="c.items && c.items.length" class="aid-items">',
+      '                  <div v-for="it in c.items" :key="it.id" class="aid-item" :class="{on: it.checked}" @click="toggleItem(c, it)">',
+      '                    <i class="aid-ck"><van-icon v-if="it.checked" name="success"/></i>',
+      '                    <div class="aid-it-t"><div>{{ it.text }}</div><div v-if="it.sub" class="s">{{ it.sub }}</div></div>',
+      '                  </div>',
+      '                </div>',
+      '                <div v-if="c.options && c.options.length" class="aid-opts">',
+      '                  <span v-for="o in c.options" :key="o.value" class="aid-opt" :class="{on: c.option === o.value}" @click="pickOption(c, o)">{{ o.label }}</span>',
+      '                </div>',
+      '                <template v-if="c.text_label">',
+      '                  <div class="aid-tlabel">{{ c.text_label }}</div>',
+      '                  <textarea class="aid-ta" v-model="c.text" :disabled="!!c.status" rows="4" maxlength="1000"></textarea>',
+      '                </template>',
+      '                <div v-if="c.error && !c.status" class="aid-cerr">{{ c.error }}</div>',
+      '                <div v-if="c.status" class="aid-cdone" :class="{muted: c.status === \'cancelled\'}">{{ c.status === \'done\' ? \'✓ \' : \'\' }}{{ c.result }}</div>',
+      '                <div v-else class="aid-cbtns">',
+      '                  <div class="aid-btn ghost" @click="dismissAction(mi, ci)">不用了</div>',
+      '                  <div class="aid-btn" :class="{danger: c.danger, busy: c.busy}" @click="confirmAction(mi, ci)">{{ c.busy ? \'处理中…\' : c.btn }}</div>',
+      '                </div>',
+      '              </div>',
+
+      // 教练版: 多位会员同名时选人
+      '              <div v-else-if="c.type === \'pick\'" class="aid-card">',
+      '                <div class="aid-ctitle">{{ c.title }}</div>',
+      '                <div v-for="o in c.options" :key="o.send" class="aid-pick" :class="{on: c.picked === o.label, off: c.picked && c.picked !== o.label}" @click="pickPerson(c, o)">',
+      '                  <span class="n">{{ o.label }}</span><span class="s">{{ o.sub }}</span><van-icon name="arrow"/>',
+      '                </div>',
+      '              </div>',
+
+      // 教练版: 可一键复制的文案(续卡/召回话术、课后反馈、生日祝福)
+      '              <div v-else-if="c.type === \'copy\'" class="aid-card">',
+      '                <div class="aid-ctitle">{{ c.title }}</div>',
+      '                <div class="aid-copy">{{ c.text }}</div>',
+      '                <div class="aid-cbtns"><div class="aid-btn" @click="copyText(c)">复制文案</div></div>',
+      '              </div>',
+
       // 跳转胶囊
       '              <div v-else-if="c.type === \'link\'" class="aid-link" @click="goLink(c)">{{ c.text }} ›</div>',
       '            </template>',
@@ -660,13 +799,13 @@
       '        <img class="aid-av" src="/static/ai-bot.png" alt="小S"/>',
       '        <div class="aid-bubble aid-thinking"><div class="aid-dots"><i></i><i></i><i></i></div></div>',
       '      </div>',
-      '      <div v-if="state.msgs.length" class="aid-disclaim">AI 生成内容仅供参考，热量为估算值；伤病问题请咨询教练或医生</div>',
+      '      <div v-if="state.msgs.length" class="aid-disclaim">{{ state.staff ? \'所有改动都需要你在卡片上确认后才会生效\' : \'AI 生成内容仅供参考，热量为估算值；伤病问题请咨询教练或医生\' }}</div>',
       '      <div style="height:12px"></div>',
       '    </div>',
 
       // 快捷胶囊条
       '    <div v-if="state.quick.length" class="aid-quick">',
-      '      <span class="aid-q photo" @click="choosePhoto">📷 拍照算热量</span>',
+      '      <span v-if="!state.staff" class="aid-q photo" @click="choosePhoto">📷 拍照算热量</span>',
       '      <span v-for="q in state.quick" :key="q" class="aid-q" @click="onQuick(q)">{{ q }}</span>',
       '      <span class="aid-q ghost" @click="clearAll">清空对话</span>',
       '    </div>',
@@ -674,14 +813,14 @@
       // 输入栏
       '    <div class="aid-bar">',
       '      <template v-if="!state.recording">',
-      '        <div class="aid-cam" @click="choosePhoto" title="拍照/相册"><van-icon name="photograph" size="19"/></div>',
-      '        <div class="aid-mic" @click="startVoice" title="语音输入">',
+      '        <div v-if="!state.staff" class="aid-cam" @click="choosePhoto" title="拍照/相册"><van-icon name="photograph" size="19"/></div>',
+      '        <div class="aid-mic" :class="{main: state.staff}" @click="startVoice" title="语音输入">',
       '          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
       '            <rect x="9" y="2" width="6" height="12" rx="3"/>',
       '            <path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/>',
       '          </svg>',
       '        </div>',
-      '        <input class="aid-in" v-model="state.input" :placeholder="state.recognizing ? \'语音识别中…\' : \'问问小S，或点麦克风说话\'" maxlength="500" @keyup.enter="sendInput"/>',
+      '        <input class="aid-in" v-model="state.input" :placeholder="state.recognizing ? \'语音识别中…\' : (state.staff ? \'点麦克风说：帮王芳约明晚7点\' : \'问问小S，或点麦克风说话\')" maxlength="500" @keyup.enter="sendInput"/>',
       '        <div class="aid-send" :class="{on: state.input.trim() && !state.sending}" @click="sendInput">发送</div>',
       '      </template>',
       '      <template v-else>',

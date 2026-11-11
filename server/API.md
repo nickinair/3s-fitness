@@ -158,6 +158,17 @@ Base URL: `http://localhost:8090/api`
 - 消课记录导出: GET /ptrain-records?...&export=csv
 - 月报新增 open_cards 开卡数字段（finance/monthly cur/prev 内）
 
+## 小S · 教练版（/api/staff/ai/*，staff token）
+员工端 AI 工作助手：AI 只负责听懂 + 调工具 + 出确认卡片，写操作一律由员工点卡片确认后、以员工本人身份调用上面已有的接口执行（权限/校验/扣课沿用原逻辑），并另记一条「[AI助手]xxx」操作日志。
+教练只能查/操作自己的学员和课程；店长/管理员按门店口径看全店（经营数据仅 admin/manager）。开卡/续卡/退卡/储值扣费/补录消课不执行，只给页面入口。
+- GET /staff/ai/dot → {dot, unread}：前端每 3 分钟轮询，顺带生成课前 15 分钟提醒、下课 30 分钟未消课提醒
+- GET /staff/ai/init → {messages, quick, enabled, mode:'staff'}：首次欢迎语、每日早报（今日课程/待确认/未消课/未写计划/里程碑/课时不足/本周生日/冲突预警，管理者另含全店概况）、周一周报
+- POST /staff/ai/chat {message} → {messages:[{id,role,text,cards}]}；每人每天 200 条（secrets.json ai_staff_daily_chats 可调）
+- POST /staff/ai/confirm {msg_id, idx, items?:[id], option?, text?, cancel?} → {card}：执行/放弃某张 action 卡片，执行参数以服务端保存的草稿为准
+- POST /staff/ai/asr {audio_base64, format}；POST /staff/ai/clear
+卡片类型：action（act=book/reschedule/cancel/confirm/finish/noshow/checkin/rest/lesson_plan/push_plan/body/maintain/potential/milestone，单次最多 20 项）、pick（同名会员选人，点选项即发送）、copy（话术/祝福等可复制文案）、link（页面入口）
+新表（首次调用自动创建）：biz_ai_staff_message、biz_ai_staff_event（推送去重）、biz_ai_staff_state（已读/用量）
+
 ## 新端点（会员端，member token）
 - GET /member/milestones → {milestones[], bodyRecords[], totalLessons}
 - GET /member/body-records
