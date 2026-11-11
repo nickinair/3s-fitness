@@ -848,6 +848,7 @@ async function systemPrompt(ctx) {
 3. 话里提到会员时，先用 search_member 拿 vip_id。匹配到多位时停下来问「你说的是哪位？」（已自动给出选择卡片），不要自己猜；一个都没找到就请对方说手机尾号。
 4. 把「明天下午三点」「周五晚上7点半」换算成具体日期和24小时制，分钟用00/15/30/45；分不清上午下午、或会员/时间不明确时先问清楚再操作。
 5. 取消/改约/消课/爽约/写课程计划前，先用 find_bookings 或 list_pending 找到 booking_id。
+   员工只说「代约课」没给信息时，问一句「给哪位会员约？哪天几点？」${ctx.isCoach ? '' : '（不说教练就默认会员的主教练）'}；只说「代消课」时直接调用 propose_finish（不传 booking_ids，会列出${ctx.isCoach ? '你' : '全店'}已上完还没消课的课，员工在卡片上勾选），没有待消课的就如实说。
 6. 开卡、续卡、退卡、储值扣费、补录消课等涉及金额的操作你不能执行，只能用 open_page 给出页面入口并说明原因。
 7. 批量操作一次最多20条，超过时告诉员工分批处理。
 8. 写话术、课后反馈、生日祝福、里程碑总结前，先查会员画像，结合真实数据写，语气真诚自然、不夸张不承诺效果；写好用 make_copy_card（里程碑总结用 propose_milestone_summary）。
@@ -1126,7 +1127,9 @@ async function execAction(ctx, card, input) {
 }
 
 /* ================= 路由 ================= */
-const QUICK_COACH = ['今天有哪些课', '帮我约课', '消课', '确认待确认的预约', '明天下午请假', '查一下学员', '这个月业绩', '课时快用完的学员'];
+// 代约课、代消课是教练和管理员最高频的操作, 固定排在最前面
+const QUICK_MAIN = ['代约课', '代消课'];
+const QUICK_COACH = ['今天有哪些课', '确认待确认的预约', '明天下午请假', '查一下学员', '这个月业绩', '课时快用完的学员'];
 const QUICK_MGR = ['今天营收多少', '全店今天的课', '待确认的预约', '教练课时排名', '卡余额负债', '课时快用完的会员'];
 
 r.get('/dot', async (req, res, next) => {
@@ -1155,7 +1158,7 @@ r.get('/init', async (req, res, next) => {
     const rows = await db.query('SELECT * FROM biz_ai_staff_message WHERE user_id=? ORDER BY id DESC LIMIT 40', [ctx.uid]);
     await markRead(ctx);
     res.json(ok({
-      messages: rows.reverse().map(msgOut), quick: ctx.isMgr && !ctx.coachId ? QUICK_MGR : ctx.isMgr ? [...QUICK_COACH.slice(0, 5), ...QUICK_MGR.slice(0, 3)] : QUICK_COACH,
+      messages: rows.reverse().map(msgOut), quick: [...QUICK_MAIN, ...(ctx.isMgr && !ctx.coachId ? QUICK_MGR : ctx.isMgr ? [...QUICK_COACH.slice(0, 4), ...QUICK_MGR.slice(0, 3)] : QUICK_COACH)],
       name: ctx.name, enabled: CFG.keys.length > 0, mode: 'staff',
     }));
   } catch (e) { next(e); }
