@@ -13,7 +13,7 @@ window.Pages.MemberBookings = {
     '  <m-nav title="我的预约" :inline-ai="true"></m-nav>',
     '  <van-tabs v-model:active="tab" color="var(--brand)" sticky :offset-top="H.navTop()">',
     '    <template #nav-left><div class="ai-tab-side wide"><ai-entry :home="true"/></div></template>',
-    '    <template #nav-right><div class="ai-tab-side wide right"><span class="ai-cam-mini" @click="openAiPhoto">📷 算热量</span></div></template>',
+    '    <template #nav-right><div class="ai-tab-side wide right"></div></template>',
     '    <van-tab :title="\'私教(\'+pt.length+\')\'">',
     '      <div v-if="loading" style="text-align:center;padding:60px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
     '      <template v-else>',

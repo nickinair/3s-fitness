@@ -71,9 +71,12 @@ window.Pages.MemberMine = {
     '    </div>',
     '    <div class="mn-item" @click="$router.push(\'/meals\')">',
     '      <div class="mn-thumb"><van-icon name="fire-o"/></div>',
-    '      <div class="flex1"><div class="mn-it">饮食日记</div>',
+    '      <div class="flex1" style="min-width:0"><div class="mn-it">饮食日记</div>',
     '        <div class="mn-is">{{ mealKcal ? (\'今天已摄入约 \' + mealKcal + \' kcal\') : \'拍照记录每餐热量，小S 帮你算\' }}</div></div>',
-    '      <div class="mn-pill">查看</div>',
+    '      <div class="mn-actions">',
+    '        <div class="mn-pill mn-pill-cam" @click.stop="openAiPhoto"><van-icon name="photograph"/><span>算热量</span></div>',
+    '        <div class="mn-pill">查看</div>',
+    '      </div>',
     '    </div>',
     '  </div>',
 
@@ -133,6 +136,9 @@ window.Pages.MemberMine = {
     '</div>',
   ].join('\n'),
   methods: {
+    openAiPhoto() {
+      if (window.AI && window.AI.openWithPhoto) window.AI.openWithPhoto();
+    },
     cardDesc(c) {
       if (Number(c.card_kind) === 3) return '余额 ' + H.money(c.left_money);
       if (Number(c.card_kind) === 2) return '不限次';

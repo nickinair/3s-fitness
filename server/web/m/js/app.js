@@ -391,7 +391,6 @@
       '</van-nav-bar>',
       '<div v-else-if="isMember && !inlineAi" class="mp-ai-bar">',
       '  <ai-entry :home="back"/>',
-      '  <div class="mp-ai-cam" @click="onPhoto">📷 拍照算热量</div>',
       '</div>',
     ].join('\n'),
     methods: {

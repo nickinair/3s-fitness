@@ -1089,6 +1089,10 @@ body:has(.login-page) { background: var(--c-card); }
 .mn-is { font-size: 12.5px; color: var(--c-text-3); margin-top: 4px; }
 .mn-pill { border: 1px solid var(--c-text-4); border-radius: var(--radius-pill); padding: 6px 16px; font-size: 13px; color: var(--c-title); white-space: nowrap; background: var(--c-card); }
 .mn-pill:active { background: var(--c-panel); }
+.mn-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.mn-pill.mn-pill-cam { background: var(--brand); border-color: var(--brand); color: #fff; padding: 6px 12px; display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
+.mn-pill.mn-pill-cam .van-icon { font-size: 15px; }
+.mn-pill.mn-pill-cam:active { background: var(--brand-light); border-color: var(--brand-light); }
 /* 会员卡行 / 空态 */
 .mn-crow { display: flex; align-items: center; gap: 10px; padding: 12px 0 0; margin-top: 12px; border-top: 1px solid var(--c-line-2); }
 .mn-vip-row { display: flex; align-items: center; gap: 10px; flex: none; width: auto; min-height: 0;
