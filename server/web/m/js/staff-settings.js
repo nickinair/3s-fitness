@@ -100,7 +100,7 @@ window.Pages.StaffSettingsStaff = {
     '    <div v-for="s in list" :key="s.id" class="rec-item">',
     '      <div class="head">',
     '        <span class="name">{{ s.realname }} <span class="muted" style="font-weight:400">{{ s.username }}</span></span>',
-    '        <d-tag dict="roleName" :v="s.role"></d-tag>',
+    '        <span><van-tag v-if="s.can_teach && s.role !== \'coach\'" plain size="small" style="margin-right:4px">可上课</van-tag><d-tag dict="roleName" :v="s.role"></d-tag></span>',
     '      </div>',
     '      <div class="muted mt4">{{ s.phone || \'未填写手机号\' }} · {{ clubName(s.club_id) }}</div>',
     '      <div class="muted mt4">',
@@ -125,7 +125,11 @@ window.Pages.StaffSettingsStaff = {
     '      <van-field v-model="form.sales_rate" type="number" label="销售提成%" placeholder="按本人业绩归属的开卡金额"/>',
     '      <van-field v-model="form.course_rate" type="number" label="课程提成%" placeholder="教练按私教消课金额"/>',
     '      <van-field :model-value="roleName(form.role)" label="角色" placeholder="必填" readonly is-link required @click="roleShow=true"/>',
-    '      <van-field :model-value="clubName(form.club_id)" label="所属门店" placeholder="选填" readonly is-link @click="clubShow=true" :border="false"/>',
+    '      <van-field :model-value="clubName(form.club_id)" label="所属门店" placeholder="选填" readonly is-link @click="clubShow=true"/>',
+    '      <van-field v-if="form.role !== \'coach\'" label="可上私教课" :border="false">',
+    '        <template #input><van-switch v-model="form.can_teach" size="20px"/></template>',
+    '      </van-field>',
+    '      <div v-if="form.role !== \'coach\'" class="muted" style="font-size:12px;padding:0 16px 4px">开启后会出现在代约课、会员端私教列表和课表里，可以给他约私教课</div>',
     '      <div class="mt12"><van-button type="primary" block round :loading="saving" @click="save">保存</van-button></div>',
     '    </div>',
     '  </van-popup>',
@@ -149,7 +153,7 @@ window.Pages.StaffSettingsStaff = {
       finally { this.loading = false; }
     },
     openAdd() {
-      this.form = { username: '', password: '', realname: '', phone: '', role: 'reception', club_id: this.clubs.length ? this.clubs[0].id : 0, base_salary: 0, sales_rate: 0, course_rate: 0 };
+      this.form = { username: '', password: '', realname: '', phone: '', role: 'reception', club_id: this.clubs.length ? this.clubs[0].id : 0, base_salary: 0, sales_rate: 0, course_rate: 0, can_teach: false };
       this.showForm = true;
     },
     openEdit(row) { this.form = JSON.parse(JSON.stringify(row)); this.showForm = true; },

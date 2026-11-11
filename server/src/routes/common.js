@@ -131,11 +131,26 @@ r.delete('/banners/:id', staffAuth('admin', 'manager'), async (req, res, next) =
   } catch (e) { next(e); }
 });
 
+// 让员工(含管理员)出现在约课教练列表: 开通 = 建立/启用与账号绑定的教练档案; 关闭 = 停用档案(历史课程不受影响)
+async function syncCoachProfile(mid, userId, on, { realname, clubId } = {}) {
+  const exist = await db.queryOne('SELECT id, status FROM biz_club_coach WHERE user_id=? AND merchant_id=? ORDER BY id LIMIT 1', [userId, mid]);
+  if (on) {
+    if (exist) await db.exec('UPDATE biz_club_coach SET status=1, realname=COALESCE(?,realname) WHERE id=?', [realname || null, exist.id]);
+    else await db.insert('INSERT INTO biz_club_coach (merchant_id,club_id,user_id,realname,status) VALUES (?,?,?,?,1)', [mid, clubId || 0, userId, realname || '']);
+  } else if (exist && exist.status === 1) {
+    await db.exec('UPDATE biz_club_coach SET status=0 WHERE id=?', [exist.id]);
+  }
+}
+
 // 员工管理
 r.get('/staff', staffAuth(), async (req, res, next) => {
   try {
     const rows = await db.query(
-      `SELECT id,club_id,username,realname,phone,role,status,base_salary,sales_rate,course_rate,insert_time FROM sys_user WHERE merchant_id=? ORDER BY id`, [req.user.mid]);
+      `SELECT u.id,u.club_id,u.username,u.realname,u.phone,u.role,u.status,u.base_salary,u.sales_rate,u.course_rate,u.insert_time,
+              (SELECT c.id FROM biz_club_coach c WHERE c.user_id=u.id AND c.merchant_id=u.merchant_id AND c.status=1 ORDER BY c.id LIMIT 1) coach_id
+         FROM sys_user u WHERE u.merchant_id=? ORDER BY u.id`, [req.user.mid]);
+    // can_teach: 有在用的教练档案 = 会出现在约课/私教列表里(教练必然可上课, 管理员可选开启)
+    rows.forEach((x) => { x.can_teach = x.role === 'coach' || !!x.coach_id; });
     res.json(ok(rows));
   } catch (e) { next(e); }
 });
@@ -149,11 +164,8 @@ r.post('/staff', staffAuth('admin', 'manager'), async (req, res, next) => {
     const id = await db.insert('INSERT INTO sys_user (merchant_id,club_id,username,password,realname,phone,role,base_salary,sales_rate,course_rate) VALUES (?,?,?,?,?,?,?,?,?,?)',
       [req.user.mid, club_id || req.clubId, username, await bcrypt.hash(password || '123456', 10), realname, phone || '', role,
         Number(base_salary) || 0, Number(sales_rate) || 0, Number(course_rate) || 0]);
-    if (role === 'coach') {
-      await db.insert('INSERT INTO biz_club_coach (merchant_id,club_id,user_id,realname) VALUES (?,?,?,?)',
-        [req.user.mid, club_id || req.clubId, id, realname]);
-    }
-    await logAction(req, '新增员工', `${realname}(${role})`);
+    if (role === 'coach' || req.body.can_teach) await syncCoachProfile(req.user.mid, id, true, { realname, clubId: club_id || req.clubId });
+    await logAction(req, '新增员工', `${realname}(${role})${role !== 'coach' && req.body.can_teach ? ' 可上私教课' : ''}`);
     res.json(ok({ id }));
   } catch (e) { next(e); }
 });
@@ -166,7 +178,12 @@ r.put('/staff/:id', staffAuth('admin', 'manager'), async (req, res, next) => {
       await db.exec('UPDATE biz_club_coach SET status=?, realname=COALESCE(?,realname) WHERE user_id=? AND merchant_id=?',
         [status, realname || null, req.params.id, req.user.mid]);
     }
-    await logAction(req, '更新员工', realname);
+    // 是否可上私教课: 教练恒为可上课; 管理员按开关开通/关闭教练档案(未传 can_teach 时保持原状, 如列表里的启用/停用)
+    const teach = role === 'coach' ? true : (req.body.can_teach != null ? !!req.body.can_teach : null);
+    if (teach != null && status !== 0) {
+      await syncCoachProfile(req.user.mid, Number(req.params.id), teach, { realname, clubId: club_id || req.clubId });
+    }
+    await logAction(req, '更新员工', `${realname}${teach === true && role !== 'coach' ? '（可上私教课）' : teach === false ? '（不上私教课）' : ''}`);
     res.json(ok());
   } catch (e) { next(e); }
 });

@@ -89,6 +89,7 @@ window.AppPages.SettingsStaff = {
         <el-table-column prop="realname" label="姓名" width="130" />
         <el-table-column label="角色" width="110"><template #default="{ row }"><dict-tag dict="role" :value="row.role" /></template></el-table-column>
         <el-table-column prop="phone" label="手机号" width="130" />
+        <el-table-column label="可上私教课" width="100"><template #default="{ row }">{{ row.can_teach ? '是' : '—' }}</template></el-table-column>
         <el-table-column label="所属门店" min-width="140"><template #default="{ row }">{{ clubName(row.club_id) }}</template></el-table-column>
         <el-table-column label="状态" width="80">
           <template #default="{ row }">
@@ -123,6 +124,11 @@ window.AppPages.SettingsStaff = {
             <el-option v-if="form.role==='admin'" value="admin" label="管理员（超级）" />
           </el-select>
         </el-form-item>
+        <el-form-item label="可上私教课">
+          <el-switch v-if="form.role !== 'coach'" v-model="form.can_teach" />
+          <span v-else class="text-muted">教练默认可上课</span>
+          <div class="text-muted" style="width:100%;font-size:12px;line-height:1.5">开启后会出现在代约课、会员端私教列表和课表里，可以给他约私教课</div>
+        </el-form-item>
         <el-form-item label="固定工资">
           <el-input-number v-model="form.base_salary" :min="0" :precision="2" controls-position="right" style="width:160px" /><span style="margin-left:6px">元/月</span>
         </el-form-item>
@@ -152,7 +158,7 @@ window.AppPages.SettingsStaff = {
       try { this.list = await api.get('/staff'); }
       finally { this.loading = false; }
     },
-    openAdd() { this.form = { username: '', password: '', realname: '', phone: '', role: 'reception', club_id: this.clubs.length ? this.clubs[0].id : 1 , base_salary: 0, sales_rate: 0, course_rate: 0 }; this.dlg = true; },
+    openAdd() { this.form = { username: '', password: '', realname: '', phone: '', role: 'reception', club_id: this.clubs.length ? this.clubs[0].id : 1 , base_salary: 0, sales_rate: 0, course_rate: 0, can_teach: false }; this.dlg = true; },
     openEdit(row) { this.form = JSON.parse(JSON.stringify(row)); this.dlg = true; },
     async save() {
       if (!this.form.username || !this.form.realname || !this.form.role) return ElementPlus.ElMessage.warning('请填写完整');
