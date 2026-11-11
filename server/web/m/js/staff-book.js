@@ -316,7 +316,7 @@ window.Pages.StaffBook = {
     if (q.tab === 'group') this.tab = 'group';
     if (q.vip_id) {
       API.get('/members/' + q.vip_id, { silent: true })
-        .then(d => { this.vip = d.vip || d; this.load(); })
+        .then(d => { this.vip = d.vip || d.profile || d; this.load(); })
         .catch(() => this.search(true));
     } else {
       this.search(true);

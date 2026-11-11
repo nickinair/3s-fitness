@@ -84,7 +84,7 @@ function studentSql(ctx, a = 'v') {
 async function getMember(ctx, vipId) {
   const [sc, sp] = studentSql(ctx);
   const v = await db.queryOne(`SELECT v.* FROM biz_vip_user v WHERE v.id=? AND v.merchant_id=?${sc}`, [vipId, ctx.mid, ...sp]);
-  if (v) return v;
+  if (v) { ctx.lastVip = { id: v.id }; return v; }
   const exist = await db.queryOne('SELECT id FROM biz_vip_user WHERE id=? AND merchant_id=?', [vipId, ctx.mid]);
   if (!exist) throw new BizError('没有找到这位会员，请先用姓名或手机尾号搜索');
   throw new BizError('这位会员不是你的学员，教练只能查看和操作自己的学员');
@@ -183,6 +183,7 @@ async function searchMember(ctx, { keyword }) {
     vip_id: v.id, name: vname(v), phone_tail: tail(v.phone), gender: v.gender === 1 ? '男' : v.gender === 2 ? '女' : '',
     main_coach: v.coach_name || '', status: ['未开卡', '有效会员', '已过期'][v.expire_status] || '',
   }));
+  if (members.length === 1) ctx.lastVip = { id: members[0].vip_id };
   if (members.length > 1) {
     ctx.cards.push({
       type: 'pick', title: '你说的是哪位？',
@@ -657,6 +658,7 @@ const itemText = (x) => `${x.action_name} ${x.sets || ''}组×${x.reps || ''}${x
 
 async function proposeLessonPlan(ctx, { booking_id, text, note }) {
   const bk = await getBooking(ctx, booking_id);
+  if (![0, 1, 3].includes(bk.status)) return { error: `这节课已${PT_STATUS[bk.status]}，不能再写课程计划` };
   const plan = await parsePlanText(ctx, text);
   return pushAction(ctx, {
     act: 'lesson_plan', title: '确认本节课训练计划', btn: '保存计划',
@@ -726,26 +728,104 @@ async function proposeMilestoneSummary(ctx, { milestone_id, summary }) {
   });
 }
 
+/* 小S 办不了的事, 一律给出对应功能页的引导按钮。roles 与工作台「全部功能」菜单一致, 没权限的页面不给 */
+const ALL = ['admin', 'manager', 'membership', 'reception', 'coach'];
+const MGR = ['admin', 'manager'];
+const CARD_ROLES = ['admin', 'manager', 'membership', 'reception'];
+const PT_ROLES = ['admin', 'manager', 'coach'];
 const PAGES = {
-  member: { path: (id) => `/staff/member/${id}`, text: '打开会员详情（开卡/续卡/退卡在这里办理）' },
-  opencard: { path: () => '/staff/opencard', text: '去开卡' },
-  book: { path: () => '/staff/book', text: '去代约页面' },
-  schedule: { path: () => '/staff/schedule', text: '打开我的课表' },
-  rests: { path: () => '/staff/rests', text: '打开请假管理' },
-  plans: { path: () => '/staff/plans', text: '打开训练计划' },
-  milestones: { path: () => '/staff/milestones', text: '打开里程碑' },
-  students: { path: () => '/staff/students', text: '打开我的学员' },
-  potential: { path: () => '/staff/potential', text: '打开潜在客户' },
-  bookings: { path: () => '/staff/bookings', text: '打开预约管理' },
-  pt_records: { path: () => '/staff/pt-records', text: '打开消课记录（补录消课在这里办理）' },
-  dashboard: { path: () => '/staff/dashboard', text: '打开经营看板' },
+  member: { name: '会员详情', desc: '会员资料、名下会员卡（续卡/退卡/暂停/延期/改卡在卡详情里办理）', path: v => `/staff/member/${v}`, roles: CARD_ROLES.concat('coach'), needVip: true },
+  members: { name: '会员列表', desc: '找会员、看会员资料', path: () => '/staff/members', roles: CARD_ROLES },
+  opencard: { name: '快速开卡', desc: '开卡、办卡、续卡（续买一张新卡）、储值充值', path: v => (v ? `/staff/opencard?vip_id=${v}` : '/staff/opencard'), roles: CARD_ROLES },
+  cards: { name: '会员卡列表', desc: '退卡、暂停/恢复、延期、修改卡信息、转卡', path: () => '/staff/cards', roles: CARD_ROLES },
+  intents: { name: '购卡意向', desc: '会员提交的购卡意向跟进', path: () => '/staff/intents', roles: CARD_ROLES },
+  contracts: { name: '合同管理', desc: '电子合同、签约', path: () => '/staff/contracts', roles: ['admin', 'manager', 'reception'] },
+  card_categories: { name: '卡类型配置', desc: '卡种、价格、约课限制配置', path: () => '/staff/card-categories', roles: MGR },
+  book: { name: '代约课', desc: '手动代约私教课/团课', path: v => (v ? `/staff/book?vip_id=${v}` : '/staff/book'), roles: PT_ROLES },
+  bookings: { name: '预约管理', desc: '查看/处理所有私教预约', path: () => '/staff/bookings', roles: ['admin', 'manager', 'reception', 'coach'] },
+  pt_records: { name: '消课记录', desc: '消课记录、手动补录消课', path: () => '/staff/pt-records', roles: PT_ROLES },
+  schedule: { name: '教练课表', desc: '日/周课表', path: () => '/staff/schedule', roles: PT_ROLES },
+  rests: { name: '休息管理', desc: '请假/休息设置与删除', path: () => '/staff/rests', roles: PT_ROLES },
+  plans: { name: '训练计划', desc: '训练计划与模板', path: () => '/staff/plans', roles: PT_ROLES },
+  milestones: { name: '里程碑总结', desc: '里程碑训练总结', path: () => '/staff/milestones', roles: PT_ROLES },
+  students: { name: '学员管理', desc: '名下私教学员', path: () => '/staff/students', roles: PT_ROLES },
+  training_actions: { name: '动作库', desc: '健身动作库维护', path: () => '/staff/training-actions', roles: PT_ROLES },
+  coach_profile: { name: '我的主页', desc: '教练个人主页、头像、介绍', path: () => '/staff/profile', roles: ['coach'] },
+  coaches: { name: '教练档案', desc: '教练资料、排序、上下架', path: () => '/staff/coaches', roles: MGR },
+  pt_courses: { name: '私教课程', desc: '私教课程、时长、可授课教练', path: () => '/staff/pt-courses', roles: MGR },
+  schedule_admin: { name: '排课表', desc: '团课排课、复制周课表', path: () => '/staff/schedule-admin', roles: ['admin', 'manager', 'reception'] },
+  group_today: { name: '团课核销', desc: '今日团课签到核销', path: () => '/staff/group-today', roles: ['admin', 'manager', 'reception'] },
+  group_courses: { name: '团课课程库', desc: '团课课程维护', path: () => '/staff/group-courses', roles: MGR },
+  checkin: { name: '前台签到', desc: '会员到店签到', path: () => '/staff/checkin', roles: ['admin', 'manager', 'reception'] },
+  checkin_records: { name: '签到记录', desc: '到店签到记录', path: () => '/staff/checkin-records', roles: ['admin', 'manager', 'reception'] },
+  potential: { name: '潜在客户', desc: '潜客录入与跟进', path: () => '/staff/potential', roles: ['admin', 'manager', 'membership'] },
+  my_perf: { name: '我的业绩', desc: '个人业绩与收入', path: () => '/staff/my-perf', roles: ALL },
+  perf: { name: '教练业绩', desc: '教练课时业绩排名', path: () => '/staff/perf', roles: PT_ROLES },
+  dashboard: { name: '数据看板', desc: '经营看板', path: () => '/staff/dashboard', roles: MGR },
+  report: { name: '报表中心', desc: '会员/财务报表、导出', path: () => '/staff/report', roles: MGR },
+  finance_monthly: { name: '月度报表', desc: '月度经营报表', path: () => '/staff/finance-monthly', roles: MGR },
+  recharges: { name: '收款明细', desc: '收款/退款流水', path: () => '/staff/recharges', roles: MGR },
+  spends: { name: '耗卡明细', desc: '耗卡流水', path: () => '/staff/spends', roles: MGR },
+  card_balance: { name: '剩余卡价值', desc: '卡余额负债', path: () => '/staff/card-balance', roles: MGR },
+  settings_staff: { name: '员工与角色', desc: '员工账号、角色、重置密码、可上私教课', path: () => '/staff/settings-staff', roles: MGR },
+  settings_club: { name: '门店信息', desc: '门店名称、地址、营业时间', path: () => '/staff/settings-club', roles: MGR },
+  op_logs: { name: '操作日志', desc: '谁在什么时候做了什么', path: () => '/staff/op-logs', roles: MGR },
 };
-function openPage(ctx, { page, vip_id }) {
+function pushPage(ctx, page, vipId) {
   const p = PAGES[page];
-  if (!p) return { error: `可选页面：${Object.keys(PAGES).join('/')}` };
-  if (page === 'member' && !vip_id) return { error: '需要 vip_id' };
-  ctx.cards.push({ type: 'link', text: p.text, path: p.path(vip_id) });
-  return { ok: true };
+  if (!p || !p.roles.includes(ctx.role === 'platform' ? 'admin' : ctx.role)) return false;
+  if (p.needVip && !vipId) return pushPage(ctx, ctx.isCoach ? 'students' : 'members');
+  if (ctx.cards.some(c => c.type === 'link' && c.path === p.path(vipId))) return true;
+  ctx.cards.push({ type: 'link', text: `去「${p.name}」办理`, path: p.path(vipId) });
+  return true;
+}
+function openPage(ctx, { page, vip_id }) {
+  if (!PAGES[page]) return { error: `可选页面：${Object.keys(PAGES).join('/')}` };
+  if (!pushPage(ctx, page, vip_id)) return { error: `员工的账号没有「${PAGES[page].name}」页面的权限，不要说「点下方按钮」，请告诉员工找店长或前台办理` };
+  return { ok: true, message: '入口按钮已放在回复下方，回复里说一句「点下方按钮去办理」即可' };
+}
+
+/* 兜底: 小S 回复说办不了/去页面办, 但模型没调用 open_page 时, 按关键词补一个最相关的入口按钮 */
+const PAGE_HINTS = [
+  [/补录|补消|手动消课|补课时/, 'pt_records'],
+  [/退卡|退款|暂停|停卡|延期|转卡|改卡|修改.*卡|卡.*(修改|调整|转让)/, 'cards'],
+  [/开卡|办卡|买卡|购卡|续卡|充值|储值/, 'opencard'],
+  [/合同|签约/, 'contracts'],
+  [/意向/, 'intents'],
+  [/卡类型|卡种|价格/, 'card_categories'],
+  [/排课|团课.*(安排|排)|复制.*课表/, 'schedule_admin'],
+  [/团课.*(核销|签到)/, 'group_today'],
+  [/签到/, 'checkin'],
+  [/私教课程|课程设置|课程时长/, 'pt_courses'],
+  [/教练档案|教练资料/, 'coaches'],
+  [/主页|头像|个人介绍/, 'coach_profile'],
+  [/动作库/, 'training_actions'],
+  [/员工|账号|密码|角色/, 'settings_staff'],
+  [/门店.*(信息|地址|营业)/, 'settings_club'],
+  [/删.*(请假|休息)|取消.*(请假|休息)|休息设置/, 'rests'],
+  [/训练计划|计划模板/, 'plans'],
+  [/里程碑/, 'milestones'],
+  [/收款|流水/, 'recharges'],
+  [/报表|导出/, 'report'],
+  [/日志/, 'op_logs'],
+  [/约课|代约|预约/, 'book'],
+  [/会员资料|会员信息|改.*(手机|姓名|资料)/, 'members'],
+];
+const CANT_RE = /办不了|做不了|没法|无法|不能(直接)?(帮|办|执行|操作|处理)|不支持|只能给你|页面|入口|去.{0,6}(办理|操作|处理)/;
+// 返回需要追加到回复里的说明(命中的页面当前账号都没有权限时)
+function guideFallback(ctx, userText, reply) {
+  if (ctx.cards.some(c => c.type === 'link' || c.type === 'action')) return '';
+  if (!CANT_RE.test(reply)) return '';
+  const vip = (ctx.lastVip && ctx.lastVip.id) || null;
+  let denied = '';
+  for (const src of [userText, reply]) {
+    for (const [re, page] of PAGE_HINTS) {
+      if (!re.test(src)) continue;
+      if (pushPage(ctx, page, page === 'opencard' || page === 'book' ? vip : null)) return '';
+      denied = denied || PAGES[page].name;
+    }
+  }
+  return denied ? `\n「${denied}」需要店长或前台的账号办理，可以请他们帮忙。` : '';
 }
 
 function makeCopyCard(ctx, { title, text }) {
@@ -783,14 +863,14 @@ function toolDefs(ctx) {
     { name: 'propose_noshow', description: '生成标记爽约草稿', parameters: P({ booking_ids: ids() }, ['booking_ids']) },
     { name: 'propose_group_checkin', description: '生成团课签到草稿: 传 syllabus_id 签到整节课已约学员, 或传 group_booking_ids 指定几个人', parameters: P({ syllabus_id: int(), group_booking_ids: ids() }) },
     { name: 'propose_rest', description: '生成请假草稿, 会自动检查该时段已有的课并提示。不填时间=全天', parameters: P({ date: str('YYYY-MM-DD'), from_time: str('HH:mm'), to_time: str('HH:mm'), remark: str('事由'), coach_name: COACH }, ['date']) },
-    { name: 'propose_lesson_plan', description: '把口述的动作安排解析成「本节课训练计划」草稿, 挂到某节私教预约上', parameters: P({ booking_id: int(), text: str('口述内容, 如: 卧推4组12次 深蹲5组8次60公斤'), note: str() }, ['booking_id', 'text']) },
+    { name: 'propose_lesson_plan', description: '把口述的动作安排解析成「本节课训练计划」草稿, 挂到某节私教预约上(待确认/已确认/已完成的课都可以)', parameters: P({ booking_id: int(), text: str('口述内容, 如: 卧推4组12次 深蹲5组8次60公斤'), note: str() }, ['booking_id', 'text']) },
     { name: 'propose_push_plan', description: '把口述内容解析成训练计划并推送给会员(会员小程序可见+短信)', parameters: P({ vip_id: int(), text: str(), plan_date: str('YYYY-MM-DD'), note: str() }, ['vip_id', 'text']) },
     { name: 'propose_body_record', description: '生成体测录入草稿', parameters: P({ vip_id: int(), record_date: str('YYYY-MM-DD'), height: { type: 'number' }, weight: { type: 'number' }, body_fat: { type: 'number', description: '体脂率%' }, muscle: { type: 'number' }, bust: { type: 'number' }, waist: { type: 'number' }, hip: { type: 'number' }, remark: str() }, ['vip_id']) },
     { name: 'propose_maintain', description: '生成会员维护(跟进)记录草稿, 可带下次跟进时间(待办)', parameters: P({ vip_id: int(), content: str(), record_type: { type: 'string', enum: ['电话', '到店', '微信', '其他'] }, todo_time: str('YYYY-MM-DD HH:mm') }, ['vip_id', 'content']) },
     { name: 'propose_potential', description: '生成录入潜在客户草稿', parameters: P({ realname: str(), phone: str(), gender: str('男/女'), remark: str() }, ['phone']) },
     { name: 'propose_milestone_summary', description: '把你写好的里程碑训练总结生成提交草稿(员工可在卡片上修改后提交)', parameters: P({ milestone_id: int(), summary: str() }, ['milestone_id', 'summary']) },
     { name: 'make_copy_card', description: '把你写好的续卡/召回话术、课后反馈、生日祝福等文案放进可一键复制的卡片', parameters: P({ title: str(), text: str() }, ['text']) },
-    { name: 'open_page', description: '给出页面入口卡片。开卡/续卡/退卡/储值扣费/补录消课等涉及金额的操作只能用它引导到页面办理', parameters: P({ page: { type: 'string', enum: Object.keys(PAGES) }, vip_id: int() }, ['page']) },
+    { name: 'open_page', description: `给出功能页入口按钮。凡是你办不了的事都必须调用它。可选页面：${Object.entries(PAGES).map(([k, p]) => `${k}=${p.name}(${p.desc})`).join('；')}`, parameters: P({ page: { type: 'string', enum: Object.keys(PAGES) }, vip_id: int('涉及具体会员时填写, 开卡/代约/会员详情会自动带上该会员') }, ['page']) },
   ];
   if (ctx.isMgr) {
     list.push({ name: 'store_report', description: '经营数据(店长/管理员): dashboard当日或当月营收与客流 / monthly月度经营 / card_balance卡余额(负债) / overview报表总览 / checkin近7天到店 / coach_consume教练耗课排名', parameters: P({ type: { type: 'string', enum: ['dashboard', 'monthly', 'card_balance', 'overview', 'checkin', 'coach_consume'] }, date: str('YYYY-MM-DD'), month: str('YYYY-MM') }, ['type']) });
@@ -849,7 +929,8 @@ async function systemPrompt(ctx) {
 4. 把「明天下午三点」「周五晚上7点半」换算成具体日期和24小时制，分钟用00/15/30/45；分不清上午下午、或会员/时间不明确时先问清楚再操作。
 5. 取消/改约/消课/爽约/写课程计划前，先用 find_bookings 或 list_pending 找到 booking_id。
    员工只说「代约课」没给信息时，问一句「给哪位会员约？哪天几点？」${ctx.isCoach ? '' : '（不说教练就默认会员的主教练）'}；只说「代消课」时直接调用 propose_finish（不传 booking_ids，会列出${ctx.isCoach ? '你' : '全店'}已上完还没消课的课，员工在卡片上勾选），没有待消课的就如实说。
-6. 开卡、续卡、退卡、储值扣费、补录消课等涉及金额的操作你不能执行，只能用 open_page 给出页面入口并说明原因。
+6. 你办不了的事（开卡、续卡、退卡、储值充值/扣费、补录消课、改卡/延期/暂停、合同、团课排课、各种设置等），一句话说明原因，并且必须调用 open_page 给出最相关的页面入口（涉及具体会员时带上 vip_id），回复里说「点下方按钮去办理」。
+   课程计划可以写在「待确认」或「已确认」的课上，不需要先确认预约。
 7. 批量操作一次最多20条，超过时告诉员工分批处理。
 8. 写话术、课后反馈、生日祝福、里程碑总结前，先查会员画像，结合真实数据写，语气真诚自然、不夸张不承诺效果；写好用 make_copy_card（里程碑总结用 propose_milestone_summary）。
 9. 回复简洁口语化，一般不超过120字，不要用 Markdown 标题、表格、加粗；列清单时用「・」。
@@ -1193,6 +1274,8 @@ r.post('/chat', async (req, res, next) => {
       }
     }
     if (!reply) reply = ctx.cards.length ? '请在下方卡片确认～' : '这个我还没处理好，换个说法再试试？';
+    const note = guideFallback(ctx, text, reply);
+    if (note) reply = reply.replace(/[，,。]?\s*(请)?(点|在)下方(按钮|卡片)[^。]*。?/g, '。').replace(/[，,]?\s*只能给你(页面)?入口[。]?/g, '。').replace(/。。/g, '。') + note;
     // 同一类卡片只保留最后一张(模型重复调用时)
     const seen = new Set();
     const cards = ctx.cards.reverse().filter((c) => { const k = `${c.type}:${c.act || ''}:${c.path || ''}`; if (seen.has(k)) return false; seen.add(k); return true; }).reverse();

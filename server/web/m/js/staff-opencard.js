@@ -264,7 +264,7 @@ window.Pages.StaffOpenCard = {
        URL 里只放意向 id, 姓名手机号走接口取, 不进地址栏。 */
     async applyIntent() {
       const iid = this.$route.query.intent;
-      if (!iid) return;
+      if (!iid) return this.applyVip();
       let it;
       try { it = await API.get('/card-intents/' + iid, { silent: true }); } catch (e) { return; }
       if (!it) return;
@@ -281,6 +281,20 @@ window.Pages.StaffOpenCard = {
       if (c) { this.kind = c.card_kind; this.pickCat(c); }
       else vant.showToast('意向卡种已下架，请手动选择');
       if (this.lockVip) this.step = 2;        // 会员已定, 直接落到选卡这步
+    },
+    /* 由小S「去开卡」带 ?vip_id= 进来: 自动选中该会员, 直接到选卡这步 */
+    async applyVip() {
+      const vid = Number(this.$route.query.vip_id);
+      if (!vid) return;
+      let d;
+      try { d = await API.get('/members/' + vid, { silent: true }); } catch (e) { return; }
+      const p = d && (d.profile || d);
+      if (!p || !p.phone) return;
+      this.mode = 'exist';
+      this.kw = p.phone;
+      await this.search(true);
+      const hit = this.results.find(m => m.id === vid);
+      if (hit) { this.vip = hit; this.lockVip = true; this.step = 2; }
     },
     // 「更换」: 展开选会员那一步, 并把列表恢复成默认的最近会员
     unlockVip() {
