@@ -95,6 +95,8 @@
     pullup: { view: 'front', props: [line([36, 8], [124, 8], 3, 0.5)], frames: [{ torso: -90, thigh: 90, shin: 90, len: { shin: 16 }, uarm: -50, farm: -80, at: ['wr', 101.4, 8] }, { torso: -90, thigh: 90, shin: 90, len: { shin: 16 }, uarm: 6, farm: -100, at: ['wr', 102, 8] }], cue: '双手正握略宽于肩，用背部发力把身体拉起到下巴过杠（手肘向下向外打开），再慢慢下放' },
     pulldown: { props: [...SEAT(58, 80), rect(70, 64, 20, 4)], frames: [{ torso: -96, thigh: 0, shin: 88, uarm: -82, farm: -86, at: ['hp', 70, 79] }, { torso: -100, thigh: 0, shin: 88, uarm: 100, farm: -72, at: ['hp', 70, 79] }], props2: (J) => [line([76, 6], J.wr, 1.4, 0.45), circ([76, 6], 3, false, 0.45, 1.6)], cue: '挺胸，把横杆拉到上胸，感受背部肌肉收缩，手臂只是挂钩' },
     seated_row: { props: [rect(40, 92, 40, 5), rect(118, 82, 4, 22)], frames: [{ torso: -70, thigh: -6, shin: 2, foot: -80, uarm: 2, farm: 2, at: ['hp', 58, 91] }, { torso: -95, thigh: -6, shin: 2, foot: -80, uarm: 140, farm: 8, at: ['hp', 58, 91] }], props2: cableTo([150, 88], 'wr'), cue: '挺胸坐直，把手柄拉向腹部，肩胛骨向后夹紧，不要后仰借力' },
+    // 单臂哑铃划船: 同侧膝盖和手撑在凳子上, 另一只脚站地, 空出的手臂把哑铃拉到腰侧
+    one_arm_row: { load: 'db', props: [rect(30, 88, 76, 5), line([40, 93], [40, GROUND], 2, 0.3), line([98, 93], [98, GROUND], 2, 0.3)], frames: [{ torso: -12, thigh: 100, shin: 95, foot: 0, thigh2: 90, shin2: 180, foot2: 180, uarm: 76, farm: 84, uarm2: 100, farm2: 80, at: ['kn2', 60, 85] }, { torso: -12, thigh: 100, shin: 95, foot: 0, thigh2: 90, shin2: 180, foot2: 180, uarm: 168, farm: 82, uarm2: 100, farm2: 80, at: ['kn2', 60, 85] }], cue: '同侧膝盖和手撑在凳上，背部放平，另一只手把哑铃沿身体拉向腰侧，手肘贴近身体，顶端停顿再慢放' },
     bent_row: { load: 'bb', frames: [S({ torso: -32, thigh: 72, shin: 100 }), S({ torso: -32, thigh: 72, shin: 100, uarm: 172, farm: 78 })], cue: '俯身约 45°，背部挺直，把重量拉向腹部，手肘贴近身体' },
     straight_pulldown: { frames: [S({ torso: -72, uarm: -28, farm: -26 }), S({ torso: -72, uarm: 70, farm: 72 })], props2: cableTo([128, 8], 'wr'), cue: '手臂伸直，用背部的力量把绳索压到大腿前，感受背阔肌发力' },
     ohp: { load: 'db', frames: [S({ uarm: 112, farm: -78 }), S({ uarm: -86, farm: -88 })], cue: '收紧核心，从肩膀位置向正上方推起，不要过度后仰' },
@@ -133,6 +135,8 @@
     jumping_jack: { view: 'front', frames: [S({ uarm: 84, farm: 88, thigh: 92, shin: 90, at: ['hp', 80, 64] }), S({ uarm: -55, farm: -75, thigh: 72, shin: 76, at: ['hp', 80, 62] })], cue: '跳起时双脚分开、双手头顶击掌，落地时还原，前脚掌着地' },
     battle_rope: { frames: [S({ torso: -68, thigh: 40, shin: 112, uarm: 30, farm: -25 }), S({ torso: -68, thigh: 40, shin: 112, uarm: 62, farm: 45 })], props2: (J, i) => [{ t: 'q', x1: J.wr[0], y1: J.wr[1], cx: 128, cy: i === 0 ? 70 : 118, x2: 152, y2: 104, o: 0.5, w: 2 }], cue: '半蹲，核心收紧，双臂快速上下甩动让绳子形成波浪' },
     foam_roller: { props2: () => [circ([104, 101], 7, false, 0.6, 2.4)], frames: [{ torso: -125, thigh: 4, shin: 0, foot: -60, uarm: 100, farm: 100, at: ['hp', 70, 95] }, { torso: -125, thigh: 4, shin: 0, foot: -60, uarm: 100, farm: 100, at: ['hp', 84, 95] }], cue: '把泡沫轴放在酸痛部位下方，用手撑地控制身体前后缓慢滚动' },
+    // 伟大伸展: 深弓步, 一只手撑在前脚内侧地面, 另一只手臂向上打开旋转, 眼睛跟随上举的手
+    greatest_stretch: { frames: [{ torso: -14, thigh: 15, shin: 95, foot: 0, thigh2: 140, shin2: 150, foot2: 175, uarm: 118, farm: 150, uarm2: 72, farm2: 84, at: ['an', 92, 108] }, { torso: -14, head: -70, thigh: 15, shin: 95, foot: 0, thigh2: 140, shin2: 150, foot2: 175, uarm: -92, farm: -92, uarm2: 72, farm2: 84, at: ['an', 92, 108] }], cue: '大弓步，后腿伸直，同侧手撑在前脚内侧，另一只手臂向上打开带动胸椎旋转，眼睛看向上方的手，左右交替' },
     stretch: { frames: [{ torso: -82, thigh: -2, shin: 0, foot: -80, uarm: -80, farm: -86, at: ['hp', 56, 101] }, { torso: -22, thigh: -2, shin: 0, foot: -80, uarm: 12, farm: 8, at: ['hp', 56, 101] }], cue: '坐姿双腿伸直，从髋部向前折叠伸手够脚尖，每个部位保持 20~30 秒，不要弹振' },
     leg_swing: { frames: [S({ thigh: 40, shin: 70, thigh2: 90, shin2: 90, uarm: 0, farm: 0, at: ['an2', 80, 108] }), S({ thigh: 130, shin: 112, thigh2: 90, shin2: 90, uarm: 0, farm: 0, at: ['an2', 80, 108] })], cue: '扶稳后腿前后摆动，幅度由小到大，热身 1~2 组即可' },
     arm_circle: { view: 'front', frames: [S({ uarm: 0, farm: 0 }), S({ uarm: -60, farm: -60 }), S({ uarm: -2, farm: -2 }), S({ uarm: 55, farm: 60 })], cue: '双臂侧平举，由小到大画圈，前后各转 10~15 圈' },
@@ -141,6 +145,7 @@
 
   /* ---------- 名称匹配: 先具体后宽泛, 匹配不到就不画 ---------- */
   const RULES = [
+    [/伟大伸展|最伟大的?伸展|最伟大的?拉伸/, 'greatest_stretch'],
     // 带限定词的先匹配(否则会被后面宽泛的「划船」「弯举」等吃掉)
     [/直立划船|直立提拉/, 'upright_row'], [/划船机/, 'rower'], [/腿弯举|俯卧弯举/, 'leg_curl'], [/腿屈伸/, 'leg_ext'],
     [/上斜.*(推|卧)/, 'incline_press'], [/反向飞鸟|俯身.*飞鸟|反飞鸟/, 'rear_fly'], [/哑铃飞鸟|仰卧飞鸟|平板飞鸟/, 'fly_top'],
@@ -148,7 +153,7 @@
     [/坐姿推胸|器械推胸|推胸/, 'chest_press'], [/臂屈伸.*(仰卧|躺)|仰卧臂屈伸|碎颅|颅骨/, 'skull_crusher'],
     [/双杠/, 'dips'], [/卧推/, 'bench_press'], [/俯卧撑/, 'pushup'],
     [/引体/, 'pullup'], [/下拉/, 'pulldown'], [/直臂/, 'straight_pulldown'], [/坐姿划船|器械划船|绳索划船/, 'seated_row'],
-    [/划船机/, 'rower'], [/划船|T杠/, 'bent_row'], [/罗马尼亚|直腿硬拉|早安/, 'rdl'], [/硬拉/, 'deadlift'],
+    [/划船机/, 'rower'], [/单臂.*划船|单手.*划船/, 'one_arm_row'], [/划船|T杠/, 'bent_row'], [/罗马尼亚|直腿硬拉|早安/, 'rdl'], [/硬拉/, 'deadlift'],
     [/面拉/, 'face_pull'], [/直立划船|直立提拉/, 'upright_row'], [/侧平举/, 'lateral_raise'], [/前平举/, 'front_raise'],
     [/推举|肩推|推肩|过头推/, 'ohp'], [/弯举/, 'curl'], [/下压|臂屈伸/, 'pushdown'],
     [/腿举|倒蹬/, 'leg_press'], [/腿屈伸/, 'leg_ext'], [/腿弯举|俯卧弯举/, 'leg_curl'], [/提踵/, 'calf_raise'],
@@ -301,7 +306,7 @@
     squat_bb: '杠铃深蹲(杠铃扛肩下蹲)', squat: '徒手/哑铃深蹲', lunge: '箭步蹲/弓步/分腿蹲', deadlift: '硬拉(屈膝从地面拉起)', rdl: '罗马尼亚硬拉(直腿屈髋)',
     bench_press: '平板卧推(躺凳上推)', incline_press: '上斜卧推', chest_press: '坐姿器械推胸', fly_top: '仰卧飞鸟', cable_fly: '绳索夹胸/站姿飞鸟',
     pec_deck: '蝴蝶机夹胸', pushup: '俯卧撑', pullup: '引体向上', pulldown: '高位下拉', seated_row: '坐姿划船(绳索/器械)',
-    bent_row: '俯身划船(杠铃/哑铃/T杠)', straight_pulldown: '直臂下压', ohp: '肩上推举', lateral_raise: '侧平举', front_raise: '前平举',
+    bent_row: '俯身划船(杠铃/哑铃/T杠)', one_arm_row: '单臂哑铃划船(单膝单手撑凳)', greatest_stretch: '伟大伸展(弓步+单手撑地+单臂上举旋转)', straight_pulldown: '直臂下压', ohp: '肩上推举', lateral_raise: '侧平举', front_raise: '前平举',
     rear_fly: '俯身反向飞鸟', face_pull: '面拉', upright_row: '直立划船', curl: '二头弯举', pushdown: '三头下压',
     skull_crusher: '仰卧臂屈伸', dips: '双杠臂屈伸', leg_press: '腿举', leg_ext: '腿屈伸', leg_curl: '俯卧腿弯举',
     calf_raise: '提踵', glute_bridge: '臀桥', hip_thrust: '杠铃臀推', hip_abduction: '髋外展', kickback: '后踢腿',

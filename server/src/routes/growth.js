@@ -194,6 +194,7 @@ r.get('/training-actions', staffAuth(), async (req, res, next) => {
     if (keyword) { cond.push('name LIKE ?'); params.push(`%${keyword}%`); }
     await actionFig.ensureCols();
     const rows = await db.query(`SELECT * FROM biz_training_action WHERE ${cond.join(' AND ')} ORDER BY merchant_id DESC, part, id`, params);
+    rows.forEach((x) => { x.fig_key = actionFig.effectiveFig(x); });
     res.json(ok(rows));
     // 还没配示意图的动作(历史数据)后台慢慢补
     if (rows.some(x => x.fig_key == null)) actionFig.backfill(req.user.mid).catch(() => {});

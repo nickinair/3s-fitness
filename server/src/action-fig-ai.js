@@ -98,13 +98,20 @@ async function backfill(mid, limit = 10) {
   } finally { backfilling = false; }
 }
 
+// 实际生效的示意图: 人工指定 > 内置名称规则(随代码更新, 能修正以前存下的旧结果) > 存下的 AI 识别结果
+function effectiveFig(row) {
+  if (row.fig_manual) return row.fig_key || '';
+  const k = AF.ruleKey(row.name);
+  return k || (row.fig_key == null ? null : row.fig_key);
+}
+
 // 前端用的「动作名 → 示意图」表: 只需要本店自定义动作(系统预置动作前端规则就能认)
 async function figMap(mid) {
   await ensureCols();
-  const rows = await db.query('SELECT name, fig_key FROM biz_training_action WHERE merchant_id=? AND status=1 AND fig_key IS NOT NULL', [mid]);
+  const rows = await db.query('SELECT name, fig_key, fig_manual FROM biz_training_action WHERE merchant_id=? AND status=1 AND fig_key IS NOT NULL', [mid]);
   const map = {};
-  rows.forEach((r) => { map[r.name] = r.fig_key || ''; });
+  rows.forEach((r) => { map[r.name] = effectiveFig(r) || ''; });
   return map;
 }
 
-module.exports = { ensureCols, assignFig, addPlanActions, backfill, figMap, aiClassify };
+module.exports = { effectiveFig, ensureCols, assignFig, addPlanActions, backfill, figMap, aiClassify };
