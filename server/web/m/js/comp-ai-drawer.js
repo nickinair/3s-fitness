@@ -409,6 +409,7 @@
         mealActions: MEAL_TYPES,
         tx: 0,
         ty: 0,
+        noSwipe: false,
       };
     },
     mounted() {
@@ -436,10 +437,13 @@
         if (!t) return;
         this.tx = t.clientX;
         this.ty = t.clientY;
+        // 在可横向滑动的区域(快捷提示词条、卡片选项)或输入框里滑动, 是在滚动内容/移动光标, 不算「左滑关闭」
+        const el = e.target && e.target.closest ? e.target : null;
+        this.noSwipe = !!(el && el.closest('.aid-quick, .aid-opts, .aid-bar, .aid-ta, input, textarea'));
       },
       onTouchEnd(e) {
         const t = e.changedTouches && e.changedTouches[0];
-        if (!t) return;
+        if (!t || this.noSwipe) return;
         const dx = t.clientX - this.tx;
         const dy = t.clientY - this.ty;
         if (dx < -65 && Math.abs(dy) < 55) this.close();
