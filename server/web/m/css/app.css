@@ -1400,3 +1400,6 @@ html.is-mp .staff-hero::after { top: 8px; }
 .tpl-item .n { font-size: 14px; font-weight: 600; color: var(--c-title); }
 .tpl-item .s { font-size: 12px; color: var(--c-text-3); margin-top: 2px; }
 .tpl-save { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--c-text-2); margin-bottom: 8px; cursor: pointer; }
+.plan-items-title { font-size: 13px; font-weight: 600; color: var(--c-title); margin-bottom: 4px; }
+.plan-items-row { font-size: 13px; line-height: 1.7; color: var(--c-text); }
+.plan-items-note { font-size: 12px; color: var(--c-text-3); margin-top: 4px; }

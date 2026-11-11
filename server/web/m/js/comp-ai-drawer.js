@@ -582,6 +582,7 @@
           c.result = r.result || '';
           c.error = r.error || '';
           if (c.status === 'done') {
+            if (d.post && d.post.type === 'lesson_plan_poster') await this.makePlanPoster(d.post);
             vant.showToast({ message: '已完成', icon: 'success' });
             window.dispatchEvent(new CustomEvent('ai-staff-changed', { detail: { act: c.act } }));
           }
@@ -591,6 +592,21 @@
           busyAction = false;
           c.busy = false;
         }
+      },
+      // 小S挂好的课程计划补生成海报(与手动「制定计划」同款), 失败不影响计划本身(卡片会以动作清单显示)
+      async makePlanPoster(p) {
+        if (!window.PlanImage || !window.dataURLtoBlob) return;
+        try {
+          await window.PlanImage.ready;
+          const dataUrl = window.PlanImage({ title: p.title, member: p.member || '', coach: p.coach || '', date: p.date, note: p.note || '', items: p.items || [] });
+          const blob = window.dataURLtoBlob(dataUrl);
+          const file = new File([blob], 'plan-' + p.booking_id + '-' + Date.now() + '.jpg', { type: 'image/jpeg' });
+          const imgUrl = await API.upload(file);
+          if (!imgUrl) return;
+          await API.put('/ptrain-bookings/' + p.booking_id + '/lesson-plan', {
+            lesson_plan: JSON.stringify({ title: p.title, note: p.note || '', items: p.items || [], img_url: imgUrl, updated_at: new Date().toISOString() }),
+          }, { silent: true });
+        } catch (e) { /* 海报生成失败时保留纯动作清单 */ }
       },
       async dismissAction(mi, ci) {
         const m = this.state.msgs[mi];

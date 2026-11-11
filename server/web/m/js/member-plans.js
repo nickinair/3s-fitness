@@ -267,6 +267,18 @@
       '      <div class="plan-legacy-text">{{ parsed.legacy_text }}</div>',
       '    </div>',
       '  </template>',
+      // 情况2b: 有结构化动作但还没生成海报(如小S写入的计划), 直接列出动作
+      '  <template v-else-if="parsed && parsed.items && parsed.items.length">',
+      '    <div class="lesson-plan-head">',
+      '      <span class="lesson-plan-head-title"><van-icon name="notes-o"/> 本节课训练计划</span>',
+      '      <van-button v-if="canEdit" size="mini" round plain type="primary" @click.stop="onEdit">编辑计划</van-button>',
+      '    </div>',
+      '    <div class="plan-legacy-card">',
+      '      <div class="plan-items-title">{{ parsed.title || "训练计划" }}</div>',
+      '      <div v-for="(it, i) in parsed.items" :key="i" class="plan-items-row">{{ i + 1 }}. {{ it.action_name }} {{ it.sets }}组×{{ it.reps }}{{ it.unit || "次" }}<span v-if="it.weight"> · {{ it.weight }}{{ /kg|公斤/i.test(String(it.weight)) ? "" : "kg" }}</span></div>',
+      '      <div v-if="parsed.note" class="plan-items-note">叮嘱：{{ parsed.note }}</div>',
+      '    </div>',
+      '  </template>',
       // 情况3: 暂无计划但教练可编辑新建
       '  <template v-else-if="canEdit">',
       '    <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--c-bg-2);border-radius:6px;border:1px dashed var(--brand-soft-2);">',

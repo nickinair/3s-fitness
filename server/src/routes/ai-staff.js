@@ -1228,6 +1228,8 @@ async function execAction(ctx, card, input) {
       const tpl = option === 'template';
       if (tpl) await saveAsTemplate(ctx, d);
       await logAction(ctx.req, '[AI助手]课程计划', `${bk.realname} ${fmtD(bk.date)} ${bk.from_time} ${d.items.length}个动作${tpl ? ' 并存为模板' : ''}`);
+      // 计划海报在前端用 canvas 生成(与手动「制定计划」同一套), 这里把数据交给前端补生成并回写 img_url
+      ctx.post = { type: 'lesson_plan_poster', booking_id: bk.id, title: d.title, items: d.items, note: d.note || '', member: bk.realname, coach: bk.coach_name, date: fmtD(bk.date) };
       return `已保存 ${bk.realname} 这节课的训练计划，会员在小程序里能看到${tpl ? `；「${d.title}」已存为模板，下次可以直接选` : ''}`;
     }
     case 'push_plan': {
@@ -1370,7 +1372,7 @@ r.post('/confirm', async (req, res, next) => {
     }
     await db.exec('UPDATE biz_ai_staff_message SET cards=? WHERE id=?', [JSON.stringify(cards), m.id]);
     const { draft, ...out } = cards[idx];
-    res.json(ok({ card: out }));
+    res.json(ok({ card: out, post: out.status === 'done' ? ctx.post || null : null }));
   } catch (e) { next(e); }
 });
 
