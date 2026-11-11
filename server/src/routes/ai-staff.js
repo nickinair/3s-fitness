@@ -69,6 +69,12 @@ async function ctxOf(req) {
 
 const tail = (p) => String(p || '').slice(-4);
 const vname = (v) => (v && (v.realname || v.nickname)) || '会员';
+const staffOpLabel = (ctx, act) => (ctx.isCoach ? `${ctx.name}代${act}` : `管理员代${act}`);
+const normReason = (s) => String(s || '').trim()
+  .replace(/店长代?(预约|约课|代约)/g, '管理员代预约')
+  .replace(/店长代?取消/g, '管理员代取消')
+  .replace(/代约\(店长\)/g, '管理员代预约')
+  .replace(/^店长$/, '管理员');
 
 // 教练的学员口径: 主/副教练是我、名下有我的私教卡、或半年内上过我的课
 function studentSql(ctx, a = 'v') {
@@ -546,7 +552,8 @@ async function proposeCancel(ctx, { booking_ids, reason }) {
     if (![0, 1].includes(bk.status)) return { error: `${bk.realname} ${fmtD(bk.date)} ${bk.from_time} 的课当前「${PT_STATUS[bk.status]}」，不能取消` };
     items.push({ id: bk.id, text: `${bk.realname} · ${dayLabel(bk.date)} ${bk.from_time}-${bk.to_time}`, sub: `${bk.coach_name} · ${bk.course_title}`, checked: true });
   }
-  return pushAction(ctx, { act: 'cancel', title: ids.length > 1 ? `确认取消 ${ids.length} 节课` : '确认取消这节课', items, rows: reason ? [['原因', reason]] : [], btn: '确认取消', danger: true, draft: { reason: reason || '' } });
+  const r = normReason(reason) || staffOpLabel(ctx, '取消');
+  return pushAction(ctx, { act: 'cancel', title: ids.length > 1 ? `确认取消 ${ids.length} 节课` : '确认取消这节课', items, rows: [['原因', r]], btn: '确认取消', danger: true, draft: { reason: r } });
 }
 
 async function proposeReschedule(ctx, { booking_id, new_date, new_from_time }) {
@@ -911,7 +918,7 @@ function toolDefs(ctx) {
     { name: 'list_milestones', description: '待填写训练总结的里程碑(milestone_id)', parameters: P({}) },
 
     { name: 'propose_booking', description: '生成代约私教课草稿卡片(不直接下单)。冲突时会自动在卡片上给出最近空档', parameters: P({ vip_id: int(), date: str('YYYY-MM-DD'), from_time: str('HH:mm, 分钟00/15/30/45'), coach_name: COACH, course_name: str() }, ['vip_id', 'date', 'from_time']) },
-    { name: 'propose_cancel', description: '生成取消私教预约草稿(可多节)', parameters: P({ booking_ids: ids('booking_id 列表'), reason: str() }, ['booking_ids']) },
+    { name: 'propose_cancel', description: '生成取消私教预约草稿(可多节)', parameters: P({ booking_ids: ids('booking_id 列表'), reason: str('用户明确说了取消原因时才填，没说就留空(默认管理员代取消)') }, ['booking_ids']) },
     { name: 'propose_reschedule', description: '生成改约草稿: 取消原课并重约到新时间, 一张卡片完成', parameters: P({ booking_id: int(), new_date: str('YYYY-MM-DD, 不填为原日期'), new_from_time: str('HH:mm') }, ['booking_id', 'new_from_time']) },
     { name: 'propose_confirm_bookings', description: '生成批量确认待确认预约草稿; 不传 booking_ids 则取全部待确认', parameters: P({ booking_ids: ids() }) },
     { name: 'propose_finish', description: '生成消课草稿(可批量勾选); 不传 booking_ids 则取全部已上完未消课。mode=finish直接消课 / start_finish发学员确认', parameters: P({ booking_ids: ids(), mode: { type: 'string', enum: ['finish', 'start_finish'] } }) },
@@ -1176,7 +1183,7 @@ async function execAction(ctx, card, input) {
       let date = d.date; let from = d.from_time;
       if (option) [date, from] = option.split(' ');
       await getMember(ctx, d.vip_id);
-      await callApi(ctx, 'POST', '/ptrain-bookings', { vip_id: d.vip_id, coach_id: d.coach_id, course_id: d.course_id, card_id: d.card_id, club_id: d.club_id, date, from_time: from, remark: `代约(${ctx.name})` });
+      await callApi(ctx, 'POST', '/ptrain-bookings', { vip_id: d.vip_id, coach_id: d.coach_id, course_id: d.course_id, card_id: d.card_id, club_id: d.club_id, date, from_time: from, remark: staffOpLabel(ctx, '预约') });
       await logAction(ctx.req, '[AI助手]私教代约', `${d.member} ${d.coach_name} ${date} ${from}`);
       return `已为 ${d.member} 约好 ${dayLabel(date)} ${from} ${d.coach_name} 的${d.course_title}`;
     }
@@ -1185,9 +1192,9 @@ async function execAction(ctx, card, input) {
       if (option) [date, from] = option.split(' ');
       const bk = await getBooking(ctx, d.booking_id);
       if (![0, 1].includes(bk.status)) throw new BizError('原预约已不是待上课状态');
-      await callApi(ctx, 'POST', `/ptrain-bookings/${bk.id}/cancel`, { reason: `改约到${date} ${from}(${ctx.name})` });
+      await callApi(ctx, 'POST', `/ptrain-bookings/${bk.id}/cancel`, { reason: `${staffOpLabel(ctx, '取消')}（改约到${date} ${from}）` });
       try {
-        await callApi(ctx, 'POST', '/ptrain-bookings', { vip_id: bk.vip_id, coach_id: bk.coach_id, course_id: bk.course_id, card_id: bk.card_id, club_id: bk.club_id || d.club_id, date, from_time: from, remark: `代约(${ctx.name})` });
+        await callApi(ctx, 'POST', '/ptrain-bookings', { vip_id: bk.vip_id, coach_id: bk.coach_id, course_id: bk.course_id, card_id: bk.card_id, club_id: bk.club_id || d.club_id, date, from_time: from, remark: staffOpLabel(ctx, '预约') });
       } catch (e) {
         // 重约失败: 恢复原预约, 不让会员凭空少一节课
         await db.exec('UPDATE biz_ptrain_bespeak_record SET status=?, cancel_reason=? WHERE id=?', [bk.status, bk.cancel_reason || '', bk.id]);
@@ -1197,7 +1204,7 @@ async function execAction(ctx, card, input) {
       return `已把 ${bk.realname} 的课从 ${dayLabel(bk.date)} ${bk.from_time} 改到 ${dayLabel(date)} ${from}`;
     }
     case 'cancel':
-      return each(async (id) => { await getBooking(ctx, id); await callApi(ctx, 'POST', `/ptrain-bookings/${id}/cancel`, { reason: d.reason || `${ctx.name}取消` }); }, '取消预约');
+      return each(async (id) => { await getBooking(ctx, id); await callApi(ctx, 'POST', `/ptrain-bookings/${id}/cancel`, { reason: normReason(d.reason) || staffOpLabel(ctx, '取消') }); }, '取消预约');
     case 'confirm':
       return each(async (id) => { await getBooking(ctx, id); await callApi(ctx, 'POST', `/ptrain-bookings/${id}/confirm`); }, '确认预约');
     case 'finish':
