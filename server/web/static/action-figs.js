@@ -93,17 +93,28 @@
     pec_deck: { view: 'front', props: [rect(66, 80, 28, 5)], frames: [{ torso: -90, thigh: 90, shin: 90, uarm: 0, farm: -90, at: ['hp', 80, 80], len: { thigh: 12, shin: 18 } }, { torso: -90, thigh: 90, shin: 90, uarm: 178, farm: -90, at: ['hp', 80, 80], len: { thigh: 12, shin: 18, uarm: 6 } }], cue: '坐直，前臂贴住挡板，用胸部发力把双臂向中间夹拢' },
     pushup: { frames: [{ torso: 208, thigh: 28, shin: 28, foot: 5, uarm: 90, farm: 90, at: ['wr', 52, 108] }, { torso: 199, thigh: 19, shin: 19, foot: 5, uarm: 45, farm: 135, at: ['wr', 52, 108] }], cue: '身体从头到脚保持一条直线，下放到胸部接近地面，核心收紧' },
     pullup: { view: 'front', props: [line([36, 8], [124, 8], 3, 0.5)], frames: [{ torso: -90, thigh: 90, shin: 90, len: { shin: 16 }, uarm: -50, farm: -80, at: ['wr', 101.4, 8] }, { torso: -90, thigh: 90, shin: 90, len: { shin: 16 }, uarm: 6, farm: -100, at: ['wr', 102, 8] }], cue: '双手正握略宽于肩，用背部发力把身体拉起到下巴过杠（手肘向下向外打开），再慢慢下放' },
-    // 大剪刀(分动式高位下拉/划船器械): 正面看, 坐姿、大腿压在挡板下, 双手握两侧高位弧形把手, 手肘向下向外拉到肩侧
+    // 大剪刀: 正面看, 身后两根长力臂交叉成 X(交叉点在上背后方), 每根力臂上端是把手、对侧下端挂配重片;
+    // 手把把手向下拉时力臂绕交叉点转动, 配重端抬起, 整个 X 像剪刀一样开合
     big_scissors: {
       view: 'front',
-      props: [line([80, 0], [80, GROUND], 3, 0.35), line([66, 0], [94, 0], 3, 0.35), rect(66, 86, 28, 5), rect(56, 78, 48, 6, 0.32), rect(70, 104, 20, 5),
-        circ([44, 80], 9, false, 0.4, 2.4), circ([116, 80], 9, false, 0.4, 2.4)],
-      props2: (J) => [line([72, 0], J.wr2, 2.4, 0.45), line([88, 0], J.wr, 2.4, 0.45), line([J.wr2[0] - 6, J.wr2[1]], [J.wr2[0] + 2, J.wr2[1]], 3, 0.6), line([J.wr[0] - 2, J.wr[1]], [J.wr[0] + 6, J.wr[1]], 3, 0.6)],
+      props: [rect(66, 86, 28, 5), rect(56, 78, 48, 6, 0.32), rect(70, 104, 20, 5), line([80, 91], [80, 104], 3, 0.3)],
+      props2: (J) => {
+        const PIV = [80, 50];
+        const lever = (w) => {
+          const dx = PIV[0] - w[0]; const dy = PIV[1] - w[1]; const l = Math.hypot(dx, dy) || 1;
+          const ux = dx / l; const uy = dy / l;
+          const top = [w[0] - ux * 9, w[1] - uy * 9];          // 把手上方露出的一截力臂
+          const end = [PIV[0] + ux * 54, PIV[1] + uy * 54];    // 对侧下端: 配重片
+          return [line(top, end, 5, 0.42), circ(end, 10, false, 0.5, 3), circ(end, 2.5, true, 0.5),
+            line([w[0] - ux * 2 - 3, w[1] + 4], [w[0] + 3 - ux * 2, w[1] - 4], 3.2, 0.7)];   // 把手
+        };
+        return [...lever(J.wr2), ...lever(J.wr), circ(PIV, 3, true, 0.55)];
+      },
       frames: [
         { torso: -90, thigh: 70, shin: 90, len: { thigh: 10, shin: 21 }, uarm: -55, farm: -72, at: ['hp', 80, 80] },
         { torso: -90, thigh: 70, shin: 90, len: { thigh: 10, shin: 21 }, uarm: 18, farm: -95, at: ['hp', 80, 80] },
       ],
-      cue: '坐稳，大腿压在挡板下，双手握住两侧把手，挺胸，用背部把把手向下、向后拉到肩部两侧，顶峰夹紧肩胛骨，再慢慢放回',
+      cue: '坐稳，大腿压在挡板下，双手握住两侧把手，挺胸，用背部把把手向下、向后拉到肩部两侧（身后 X 形力臂随之张开），顶峰夹紧肩胛骨，再慢慢放回',
     },
     pulldown: { props: [...SEAT(58, 80), rect(70, 64, 20, 4)], frames: [{ torso: -96, thigh: 0, shin: 88, uarm: -82, farm: -86, at: ['hp', 70, 79] }, { torso: -100, thigh: 0, shin: 88, uarm: 100, farm: -72, at: ['hp', 70, 79] }], props2: (J) => [line([76, 6], J.wr, 1.4, 0.45), circ([76, 6], 3, false, 0.45, 1.6)], cue: '挺胸，把横杆拉到上胸，感受背部肌肉收缩，手臂只是挂钩' },
     seated_row: { props: [rect(40, 92, 40, 5), rect(118, 82, 4, 22)], frames: [{ torso: -70, thigh: -6, shin: 2, foot: -80, uarm: 2, farm: 2, at: ['hp', 58, 91] }, { torso: -95, thigh: -6, shin: 2, foot: -80, uarm: 140, farm: 8, at: ['hp', 58, 91] }], props2: cableTo([150, 88], 'wr'), cue: '挺胸坐直，把手柄拉向腹部，肩胛骨向后夹紧，不要后仰借力' },
