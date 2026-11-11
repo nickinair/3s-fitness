@@ -6,6 +6,7 @@ const sms = require('../sms');
 const { parsePlan } = require('../parser');
 const { ok, fail, BizError, page, logAction, sendCsv } = require('../util');
 const { staffAuth, parseToken } = require('../middleware/auth');
+const actionFig = require('../action-fig-ai');
 
 function anyAuth(req, res, next) {
   const u = parseToken(req);
@@ -191,8 +192,11 @@ r.get('/training-actions', staffAuth(), async (req, res, next) => {
     const cond = ['merchant_id IN (0,?)', 'status=1']; const params = [req.user.mid];
     if (part) { cond.push('part=?'); params.push(part); }
     if (keyword) { cond.push('name LIKE ?'); params.push(`%${keyword}%`); }
+    await actionFig.ensureCols();
     const rows = await db.query(`SELECT * FROM biz_training_action WHERE ${cond.join(' AND ')} ORDER BY merchant_id DESC, part, id`, params);
     res.json(ok(rows));
+    // 还没配示意图的动作(历史数据)后台慢慢补
+    if (rows.some(x => x.fig_key == null)) actionFig.backfill(req.user.mid).catch(() => {});
   } catch (e) { next(e); }
 });
 
@@ -204,18 +208,40 @@ r.post('/training-actions', staffAuth(), async (req, res, next) => {
     if (dup) throw new BizError('该动作已存在');
     const id = await db.insert('INSERT INTO biz_training_action (merchant_id,name,part,equipment,description,is_custom) VALUES (?,?,?,?,?,1)',
       [req.user.mid, b.name, b.part || '', b.equipment || '', b.description || '']);
-    res.json(ok({ id }));
+    const fig = await setFig(id, b.fig_key, true);
+    res.json(ok({ id, fig_key: fig }));
   } catch (e) { next(e); }
 });
 
 r.put('/training-actions/:id', staffAuth(), async (req, res, next) => {
   try {
     const b = req.body;
+    const old = await db.queryOne('SELECT name FROM biz_training_action WHERE id=? AND merchant_id=?', [req.params.id, req.user.mid]);
     const rst = await db.exec('UPDATE biz_training_action SET name=?,part=?,equipment=?,description=? WHERE id=? AND merchant_id=?',
       [b.name, b.part || '', b.equipment || '', b.description || '', req.params.id, req.user.mid]);
     if (!rst.affectedRows) throw new BizError('系统预置动作不可修改');
-    res.json(ok());
+    const fig = await setFig(Number(req.params.id), b.fig_key, !old || old.name !== b.name);
+    res.json(ok({ fig_key: fig }));
   } catch (e) { next(e); }
+});
+
+/* 示意图: fig_key 不传/传 'auto' = AI 自动识别; 传具体类型或 '' = 人工指定(之后不再被 AI 覆盖)。
+   AI 识别最多等 15 秒, 超时就先返回, 后台继续识别。 */
+async function setFig(id, figKey, rerun) {
+  await actionFig.ensureCols();
+  if (figKey !== undefined && figKey !== 'auto') {
+    await db.exec('UPDATE biz_training_action SET fig_key=?, fig_manual=1 WHERE id=?', [figKey || '', id]);
+    return figKey || '';
+  }
+  if (figKey === 'auto') await db.exec('UPDATE biz_training_action SET fig_manual=0 WHERE id=?', [id]);
+  else { const a = await db.queryOne('SELECT fig_manual FROM biz_training_action WHERE id=?', [id]); if (a && a.fig_manual && !rerun) return undefined; }
+  const job = actionFig.assignFig(id, { force: true }).catch((e) => { console.error('[action-fig]', e.message); return null; });
+  return Promise.race([job, new Promise(r => setTimeout(() => r(undefined), 15000))]);
+}
+
+// 前端显示示意图用: 本店自定义动作 名称 → 示意图类型
+r.get('/action-figs', staffAuth(), async (req, res, next) => {
+  try { res.json(ok(await actionFig.figMap(req.user.mid))); } catch (e) { next(e); }
 });
 
 r.delete('/training-actions/:id', staffAuth(), async (req, res, next) => {
@@ -320,6 +346,8 @@ r.post('/training-plans', staffAuth(), async (req, res, next) => {
       [req.user.mid, req.clubId, coachId, coachName, b.vip_id || 0, vipName, b.title,
         b.plan_date || null, JSON.stringify(b.items), b.note || '', b.is_template ? 1 : 0]);
     res.json(ok({ id }));
+    // 存为模板: 模板里动作库还没有的动作自动补进本店动作库, 并由 AI 配示意图(后台进行, 不影响保存)
+    if (b.is_template) actionFig.addPlanActions(req.user.mid, b.items).catch(e => console.error('[action-fig] plan:', e.message));
   } catch (e) { next(e); }
 });
 
@@ -332,6 +360,7 @@ r.put('/training-plans/:id', staffAuth(), async (req, res, next) => {
     await db.exec('UPDATE biz_training_plan SET title=?,plan_date=?,items=?,note=?,is_template=? WHERE id=?',
       [b.title, b.plan_date || null, JSON.stringify(b.items || []), b.note || '', b.is_template ? 1 : 0, plan.id]);
     res.json(ok());
+    if (b.is_template) actionFig.addPlanActions(req.user.mid, b.items || []).catch(e => console.error('[action-fig] plan:', e.message));
   } catch (e) { next(e); }
 });
 

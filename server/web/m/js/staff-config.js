@@ -191,7 +191,8 @@
         parts: ['全部', '胸', '背', '肩', '手臂', '腿', '臀', '核心', '有氧', '拉伸'],
         keyword: '',
         list: [], loading: false,
-        popup: false, form: {}, saving: false, partShow: false,
+        popup: false, form: {}, saving: false, partShow: false, figShow: false,
+        figKeys: (window.ActionFig && ActionFig.keys) || [], figLabels: (window.ActionFig && ActionFig.labels) || {},
       };
     },
     computed: {
@@ -222,7 +223,7 @@
       '            <div class="muted mt4" v-if="a.equipment">器械：{{ a.equipment }}</div>',
       '            <div class="muted mt4" v-if="a.description">{{ a.description }}</div>',
       '          </div>',
-      '          <action-fig :name="a.name" :desc="a.description" :size="64" style="margin-left:8px"/>',
+      '          <action-fig :name="a.name" :desc="a.description" :fig="a.fig_key" :size="64" style="margin-left:8px"/>',
       '        </div>',
       '      </div>',
       '      <template #right v-if="canEdit && a.merchant_id>0">',
@@ -237,8 +238,21 @@
       '      <van-field v-model="form.name" label="动作名称" placeholder="如：绳索面拉" required/>',
       '      <van-field :model-value="form.part" label="部位" placeholder="选择部位" readonly is-link required @click="partShow=true"/>',
       '      <van-field v-model="form.equipment" label="器械" placeholder="如：龙门架 / 哑铃 / 自重"/>',
-      '      <van-field v-model="form.description" type="textarea" rows="3" autosize label="说明" placeholder="动作要点、注意事项" :border="false"/>',
+      '      <van-field v-model="form.description" type="textarea" rows="3" autosize label="说明" placeholder="动作要点、注意事项，留空 AI 会帮你补"/>',
+      '      <van-field label="示意图" readonly is-link :border="false" @click="figShow=true">',
+      '        <template #input><div class="flex" style="gap:8px"><action-fig v-if="form.fig_mode !== \'auto\' && form.fig_mode" :name="form.name" :fig="form.fig_mode" :size="44"/><span>{{ figText(form.fig_mode) }}</span></div></template>',
+      '      </van-field>',
       '      <div class="mt12"><van-button type="primary" block round :loading="saving" @click="save">保存</van-button></div>',
+      '    </div>',
+      '  </van-popup>',
+      '  <van-popup v-model:show="figShow" position="bottom" round safe-area-inset-bottom style="max-height:78vh;display:flex;flex-direction:column">',
+      '    <div class="pop-head" style="flex-shrink:0;padding:16px 16px 6px;text-align:center">选择示意图</div>',
+      '    <div style="flex:1;overflow-y:auto;padding:0 12px 16px">',
+      '      <div class="fig-opt auto" :class="{on: form.fig_mode===\'auto\'}" @click="pickFig(\'auto\')"><b>AI 自动识别</b><span class="muted">保存时 AI 根据动作名选最接近的图</span></div>',
+      '      <div class="fig-grid">',
+      '        <div v-for="k in figKeys" :key="k" class="fig-cell" :class="{on: form.fig_mode===k}" @click="pickFig(k)"><action-fig :name="form.name || k" :fig="k" :size="88" anim/><div class="t">{{ figLabels[k] }}</div></div>',
+      '      </div>',
+      '      <div class="fig-opt" :class="{on: form.fig_mode===\'\'}" @click="pickFig(\'\')"><b>不显示示意图</b></div>',
       '    </div>',
       '  </van-popup>',
       '  <van-popup v-model:show="partShow" position="bottom" round>',
@@ -257,22 +271,29 @@
         } finally { this.loading = false; }
       },
       openAdd() {
-        this.form = { name: '', part: this.part === '全部' ? '胸' : this.part, equipment: '', description: '' };
+        this.form = { name: '', part: this.part === '全部' ? '胸' : this.part, equipment: '', description: '', fig_mode: 'auto' };
         this.popup = true;
       },
-      openEdit(row) { this.form = JSON.parse(JSON.stringify(row)); this.popup = true; },
+      openEdit(row) { this.form = Object.assign(JSON.parse(JSON.stringify(row)), { fig_mode: row.fig_manual ? (row.fig_key || '') : 'auto' }); this.popup = true; },
+      figText(k) { return k === 'auto' ? 'AI 自动识别' : (k ? this.figLabels[k] || k : '不显示'); },
+      pickFig(k) { this.form.fig_mode = k; this.figShow = false; },
       onPart(v) { this.form.part = v.selectedOptions[0].value; this.partShow = false; },
       async save() {
         if (!this.form.name || !String(this.form.name).trim()) return vant.showToast('请填写动作名称');
         if (!this.form.part) return vant.showToast('请选择部位');
         this.saving = true;
+        const auto = this.form.fig_mode === 'auto';
+        const t = auto ? vant.showLoadingToast({ message: 'AI 正在识别动作…', forbidClick: true, duration: 0 }) : null;
         try {
-          if (this.form.id) await API.put('/training-actions/' + this.form.id, this.form);
-          else await API.post('/training-actions', this.form);
-          vant.showToast({ message: '保存成功', icon: 'success' });
+          const body = Object.assign({}, this.form, { fig_key: this.form.fig_mode });
+          const d = this.form.id ? await API.put('/training-actions/' + this.form.id, body) : await API.post('/training-actions', body);
+          if (t) t.close();
+          const fk = d && d.fig_key;
+          vant.showToast(auto && fk !== undefined ? (fk ? '已保存，配图：' + (this.figLabels[fk] || fk) : '已保存，没找到合适的示意图') : { message: '保存成功', icon: 'success' });
           this.popup = false;
+          window.loadActionFigs && window.loadActionFigs(true);
           this.load();
-        } finally { this.saving = false; }
+        } catch (e) { if (t) t.close(); } finally { this.saving = false; }
       },
       async del(row) {
         try {

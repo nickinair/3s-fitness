@@ -169,8 +169,20 @@
   window.PlanImage.ready = planReady;
 
   /* 动作示意图: 缩略图组件 + 点开放大(动画 + 动作要领) —— 图形由 /static/action-figs.js 生成 */
-  window.showActionFig = function (name, desc) {
-    const m = window.ActionFig && ActionFig.match(name);
+  // 本店自定义动作的示意图(AI 识别 / 人工指定)表, 按登录身份懒加载一次; figStore.v 变化让缩略图重新渲染
+  const figStore = Vue.reactive({ v: 0 });
+  let figLoadedFor = '';
+  window.loadActionFigs = async function (force) {
+    if (!window.ActionFig || !Store.token || (!force && figLoadedFor === Store.token)) return;
+    figLoadedFor = Store.token;
+    try {
+      const map = await API.get(Store.type === 'staff' ? '/action-figs' : '/member/action-figs', { silent: true });
+      ActionFig.setCustom(map || {});
+      figStore.v++;
+    } catch (e) { figLoadedFor = ''; }
+  };
+  window.showActionFig = function (name, desc, fig) {
+    const m = window.ActionFig && ActionFig.match(name, fig == null ? undefined : fig);
     if (!m) return;
     const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     vant.showDialog({
@@ -186,15 +198,18 @@
     });
   };
   (window.MComponents = window.MComponents || {})['action-fig'] = {
-    props: { name: String, desc: String, size: { type: Number, default: 56 }, anim: { type: Boolean, default: false } },
+    // fig: 动作库里存的示意图类型(有就用它, 没有按 AI 识别表/内置规则)
+    props: { name: String, desc: String, fig: { type: String, default: undefined }, size: { type: Number, default: 56 }, anim: { type: Boolean, default: false } },
     computed: {
       html() {
-        const m = window.ActionFig && ActionFig.match(this.name);
+        if (!window.ActionFig || figStore.v < 0) return '';
+        const m = ActionFig.match(this.name, this.fig == null ? undefined : this.fig);
         return m ? ActionFig.svg(m, { anim: this.anim }) : '';
       },
     },
+    mounted() { window.loadActionFigs(); },
     template: '<span v-if="html" class="afig-thumb" :style="{width: size + \'px\', height: Math.round(size * 0.75) + \'px\'}" v-html="html" @click.stop="open" title="查看动作示意"></span>',
-    methods: { open() { window.showActionFig(this.name, this.desc); } },
+    methods: { open() { window.showActionFig(this.name, this.desc, this.fig); } },
   };
 
   /* 解析 items (JSON 字符串) */

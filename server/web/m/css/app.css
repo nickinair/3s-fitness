@@ -1423,3 +1423,11 @@ html.is-mp .staff-hero::after { top: 8px; }
 .afig-desc { text-align: left; font-size: 12px; line-height: 1.6; color: var(--c-text-3); margin-top: 6px; }
 .afig-tip { font-size: 11px; color: var(--c-text-4); margin-top: 8px; }
 .afig-dialog .van-dialog__message { max-height: 70vh; }
+/* 动作库: 示意图选择 */
+.fig-opt { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; margin: 6px 0; border-radius: 10px; background: var(--c-panel); border: 1.5px solid transparent; font-size: 14px; color: var(--c-title); }
+.fig-opt .muted { font-size: 12px; }
+.fig-opt.on, .fig-cell.on { border-color: var(--brand); }
+.fig-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.fig-cell { border: 1.5px solid transparent; border-radius: 10px; padding: 4px; text-align: center; background: var(--c-card); }
+.fig-cell .afig-thumb { width: 100% !important; height: auto !important; aspect-ratio: 4 / 3; }
+.fig-cell .t { font-size: 11px; color: var(--c-text-2); margin-top: 3px; line-height: 1.3; }

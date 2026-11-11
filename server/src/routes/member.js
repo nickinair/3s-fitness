@@ -235,6 +235,10 @@ r.get('/coaches', async (req, res, next) => {
 });
 
 // ---- 我的体测数据 ----
+// 动作示意图: 本店自定义动作 名称 → 示意图类型(系统预置动作前端规则就能识别)
+r.get('/action-figs', async (req, res, next) => {
+  try { res.json(ok(await require('../action-fig-ai').figMap(req.user.mid))); } catch (e) { next(e); }
+});
 r.get('/body-records', async (req, res, next) => {
   try {
     res.json(ok(await db.query('SELECT * FROM biz_body_record WHERE vip_id=? ORDER BY record_date, id', [req.user.vip])));

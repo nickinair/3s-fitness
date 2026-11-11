@@ -8,6 +8,7 @@ window.AppPages.TrainingActions = {
       keyword: '',
       list: [], loading: false,
       dlg: false, form: {}, saving: false,
+      figKeys: (window.ActionFig && ActionFig.keys) || [], figLabels: (window.ActionFig && ActionFig.labels) || {},
       Fmt: window.Fmt, DICT: window.DICT,
     };
   },
@@ -25,7 +26,7 @@ window.AppPages.TrainingActions = {
       </div>
       <el-table border :data="list" v-loading="loading" stripe>
         <el-table-column label="示意图" width="116">
-          <template #default="{ row }"><span v-if="figHtml(row.name)" class="afig-thumb" style="width:80px;height:60px;cursor:pointer" v-html="figHtml(row.name)" @click="showFig(row)"></span><span v-else class="text-muted" style="font-size:12px">—</span></template>
+          <template #default="{ row }"><span v-if="figHtml(row.name, row.fig_key)" class="afig-thumb" style="width:80px;height:60px;cursor:pointer" v-html="figHtml(row.name, row.fig_key)" @click="showFig(row)"></span><span v-else class="text-muted" style="font-size:12px">—</span></template>
         </el-table-column>
         <el-table-column prop="name" label="动作名称" min-width="150">
           <template #default="{ row }"><span style="font-weight:600">{{ row.name }}</span></template>
@@ -65,7 +66,17 @@ window.AppPages.TrainingActions = {
           </el-select>
         </el-form-item>
         <el-form-item label="器械"><el-input v-model="form.equipment" placeholder="如：龙门架 / 哑铃 / 自重" /></el-form-item>
-        <el-form-item label="说明"><el-input v-model="form.description" type="textarea" :rows="3" placeholder="动作要点、注意事项" /></el-form-item>
+        <el-form-item label="说明"><el-input v-model="form.description" type="textarea" :rows="3" placeholder="动作要点、注意事项，留空 AI 会帮你补" /></el-form-item>
+        <el-form-item label="示意图">
+          <div style="display:flex;align-items:center;gap:10px;width:100%">
+            <el-select v-model="form.fig_mode" filterable style="flex:1">
+              <el-option value="auto" label="AI 自动识别（保存时根据动作名选最接近的图）" />
+              <el-option v-for="k in figKeys" :key="k" :value="k" :label="figLabels[k]" />
+              <el-option value="" label="不显示示意图" />
+            </el-select>
+            <span v-if="form.fig_mode && form.fig_mode !== 'auto' && figHtml(form.name, form.fig_mode)" class="afig-thumb" style="width:64px;height:48px" v-html="figHtml(form.name, form.fig_mode)"></span>
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dlg=false">取消</el-button>
@@ -75,9 +86,10 @@ window.AppPages.TrainingActions = {
   </div>`,
   methods: {
     // 动作示意图(线条小人, /static/action-figs.js), 匹配不到动作名时不显示
-    figHtml(name) { const m = window.ActionFig && ActionFig.match(name); return m ? ActionFig.svg(m, { anim: false }) : ''; },
+    // fig: 动作库里存的示意图类型(AI 识别或人工指定), null 时按内置规则
+    figHtml(name, fig) { const m = window.ActionFig && ActionFig.match(name, fig == null ? undefined : fig); return m ? ActionFig.svg(m, { anim: false }) : ''; },
     showFig(row) {
-      const m = window.ActionFig && ActionFig.match(row.name);
+      const m = window.ActionFig && ActionFig.match(row.name, row.fig_key == null ? undefined : row.fig_key);
       if (!m) return;
       const esc = t => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       ElementPlus.ElMessageBox.alert('<div class="afig-big">' + ActionFig.svg(m) + '</div><div class="afig-cue"><b>动作要领</b>' + esc(m.cue) + '</div>'
@@ -93,18 +105,20 @@ window.AppPages.TrainingActions = {
       } finally { this.loading = false; }
     },
     openAdd() {
-      this.form = { name: '', part: this.part === '全部' ? '胸' : this.part, equipment: '', description: '' };
+      this.form = { name: '', part: this.part === '全部' ? '胸' : this.part, equipment: '', description: '', fig_mode: 'auto' };
       this.dlg = true;
     },
-    openEdit(row) { this.form = JSON.parse(JSON.stringify(row)); this.dlg = true; },
+    openEdit(row) { this.form = Object.assign(JSON.parse(JSON.stringify(row)), { fig_mode: row.fig_manual ? (row.fig_key || '') : 'auto' }); this.dlg = true; },
     async save() {
       if (!this.form.name) return ElementPlus.ElMessage.warning('请填写动作名称');
       if (!this.form.part) return ElementPlus.ElMessage.warning('请选择部位');
       this.saving = true;
       try {
-        if (this.form.id) await api.put('/training-actions/' + this.form.id, this.form);
-        else await api.post('/training-actions', this.form);
-        ElementPlus.ElMessage.success('保存成功');
+        const body = Object.assign({}, this.form, { fig_key: this.form.fig_mode });
+        const d = this.form.id ? await api.put('/training-actions/' + this.form.id, body) : await api.post('/training-actions', body);
+        const fk = d && d.fig_key;
+        if (this.form.fig_mode === 'auto' && fk !== undefined) ElementPlus.ElMessage.success(fk ? '已保存，AI 配图：' + (this.figLabels[fk] || fk) : '已保存，没找到合适的示意图，可手动选择');
+        else ElementPlus.ElMessage.success('保存成功');
         this.dlg = false;
         this.load();
       } finally { this.saving = false; }

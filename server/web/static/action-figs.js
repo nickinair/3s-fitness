@@ -9,6 +9,7 @@
  * 颜色全部用 currentColor, 由外层 CSS 决定(跟随主题)。
  */
 (function () {
+  const root = typeof window !== 'undefined' ? window : {};
   const L = { torso: 33, neck: 5, head: 7.5, uarm: 18, farm: 16, thigh: 23, shin: 22, foot: 8 };
   const GROUND = 109;
   const rad = d => d * Math.PI / 180;
@@ -80,8 +81,8 @@
     squat_bb: { load: 'bb', loadAt: 'sh', frames: [S({ uarm: 150, farm: -40 }), S({ torso: -58, thigh: 12, shin: 112, uarm: 175, farm: -30 })], cue: '挺胸收腹，臀部向后坐，膝盖与脚尖同向，大腿蹲至与地面平行' },
     squat: { load: 'db', frames: [S({ uarm: 110, farm: -70 }), S({ torso: -62, thigh: 12, shin: 112, uarm: 130, farm: -40 })], cue: '重心在脚掌中部，臀部向后坐，起身时臀腿发力' },
     lunge: { load: 'db', frames: [S({ thigh: 80, shin: 95, thigh2: 112, shin2: 98, foot2: 40, at: ['an', 95, 108] }), S({ thigh: 8, shin: 95, thigh2: 100, shin2: 172, foot2: 40, at: ['an', 95, 108] })], cue: '前腿膝盖不超过脚尖太多，后腿膝盖下沉接近地面，上身保持直立' },
-    deadlift: { load: 'bb', frames: [S({ torso: -28, thigh: 60, shin: 98 }), S({})], cue: '背部挺直，杠铃贴着腿上下，用臀部和腿的力量站起' },
-    rdl: { load: 'bb', frames: [S({ torso: -30, thigh: 82, shin: 92 }), S({})], cue: '膝盖微屈，臀部向后推，感受大腿后侧拉伸，背部始终挺直' },
+    deadlift: { load: 'bb', still: 0, frames: [S({ torso: -28, thigh: 60, shin: 98 }), S({})], cue: '背部挺直，杠铃贴着腿上下，用臀部和腿的力量站起' },
+    rdl: { load: 'bb', still: 0, frames: [S({ torso: -30, thigh: 82, shin: 92 }), S({})], cue: '膝盖微屈，臀部向后推，感受大腿后侧拉伸，背部始终挺直' },
     bench_press: { load: 'bb', props: BENCH, frames: [lying({ uarm: -90, farm: -90 }), lying({ uarm: 52, farm: -88 })], cue: '肩胛骨收紧贴住凳面，下放到胸部，向上推起时不要锁死手肘' },
     incline_press: { load: 'db', props: [{ t: 'p', pts: [[38, 60], [92, 84], [92, 89], [36, 65]], o: 0.22 }, ...SEAT(86, 84, 30)], frames: [{ torso: -152, thigh: 8, shin: 85, uarm: -70, farm: -70, at: ['hp', 94, 82] }, { torso: -152, thigh: 8, shin: 85, uarm: 70, farm: -80, at: ['hp', 94, 82] }], cue: '凳面上斜 30°左右，推起时重量在上胸正上方' },
     chest_press: { props: [...SEAT(58, 80), rect(52, 40, 5, 42)], frames: [{ torso: -90, thigh: 0, shin: 88, uarm: 170, farm: -5, at: ['hp', 70, 79] }, { torso: -90, thigh: 0, shin: 88, uarm: 2, farm: 0, at: ['hp', 70, 79] }], cue: '背部贴紧靠垫，向前推到手臂接近伸直，慢慢回放' },
@@ -126,14 +127,14 @@
     rower: { props: [rect(24, 100, 120, 5)], frames: [{ torso: -58, thigh: -55, shin: 52, foot: -40, uarm: 8, farm: 6, at: ['hp', 58, 96] }, { torso: -112, thigh: -4, shin: 2, foot: -80, uarm: 135, farm: -10, at: ['hp', 58, 96] }], props2: cableTo([146, 92], 'wr'), cue: '先蹬腿、再后仰、最后拉手，回程顺序相反，保持节奏' },
     stair: { props: [{ t: 'pl', pts: [[40, 109], [40, 96], [70, 96], [70, 83], [100, 83], [100, 70], [130, 70]], o: 0.35 }], frames: [{ torso: -84, thigh: 15, shin: 95, thigh2: 82, shin2: 95, uarm: 100, farm: 60, at: ['an2', 64, 95] }, { torso: -84, thigh: 82, shin: 95, thigh2: 15, shin2: 95, uarm: 70, farm: 30, at: ['an', 90, 82] }], cue: '身体直立不要趴在扶手上，整只脚踩上台阶，匀速攀爬' },
     jump_rope: { view: 'front', frames: [S({ uarm: 75, farm: 15, at: ['an', 85, 108] }), S({ uarm: 75, farm: 15, thigh: 94, shin: 86, at: ['an', 85, 101] })], props2: (J, i) => [{ t: 'q', x1: J.wr2[0], y1: J.wr2[1], cx: 80, cy: i === 0 ? -6 : 128, x2: J.wr[0], y2: J.wr[1], o: 0.5, w: 1.4 }], cue: '用手腕摇绳，前脚掌着地轻跳，膝盖微屈缓冲' },
-    burpee: { frames: [S({ uarm: -85, farm: -90, at: ['an', 96, 108] }), S({ torso: -40, thigh: 8, shin: 118, uarm: 90, farm: 88, at: ['an', 96, 108] }), { torso: -28, thigh: 152, shin: 152, foot: 65, uarm: 90, farm: 90, at: ['wr', 112, 108] }], cue: '下蹲双手撑地 → 双脚向后跳成平板 → 收回 → 起跳双手上举' },
+    burpee: { still: 1, frames: [S({ uarm: -85, farm: -90, at: ['an', 96, 108] }), S({ torso: -40, thigh: 8, shin: 118, uarm: 90, farm: 88, at: ['an', 96, 108] }), { torso: -28, thigh: 152, shin: 152, foot: 65, uarm: 90, farm: 90, at: ['wr', 112, 108] }], cue: '下蹲双手撑地 → 双脚向后跳成平板 → 收回 → 起跳双手上举' },
     jumping_jack: { view: 'front', frames: [S({ uarm: 84, farm: 88, thigh: 92, shin: 90, at: ['hp', 80, 64] }), S({ uarm: -55, farm: -75, thigh: 72, shin: 76, at: ['hp', 80, 62] })], cue: '跳起时双脚分开、双手头顶击掌，落地时还原，前脚掌着地' },
     battle_rope: { frames: [S({ torso: -68, thigh: 40, shin: 112, uarm: 30, farm: -25 }), S({ torso: -68, thigh: 40, shin: 112, uarm: 62, farm: 45 })], props2: (J, i) => [{ t: 'q', x1: J.wr[0], y1: J.wr[1], cx: 128, cy: i === 0 ? 70 : 118, x2: 152, y2: 104, o: 0.5, w: 2 }], cue: '半蹲，核心收紧，双臂快速上下甩动让绳子形成波浪' },
     foam_roller: { props2: () => [circ([104, 101], 7, false, 0.6, 2.4)], frames: [{ torso: -125, thigh: 4, shin: 0, foot: -60, uarm: 100, farm: 100, at: ['hp', 70, 95] }, { torso: -125, thigh: 4, shin: 0, foot: -60, uarm: 100, farm: 100, at: ['hp', 84, 95] }], cue: '把泡沫轴放在酸痛部位下方，用手撑地控制身体前后缓慢滚动' },
     stretch: { frames: [{ torso: -82, thigh: -2, shin: 0, foot: -80, uarm: -80, farm: -86, at: ['hp', 56, 101] }, { torso: -22, thigh: -2, shin: 0, foot: -80, uarm: 12, farm: 8, at: ['hp', 56, 101] }], cue: '坐姿双腿伸直，从髋部向前折叠伸手够脚尖，每个部位保持 20~30 秒，不要弹振' },
     leg_swing: { frames: [S({ thigh: 40, shin: 70, thigh2: 90, shin2: 90, uarm: 0, farm: 0, at: ['an2', 80, 108] }), S({ thigh: 130, shin: 112, thigh2: 90, shin2: 90, uarm: 0, farm: 0, at: ['an2', 80, 108] })], cue: '扶稳后腿前后摆动，幅度由小到大，热身 1~2 组即可' },
     arm_circle: { view: 'front', frames: [S({ uarm: 0, farm: 0 }), S({ uarm: -60, farm: -60 }), S({ uarm: -2, farm: -2 }), S({ uarm: 55, farm: 60 })], cue: '双臂侧平举，由小到大画圈，前后各转 10~15 圈' },
-    kb_swing: { load: 'kb', frames: [S({ torso: -30, thigh: 68, shin: 98, uarm: 110, farm: 112 }), S({ uarm: 2, farm: 0 })], cue: '用髋部爆发把壶铃荡到胸前高度，不是用手臂往上抬' },
+    kb_swing: { load: 'kb', still: 0, frames: [S({ torso: -30, thigh: 68, shin: 98, uarm: 110, farm: 112 }), S({ uarm: 2, farm: 0 })], cue: '用髋部爆发把壶铃荡到胸前高度，不是用手臂往上抬' },
   };
 
   /* ---------- 名称匹配: 先具体后宽泛, 匹配不到就不画 ---------- */
@@ -158,12 +159,14 @@
     [/泡沫轴|筋膜/, 'foam_roller'], [/肩部环绕|绕肩|手臂绕环/, 'arm_circle'], [/动态热身|摆腿/, 'leg_swing'], [/拉伸|伸展/, 'stretch'],
     [/壶铃/, 'kb_swing'],
   ];
-  function match(name) {
+  // 门店动作库里由 AI 识别/人工指定的示意图(动作名 → 图形), 优先于内置规则; 值为 '' 表示明确不画
+  let CUSTOM = {};
+  function ruleKey(n) { const r = RULES.find(([re]) => re.test(n)); return r ? r[1] : null; }
+  function match(name, figKey) {
     const n = String(name || '').replace(/\s/g, '');
     if (!n) return null;
-    const r = RULES.find(([re]) => re.test(n));
-    if (!r) return null;
-    const key = r[1];
+    let key = figKey !== undefined && figKey !== null ? figKey : (Object.prototype.hasOwnProperty.call(CUSTOM, n) ? CUSTOM[n] : ruleKey(n));
+    if (!key || !P[key]) return null;
     let load = P[key].load || '';
     if (load) {
       if (/哑铃/.test(n)) load = 'db';
@@ -238,7 +241,8 @@
     // 两帧: 起始→发力位→停顿→还原; 多帧: 依次循环
     const seq = n === 2 ? [0, 1, 1, 0, 0] : [...frames.keys(), 0];
     const kt = n === 2 ? '0;0.38;0.55;0.92;1' : seq.map((_, i) => f1(i / (seq.length - 1))).join(';');
-    const still = opt.frame != null ? opt.frame : (n === 2 ? 1 : 0);
+    // 静态缩略图显示最有辨识度的一帧(默认发力位, 硬拉类显示屈髋位)
+    const still = opt.frame != null ? opt.frame : (p.still != null ? p.still : (n === 2 ? 1 : 0));
     const els = frames[0].map((pr, idx) => {
       const base = frames[still][idx];
       const st = `stroke="currentColor" stroke-opacity="${pr.o}" stroke-width="${pr.w || 2}" stroke-linecap="round" stroke-linejoin="round"`;
@@ -266,7 +270,7 @@
     const m = typeof name === 'object' ? name : match(name);
     if (!m || !P[m.key]) return false;
     const p = P[m.key];
-    const list = prims(m.key, m.load, p.frames.length === 2 ? 1 : 0);
+    const list = prims(m.key, m.load, p.still != null ? p.still : (p.frames.length === 2 ? 1 : 0));
     const b = fitBox(p.frames.map((_, i) => prims(m.key, m.load, i)));
     const s = Math.min(w / b.w, h / b.h);
     const ox = x + (w - b.w * s) / 2 - b.x * s; const oy = y + (h - b.h * s) / 2 - b.y * s;
@@ -289,5 +293,26 @@
     return true;
   }
 
-  window.ActionFig = { match, svg, draw, keys: Object.keys(P), cueOf: k => (P[k] || {}).cue || '' };
+  // 每种图形的中文说明(管理端下拉选择 / 服务端让 AI 归类时用)
+  const LABELS = {
+    squat_bb: '杠铃深蹲(杠铃扛肩下蹲)', squat: '徒手/哑铃深蹲', lunge: '箭步蹲/弓步/分腿蹲', deadlift: '硬拉(屈膝从地面拉起)', rdl: '罗马尼亚硬拉(直腿屈髋)',
+    bench_press: '平板卧推(躺凳上推)', incline_press: '上斜卧推', chest_press: '坐姿器械推胸', fly_top: '仰卧飞鸟', cable_fly: '绳索夹胸/站姿飞鸟',
+    pec_deck: '蝴蝶机夹胸', pushup: '俯卧撑', pullup: '引体向上', pulldown: '高位下拉', seated_row: '坐姿划船(绳索/器械)',
+    bent_row: '俯身划船(杠铃/哑铃/T杠)', straight_pulldown: '直臂下压', ohp: '肩上推举', lateral_raise: '侧平举', front_raise: '前平举',
+    rear_fly: '俯身反向飞鸟', face_pull: '面拉', upright_row: '直立划船', curl: '二头弯举', pushdown: '三头下压',
+    skull_crusher: '仰卧臂屈伸', dips: '双杠臂屈伸', leg_press: '腿举', leg_ext: '腿屈伸', leg_curl: '俯卧腿弯举',
+    calf_raise: '提踵', glute_bridge: '臀桥', hip_thrust: '杠铃臀推', hip_abduction: '髋外展', kickback: '后踢腿',
+    plank: '平板支撑', side_plank: '侧平板支撑', crunch: '卷腹', hanging_raise: '悬垂举腿', russian_twist: '俄罗斯转体',
+    mountain_climber: '登山跑', ab_wheel: '健腹轮', run: '跑步/跑步机', high_knees: '高抬腿', elliptical: '椭圆机',
+    bike: '单车/骑行', rower: '划船机', stair: '爬楼/台阶', jump_rope: '跳绳', burpee: '波比跳',
+    jumping_jack: '开合跳', battle_rope: '战绳', foam_roller: '泡沫轴放松', stretch: '坐姿体前屈/拉伸', leg_swing: '摆腿/动态热身',
+    arm_circle: '手臂绕环', kb_swing: '壶铃摆动',
+  };
+  const api = {
+    match, svg, draw, keys: Object.keys(P), labels: LABELS, ruleKey: n => ruleKey(String(n || '').replace(/\s/g, '')),
+    cueOf: k => (P[k] || {}).cue || '',
+    setCustom(map) { CUSTOM = {}; Object.keys(map || {}).forEach((k) => { CUSTOM[String(k).replace(/\s/g, '')] = map[k] || ''; }); },
+  };
+  root.ActionFig = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

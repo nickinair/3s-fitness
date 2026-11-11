@@ -148,6 +148,9 @@ Base URL: `http://localhost:8090/api`
 - 里程碑: GET /milestones?status=0|1&vip_id&keyword（教练角色自动只看自己名下）→{list,total}；GET /milestones/pending-count→{count}；POST /milestones/:id/summary {summary}
   字段: realname/coach_name/type(1按课时2按天)/node_value/status(0待总结1已总结)/summary/summary_time/card_type_name
 - 动作库: GET /training-actions?part&keyword（part: 胸/背/肩/手臂/腿/臀/核心/有氧/拉伸; merchant_id=0 为系统预置不可改）；POST/PUT/DELETE /training-actions(/:id) {name,part,equipment,description}
+  示意图: 每个动作带 fig_key(示意图类型, 见 /static/action-figs.js; ''=不画, NULL=未识别) 与 fig_manual(1=人工指定)。POST/PUT 可传 fig_key: 不传或 'auto'=AI 自动识别(先按名称规则, 认不出再让 AI 归类, 并补全空的部位/器械/说明), 具体类型或 ''=人工指定; 返回 {fig_key}
+  GET /action-figs → {动作名: fig_key}（本店自定义动作, 前端显示示意图用）；会员端 GET /member/action-figs 同
+  训练计划存为模板(POST/PUT /training-plans 且 is_template=1)时, 计划里动作库没有的动作自动补进本店动作库并配图(后台进行)
 - 训练计划: GET /training-plans?vip_id&coach_id&is_template&keyword→{list,total}；GET/POST/PUT/DELETE /training-plans(/:id)
   {title, vip_id(0=模板), coach_id(非教练角色需传), plan_date, items:[{action_name,sets,reps,unit(次/秒/分钟),weight,rest,remark,part?}], note, is_template}
   POST /training-plans/parse {text} → items[]（AI/语音一句话解析, 如"卧推4组12次60kg，跑步机20分钟"）
