@@ -347,8 +347,8 @@ r.post('/training-plans', staffAuth(), async (req, res, next) => {
       [req.user.mid, req.clubId, coachId, coachName, b.vip_id || 0, vipName, b.title,
         b.plan_date || null, JSON.stringify(b.items), b.note || '', b.is_template ? 1 : 0]);
     res.json(ok({ id }));
-    // 存为模板: 模板里动作库还没有的动作自动补进本店动作库, 并由 AI 配示意图(后台进行, 不影响保存)
-    if (b.is_template) actionFig.addPlanActions(req.user.mid, b.items).catch(e => console.error('[action-fig] plan:', e.message));
+    // 计划里动作库还没有的动作自动补进本店动作库, 并由 AI 配示意图(后台进行, 不影响保存)
+    actionFig.addPlanActions(req.user.mid, b.items).catch(e => console.error('[action-fig] plan:', e.message));
   } catch (e) { next(e); }
 });
 
@@ -361,7 +361,7 @@ r.put('/training-plans/:id', staffAuth(), async (req, res, next) => {
     await db.exec('UPDATE biz_training_plan SET title=?,plan_date=?,items=?,note=?,is_template=? WHERE id=?',
       [b.title, b.plan_date || null, JSON.stringify(b.items || []), b.note || '', b.is_template ? 1 : 0, plan.id]);
     res.json(ok());
-    if (b.is_template) actionFig.addPlanActions(req.user.mid, b.items || []).catch(e => console.error('[action-fig] plan:', e.message));
+    actionFig.addPlanActions(req.user.mid, b.items || []).catch(e => console.error('[action-fig] plan:', e.message));
   } catch (e) { next(e); }
 });
 

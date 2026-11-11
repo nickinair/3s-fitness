@@ -560,6 +560,7 @@ r.put('/ptrain-bookings/:id/lesson-plan', staffAuth(), async (req, res, next) =>
              VALUES (?,?,?,?,?,?,?,?,?,?,0,1)`,
             [bk.merchant_id, bk.club_id || 0, bk.coach_id || 0, bk.coach_name || '', bk.vip_id, bk.realname || '', title, planDate, itemsJson, note]);
         }
+        require('../action-fig-ai').addPlanActions(bk.merchant_id, parsed.items).catch(e => console.error('[action-fig] lesson-plan:', e.message));
       }
     }
     await db.exec('UPDATE biz_ptrain_bespeak_record SET lesson_plan=? WHERE id=?', [lessonPlan, bk.id]);

@@ -50,7 +50,7 @@
     methods: {
       itemCount(p) { return window.parsePlanItems(p.items).length; },
       async genImage(p) {
-        await window.PlanImage.ready;
+        await Promise.all([window.PlanImage.ready, window.loadActionFigs ? window.loadActionFigs() : null]);
         this.img = window.PlanImage({
           title: p.title, member: p.is_template ? '' : (p.realname || ''), coach: p.coach_name || (Store.user || {}).realname,
           date: H.dateOf(p.plan_date), note: p.note, items: window.parsePlanItems(p.items),

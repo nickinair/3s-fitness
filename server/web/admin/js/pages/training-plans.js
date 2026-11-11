@@ -128,6 +128,12 @@ window.AppPages.TrainingPlans = {
       </div>
       <el-table :data="form.items" size="small" border>
         <el-table-column type="index" label="#" width="42" />
+        <el-table-column label="示意" width="76">
+          <template #default="{ row }">
+            <span v-if="figHtml(row.action_name)" class="afig-thumb" style="width:52px;height:39px;cursor:pointer" v-html="figHtml(row.action_name)" @click="showFig(row)"></span>
+            <span v-else class="text-muted" style="font-size:12px">—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="动作名称" min-width="180">
           <template #default="{ row }">
             <el-autocomplete v-model="row.action_name" :fetch-suggestions="suggestActions" style="width:100%"
@@ -188,6 +194,13 @@ window.AppPages.TrainingPlans = {
   methods: {
     parseItems(row) { try { return JSON.parse(row.items || '[]'); } catch (e) { return []; } },
     itemCount(row) { return this.parseItems(row).length; },
+    figHtml(name) { const m = window.ActionFig && ActionFig.match(name); return m ? ActionFig.svg(m, { anim: false }) : ''; },
+    showFig(row) {
+      const m = window.ActionFig && ActionFig.match(row.action_name);
+      if (!m) return;
+      const esc = t => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      ElementPlus.ElMessageBox.alert('<div class="afig-big">' + ActionFig.svg(m) + '</div><div class="afig-cue"><b>动作要领</b>' + esc(m.cue) + '</div>', row.action_name, { dangerouslyUseHTMLString: true, confirmButtonText: '知道了' });
+    },
     async load() {
       this.loading = true;
       try {
@@ -202,6 +215,7 @@ window.AppPages.TrainingPlans = {
     reset() { this.query = { keyword: '', page: 1, size: 20 }; this.onlyTemplate = false; this.load(); },
     async loadDicts() {
       if (!this.isCoach) this.coaches = await api.get('/coaches', { status: 1 });
+      if (window.ActionFig) api.get('/action-figs').then(m => ActionFig.setCustom(m || {})).catch(() => {});
     },
     blankItem() { return { action_name: '', sets: 3, reps: 12, unit: '次', weight: '', rest: '', remark: '', part: '' }; },
     addItem() { this.form.items.push(this.blankItem()); },

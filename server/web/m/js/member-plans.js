@@ -254,6 +254,8 @@
 
   window.MComponents = window.MComponents || {};
 
+  const POSTER_FIG_VER = 2;
+
   /* 通用组件: 训练计划图片缩略图展示卡片 (学员/教练端共用) */
   window.MComponents['lesson-plan-card'] = {
     props: {
@@ -270,24 +272,24 @@
         return window.parseLessonPlan(this.plan);
       },
       imgUrl() {
-        return (this.parsed && this.parsed.img_url) || this.localImg;
+        return this.localImg || (this.parsed && this.parsed.img_url);
       },
     },
     watch: {
       plan: { immediate: true, handler() { this.ensurePoster(); } },
     },
     methods: {
-      /* 只有动作、还没有海报的计划(如小S写入的): 用与「制定计划」同一套 canvas 生成海报显示;
+      /* 还没有海报或旧海报未含最新动作图例(fig_v!==POSTER_FIG_VER)的计划: 用与「制定计划」同一套 canvas 生成海报显示;
          员工端顺手上传并回写 img_url, 之后会员端也直接看到这张图 */
       async ensurePoster() {
         const p = this.parsed;
         this.localImg = '';
-        if (!p || p.img_url || !Array.isArray(p.items) || !p.items.length || !window.PlanImage) return;
+        if (!p || (p.img_url && p.fig_v === POSTER_FIG_VER) || !Array.isArray(p.items) || !p.items.length || !window.PlanImage) return;
         const bk = this.booking || {};
         const raw = bk.rawBooking || {};
         const id = bk.id || raw.id;
         try {
-          await window.PlanImage.ready;
+          await Promise.all([window.PlanImage.ready, window.loadActionFigs ? window.loadActionFigs() : null]);
           const dataUrl = window.PlanImage({
             title: p.title || '训练计划',
             member: bk.realname || bk.studentName || raw.realname || '',
@@ -304,7 +306,7 @@
           const imgUrl = await API.upload(new File([blob], 'plan-' + id + '-' + Date.now() + '.jpg', { type: 'image/jpeg' }));
           if (!imgUrl) return;
           await API.put('/ptrain-bookings/' + id + '/lesson-plan', {
-            lesson_plan: JSON.stringify(Object.assign({}, p, { img_url: imgUrl, updated_at: new Date().toISOString() })),
+            lesson_plan: JSON.stringify(Object.assign({}, p, { img_url: imgUrl, fig_v: POSTER_FIG_VER, updated_at: new Date().toISOString() })),
           }, { silent: true });
         } catch (e) { /* 生成失败时退回动作清单显示 */ }
       },
@@ -657,8 +659,8 @@
             part: it.part || '',
           }));
 
-          // 1. 调用已有能力生成品牌长图(先等 Banner 素材就绪)
-          await window.PlanImage.ready;
+          // 1. 调用已有能力生成品牌长图(先等 Banner 素材与自定义动作图例就绪)
+          await Promise.all([window.PlanImage.ready, window.loadActionFigs ? window.loadActionFigs() : null]);
           const dataUrl = window.PlanImage({
             title: this.form.title.trim(),
             member: m.realname || '',
@@ -679,6 +681,7 @@
             note: this.form.note ? this.form.note.trim() : '',
             items: itemsClean,
             img_url: imgUrl,
+            fig_v: POSTER_FIG_VER,
             updated_at: new Date().toISOString(),
           };
           const rawStr = JSON.stringify(planPayload);
@@ -874,7 +877,7 @@
     ].join('\n'),
     methods: {
       async genImage() {
-        await window.PlanImage.ready;
+        await Promise.all([window.PlanImage.ready, window.loadActionFigs ? window.loadActionFigs() : null]);
         this.img = window.PlanImage({
           title: this.p.title, member: this.p.realname || (Store.user && Store.user.realname) || '',
           coach: this.p.coach_name, date: H.dateOf(this.p.plan_date), note: this.p.note, items: this.items,

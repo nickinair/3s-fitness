@@ -168,26 +168,26 @@
 
   /* ---------- 名称匹配: 先具体后宽泛, 匹配不到就不画 ---------- */
   const RULES = [
-    [/伟大伸展|最伟大的?伸展|最伟大的?拉伸/, 'greatest_stretch'],
+    [/伟大.*(伸展|拉伸)|最伟大的?(伸展|拉伸)/, 'greatest_stretch'],
     // 带限定词的先匹配(否则会被后面宽泛的「划船」「弯举」等吃掉)
     [/直立划船|直立提拉/, 'upright_row'], [/划船机/, 'rower'], [/腿弯举|俯卧弯举/, 'leg_curl'], [/腿屈伸/, 'leg_ext'],
-    [/上斜.*(推|卧)/, 'incline_press'], [/反向飞鸟|俯身.*飞鸟|反飞鸟/, 'rear_fly'], [/哑铃飞鸟|仰卧飞鸟|平板飞鸟/, 'fly_top'],
+    [/上斜.*(推|卧|固定)|哑铃上斜/, 'incline_press'], [/反向飞鸟|俯身.*飞鸟|反飞鸟/, 'rear_fly'], [/哑铃飞鸟|仰卧飞鸟|平板飞鸟/, 'fly_top'],
     [/绳索夹胸|龙门架|飞鸟/, 'cable_fly'], [/蝴蝶机|夹胸/, 'pec_deck'],
     [/坐姿推胸|器械推胸|推胸/, 'chest_press'], [/臂屈伸.*(仰卧|躺)|仰卧臂屈伸|碎颅|颅骨/, 'skull_crusher'],
     [/双杠/, 'dips'], [/卧推/, 'bench_press'], [/俯卧撑/, 'pushup'],
     [/引体/, 'pullup'], [/大剪刀|剪刀下拉|分动式.*(下拉|划船)/, 'big_scissors'], [/下拉/, 'pulldown'], [/直臂/, 'straight_pulldown'], [/坐姿划船|器械划船|绳索划船/, 'seated_row'],
-    [/划船机/, 'rower'], [/单臂.*划船|单手.*划船/, 'one_arm_row'], [/划船|T杠/, 'bent_row'], [/罗马尼亚|直腿硬拉|早安/, 'rdl'], [/硬拉/, 'deadlift'],
-    [/面拉/, 'face_pull'], [/直立划船|直立提拉/, 'upright_row'], [/侧平举/, 'lateral_raise'], [/前平举/, 'front_raise'],
-    [/推举|肩推|推肩|过头推/, 'ohp'], [/弯举/, 'curl'], [/下压|臂屈伸/, 'pushdown'],
+    [/划船机/, 'rower'], [/单[臂手边侧].*划船/, 'one_arm_row'], [/划船|T杠|抱拉/, 'bent_row'], [/罗马尼亚|直腿硬拉|早安|山羊挺|羊氏挺身|挺身|燕氏平衡/, 'rdl'], [/硬拉/, 'deadlift'],
+    [/面拉/, 'face_pull'], [/直立划船|直立提拉/, 'upright_row'], [/侧平举/, 'lateral_raise'], [/前平举|开车/, 'front_raise'],
+    [/推举|肩推|推肩|过头推|实力推|火箭推|上推|抓推|抓举/, 'ohp'], [/弯举/, 'curl'], [/下压|臂屈伸|曲臂伸|曲伸|绳索三头/, 'pushdown'],
     [/腿举|倒蹬/, 'leg_press'], [/腿屈伸/, 'leg_ext'], [/腿弯举|俯卧弯举/, 'leg_curl'], [/提踵/, 'calf_raise'],
-    [/保加利亚|箭步|弓步|分腿蹲/, 'lunge'], [/杠铃深蹲|颈后深蹲|哈克|史密斯.*蹲/, 'squat_bb'], [/深蹲|高脚杯|蹲/, 'squat'],
-    [/臀推/, 'hip_thrust'], [/臀桥/, 'glute_bridge'], [/髋外展|外展/, 'hip_abduction'], [/后踢|驴踢/, 'kickback'],
-    [/侧平板|侧桥/, 'side_plank'], [/平板支撑|平板/, 'plank'], [/卷腹|仰卧起坐/, 'crunch'], [/举腿/, 'hanging_raise'],
-    [/俄罗斯转体|转体/, 'russian_twist'], [/登山/, 'mountain_climber'], [/健腹轮|腹轮/, 'ab_wheel'],
-    [/高抬腿/, 'high_knees'], [/跑|慢跑|快走/, 'run'], [/椭圆/, 'elliptical'], [/单车|骑行|动感/, 'bike'], [/爬楼|台阶机/, 'stair'],
-    [/跳绳/, 'jump_rope'], [/波比/, 'burpee'], [/开合跳/, 'jumping_jack'], [/战绳/, 'battle_rope'],
-    [/泡沫轴|筋膜/, 'foam_roller'], [/肩部环绕|绕肩|手臂绕环/, 'arm_circle'], [/动态热身|摆腿/, 'leg_swing'], [/拉伸|伸展/, 'stretch'],
-    [/壶铃/, 'kb_swing'],
+    [/保加利亚|箭步|[弓公]步|分腿蹲/, 'lunge'], [/杠铃深蹲|颈后深蹲|哈克|史密斯.*蹲/, 'squat_bb'], [/深蹲|高脚杯|蹲|螃蟹步/, 'squat'],
+    [/臀推/, 'hip_thrust'], [/臀桥/, 'glute_bridge'], [/髋?[外内][展收]/, 'hip_abduction'], [/后踢|驴踢|俯身抬腿|小狗|大狗|猎鸟狗/, 'kickback'],
+    [/侧平板|侧板支撑|侧桥|哥本哈根/, 'side_plank'], [/平板支撑|平板|四足|交替摸肩|摸肩|熊爬|超人式/, 'plank'], [/卷腹|仰卧起坐|仰卧抬腿|交替抬腿|左右抬腿|支撑抬腿|死虫/, 'crunch'], [/举腿/, 'hanging_raise'],
+    [/俄罗斯转体|转体|炮筒.*(横移|翻转)/, 'russian_twist'], [/登山/, 'mountain_climber'], [/健腹轮|腹轮/, 'ab_wheel'],
+    [/高抬腿/, 'high_knees'], [/跑|慢跑|快走/, 'run'], [/椭圆/, 'elliptical'], [/单车|骑行|动感/, 'bike'], [/爬楼|台阶机|跳箱|上箱|跳台阶/, 'stair'],
+    [/跳绳/, 'jump_rope'], [/波比|毛毛虫|摸高跳/, 'burpee'], [/开合跳/, 'jumping_jack'], [/战[绳神胜]/, 'battle_rope'],
+    [/泡沫轴|筋膜/, 'foam_roller'], [/肩部环绕|绕肩|手臂绕环/, 'arm_circle'], [/动态热身|摆腿|下肢激活/, 'leg_swing'], [/拉伸|伸展/, 'stretch'],
+    [/壶铃|药球.*砸|药下砸/, 'kb_swing'],
   ];
   // 门店动作库里由 AI 识别/人工指定的示意图(动作名 → 图形), 优先于内置规则; 值为 '' 表示明确不画
   let CUSTOM = {};
