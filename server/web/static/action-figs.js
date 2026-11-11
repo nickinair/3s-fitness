@@ -93,6 +93,18 @@
     pec_deck: { view: 'front', props: [rect(66, 80, 28, 5)], frames: [{ torso: -90, thigh: 90, shin: 90, uarm: 0, farm: -90, at: ['hp', 80, 80], len: { thigh: 12, shin: 18 } }, { torso: -90, thigh: 90, shin: 90, uarm: 178, farm: -90, at: ['hp', 80, 80], len: { thigh: 12, shin: 18, uarm: 6 } }], cue: '坐直，前臂贴住挡板，用胸部发力把双臂向中间夹拢' },
     pushup: { frames: [{ torso: 208, thigh: 28, shin: 28, foot: 5, uarm: 90, farm: 90, at: ['wr', 52, 108] }, { torso: 199, thigh: 19, shin: 19, foot: 5, uarm: 45, farm: 135, at: ['wr', 52, 108] }], cue: '身体从头到脚保持一条直线，下放到胸部接近地面，核心收紧' },
     pullup: { view: 'front', props: [line([36, 8], [124, 8], 3, 0.5)], frames: [{ torso: -90, thigh: 90, shin: 90, len: { shin: 16 }, uarm: -50, farm: -80, at: ['wr', 101.4, 8] }, { torso: -90, thigh: 90, shin: 90, len: { shin: 16 }, uarm: 6, farm: -100, at: ['wr', 102, 8] }], cue: '双手正握略宽于肩，用背部发力把身体拉起到下巴过杠（手肘向下向外打开），再慢慢下放' },
+    // 大剪刀(分动式高位下拉/划船器械): 正面看, 坐姿、大腿压在挡板下, 双手握两侧高位弧形把手, 手肘向下向外拉到肩侧
+    big_scissors: {
+      view: 'front',
+      props: [line([80, 0], [80, GROUND], 3, 0.35), line([66, 0], [94, 0], 3, 0.35), rect(66, 86, 28, 5), rect(56, 78, 48, 6, 0.32), rect(70, 104, 20, 5),
+        circ([44, 80], 9, false, 0.4, 2.4), circ([116, 80], 9, false, 0.4, 2.4)],
+      props2: (J) => [line([72, 0], J.wr2, 2.4, 0.45), line([88, 0], J.wr, 2.4, 0.45), line([J.wr2[0] - 6, J.wr2[1]], [J.wr2[0] + 2, J.wr2[1]], 3, 0.6), line([J.wr[0] - 2, J.wr[1]], [J.wr[0] + 6, J.wr[1]], 3, 0.6)],
+      frames: [
+        { torso: -90, thigh: 70, shin: 90, len: { thigh: 10, shin: 21 }, uarm: -55, farm: -72, at: ['hp', 80, 80] },
+        { torso: -90, thigh: 70, shin: 90, len: { thigh: 10, shin: 21 }, uarm: 18, farm: -95, at: ['hp', 80, 80] },
+      ],
+      cue: '坐稳，大腿压在挡板下，双手握住两侧把手，挺胸，用背部把把手向下、向后拉到肩部两侧，顶峰夹紧肩胛骨，再慢慢放回',
+    },
     pulldown: { props: [...SEAT(58, 80), rect(70, 64, 20, 4)], frames: [{ torso: -96, thigh: 0, shin: 88, uarm: -82, farm: -86, at: ['hp', 70, 79] }, { torso: -100, thigh: 0, shin: 88, uarm: 100, farm: -72, at: ['hp', 70, 79] }], props2: (J) => [line([76, 6], J.wr, 1.4, 0.45), circ([76, 6], 3, false, 0.45, 1.6)], cue: '挺胸，把横杆拉到上胸，感受背部肌肉收缩，手臂只是挂钩' },
     seated_row: { props: [rect(40, 92, 40, 5), rect(118, 82, 4, 22)], frames: [{ torso: -70, thigh: -6, shin: 2, foot: -80, uarm: 2, farm: 2, at: ['hp', 58, 91] }, { torso: -95, thigh: -6, shin: 2, foot: -80, uarm: 140, farm: 8, at: ['hp', 58, 91] }], props2: cableTo([150, 88], 'wr'), cue: '挺胸坐直，把手柄拉向腹部，肩胛骨向后夹紧，不要后仰借力' },
     // 单臂哑铃划船: 同侧膝盖和手撑在凳子上, 另一只脚站地, 空出的手臂把哑铃拉到腰侧
@@ -152,7 +164,7 @@
     [/绳索夹胸|龙门架|飞鸟/, 'cable_fly'], [/蝴蝶机|夹胸/, 'pec_deck'],
     [/坐姿推胸|器械推胸|推胸/, 'chest_press'], [/臂屈伸.*(仰卧|躺)|仰卧臂屈伸|碎颅|颅骨/, 'skull_crusher'],
     [/双杠/, 'dips'], [/卧推/, 'bench_press'], [/俯卧撑/, 'pushup'],
-    [/引体/, 'pullup'], [/下拉/, 'pulldown'], [/直臂/, 'straight_pulldown'], [/坐姿划船|器械划船|绳索划船/, 'seated_row'],
+    [/引体/, 'pullup'], [/大剪刀|剪刀下拉|分动式.*(下拉|划船)/, 'big_scissors'], [/下拉/, 'pulldown'], [/直臂/, 'straight_pulldown'], [/坐姿划船|器械划船|绳索划船/, 'seated_row'],
     [/划船机/, 'rower'], [/单臂.*划船|单手.*划船/, 'one_arm_row'], [/划船|T杠/, 'bent_row'], [/罗马尼亚|直腿硬拉|早安/, 'rdl'], [/硬拉/, 'deadlift'],
     [/面拉/, 'face_pull'], [/直立划船|直立提拉/, 'upright_row'], [/侧平举/, 'lateral_raise'], [/前平举/, 'front_raise'],
     [/推举|肩推|推肩|过头推/, 'ohp'], [/弯举/, 'curl'], [/下压|臂屈伸/, 'pushdown'],
@@ -305,7 +317,7 @@
   const LABELS = {
     squat_bb: '杠铃深蹲(杠铃扛肩下蹲)', squat: '徒手/哑铃深蹲', lunge: '箭步蹲/弓步/分腿蹲', deadlift: '硬拉(屈膝从地面拉起)', rdl: '罗马尼亚硬拉(直腿屈髋)',
     bench_press: '平板卧推(躺凳上推)', incline_press: '上斜卧推', chest_press: '坐姿器械推胸', fly_top: '仰卧飞鸟', cable_fly: '绳索夹胸/站姿飞鸟',
-    pec_deck: '蝴蝶机夹胸', pushup: '俯卧撑', pullup: '引体向上', pulldown: '高位下拉', seated_row: '坐姿划船(绳索/器械)',
+    pec_deck: '蝴蝶机夹胸', pushup: '俯卧撑', pullup: '引体向上', big_scissors: '大剪刀(坐姿分动式高位下拉/划船器械)', pulldown: '高位下拉', seated_row: '坐姿划船(绳索/器械)',
     bent_row: '俯身划船(杠铃/哑铃/T杠)', one_arm_row: '单臂哑铃划船(单膝单手撑凳)', greatest_stretch: '伟大伸展(弓步+单手撑地+单臂上举旋转)', straight_pulldown: '直臂下压', ohp: '肩上推举', lateral_raise: '侧平举', front_raise: '前平举',
     rear_fly: '俯身反向飞鸟', face_pull: '面拉', upright_row: '直立划船', curl: '二头弯举', pushdown: '三头下压',
     skull_crusher: '仰卧臂屈伸', dips: '双杠臂屈伸', leg_press: '腿举', leg_ext: '腿屈伸', leg_curl: '俯卧腿弯举',
