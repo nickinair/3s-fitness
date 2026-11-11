@@ -1388,3 +1388,15 @@ html.is-mp .staff-hero::after { top: 8px; }
 .aid-rec-stop { width: 18px; height: 18px; border-radius: 50%; background: #ff4d4f; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .aid-rec-stop i { width: 6px; height: 6px; border-radius: 1.5px; background: #fff; display: block; }
 .aid-rec-sec { font-size: 11px; color: #cf1322; font-weight: 600; flex-shrink: 0; white-space: nowrap; }
+
+/* 制定本节课训练计划: 从模板选择 / 存为模板 */
+.tpl-entry { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 12px 14px; background: var(--c-card); border-radius: var(--radius-card); cursor: pointer; color: var(--c-title); }
+.tpl-entry b { font-size: 14px; }
+.tpl-entry .muted { font-size: 12px; margin-top: 2px; }
+.tpl-entry:active { background: var(--c-panel); }
+.tpl-sec { font-size: 12px; color: var(--c-text-3); padding: 12px 4px 6px; }
+.tpl-item { display: flex; align-items: center; gap: 8px; padding: 11px 12px; margin-bottom: 8px; background: var(--c-panel); border-radius: 10px; cursor: pointer; }
+.tpl-item:active { background: var(--c-panel-2); }
+.tpl-item .n { font-size: 14px; font-weight: 600; color: var(--c-title); }
+.tpl-item .s { font-size: 12px; color: var(--c-text-3); margin-top: 2px; }
+.tpl-save { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--c-text-2); margin-bottom: 8px; cursor: pointer; }

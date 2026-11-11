@@ -298,6 +298,11 @@
         recSec: 0,
         sugFor: -1,
         sugs: [],
+        tplShow: false,
+        tplLoading: false,
+        tplList: [],
+        tplRecent: [],
+        saveTpl: false,
       };
     },
     computed: {
@@ -382,6 +387,44 @@
       },
       close() {
         this.$emit('update:modelValue', false);
+      },
+      /* 从模板选择: 我的模板 + 该学员最近的计划(教练接口自动只返回本人的) */
+      async openTpl() {
+        this.tplShow = true;
+        this.tplLoading = true;
+        const m = this.bkMeta();
+        try {
+          const [t, r] = await Promise.all([
+            API.get('/training-plans?is_template=1&size=50', { silent: true }),
+            m.vip_id ? API.get('/training-plans?is_template=0&size=5&vip_id=' + m.vip_id, { silent: true }) : Promise.resolve({ list: [] }),
+          ]);
+          const pick = (p) => {
+            let items = [];
+            try { items = JSON.parse(p.items || '[]'); } catch (e) { items = []; }
+            return { id: p.id, title: p.title, note: p.note || '', date: p.plan_date ? H.dateOf(p.plan_date) : '', items,
+              brief: items.length + '个动作：' + items.slice(0, 3).map(x => x.action_name).join('、') + (items.length > 3 ? '…' : '') };
+          };
+          this.tplList = ((t && t.list) || []).map(pick).filter(p => p.items.length);
+          this.tplRecent = ((r && r.list) || []).map(pick).filter(p => p.items.length);
+        } catch (e) { this.tplList = []; this.tplRecent = []; }
+        finally { this.tplLoading = false; }
+      },
+      async useTpl(p, isTpl) {
+        if (this.items.length) {
+          try {
+            await vant.showConfirmDialog({ title: '使用「' + p.title + '」', message: '将替换当前已添加的 ' + this.items.length + ' 个动作', confirmButtonColor: 'var(--brand)' });
+          } catch (e) { return; }
+        }
+        this.items = p.items.map(it => ({
+          action_name: it.action_name || '', sets: Number(it.sets) || 1, reps: Number(it.reps) || 12, unit: it.unit || '次',
+          weight: it.weight || '', rest: it.rest || '', remark: it.remark || '', part: it.part || '',
+        }));
+        // 模板名作为本节课标题; 沿用学员历史计划时保留原标题
+        if (isTpl || !String(this.form.title || '').trim() || /私教训练$|训练计划$/.test(this.form.title)) this.form.title = p.title;
+        if (p.note && !String(this.form.note || '').trim()) this.form.note = p.note;
+        this.saveTpl = false;
+        this.tplShow = false;
+        vant.showToast({ message: '已带入 ' + this.items.length + ' 个动作，可继续修改', icon: 'success' });
       },
       addItem() {
         this.items.push({ action_name: '', sets: 4, reps: 12, unit: '次', weight: '', rest: '', remark: '', part: '' });
@@ -547,9 +590,14 @@
             lesson_plan: rawStr,
           });
           const finalRaw = (savedRes && savedRes.lesson_plan) || rawStr;
+          if (this.saveTpl) {
+            try {
+              await API.post('/training-plans', { title: planPayload.title, items: itemsClean, note: planPayload.note, vip_id: 0, is_template: 1 }, { silent: true });
+            } catch (e) { vant.showToast('计划已保存，但存为模板失败'); }
+          }
 
           t.close();
-          vant.showToast({ message: '计划已生成并保存', icon: 'success' });
+          vant.showToast({ message: this.saveTpl ? '计划已保存，并存为模板' : '计划已生成并保存', icon: 'success' });
           this.$emit('saved', { booking: bk, plan: planPayload, raw: finalRaw });
           this.close();
         } catch (e) {
@@ -569,6 +617,12 @@
       '    <van-icon name="cross" size="20" color="var(--c-text-3)" @click="close" style="cursor:pointer;padding:4px"/>',
       '  </div>',
       '  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 20px">',
+      /* 从模板选择 */
+      '    <div class="tpl-entry" @click="openTpl">',
+      '      <van-icon name="description" size="18"/>',
+      '      <div class="flex1"><b>从模板选择</b><div class="muted">用我的模板，或沿用这位学员之前的计划</div></div>',
+      '      <van-icon name="arrow" color="var(--c-text-4)"/>',
+      '    </div>',
       /* AI 一句话生成 (图二顶部卡片) */
       '    <div class="ai-box" style="margin:0 0 12px">',
       '      <div class="flex"><van-icon name="bulb-o" color="var(--c-title)"/><b style="margin-left:6px;font-size:14px">AI 一句话生成</b><span class="muted flex1" style="margin-left:8px">说出或输入整套安排</span></div>',
@@ -627,8 +681,29 @@
       '  </div>',
       /* 底部保存按钮 */
       '  <div style="flex-shrink:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#fff;box-shadow:0 -2px 10px rgba(0,0,0,.05);border-top:1px solid var(--c-line)">',
+      '    <div class="tpl-save" @click="saveTpl=!saveTpl"><van-checkbox :model-value="saveTpl" icon-size="16px" checked-color="var(--brand)" @click.stop="saveTpl=!saveTpl"/><span>同时存为我的模板，下次直接选</span></div>',
       '    <van-button type="primary" block round :loading="saving" loading-text="正在生成海报图片..." @click="save">生成计划海报并保存</van-button>',
       '  </div>',
+      /* 模板选择弹层 */
+      '  <van-popup v-model:show="tplShow" position="bottom" round safe-area-inset-bottom teleport="body" style="max-height:75vh;display:flex;flex-direction:column">',
+      '    <div class="pop-head" style="flex-shrink:0;padding:16px 16px 4px;text-align:center">从模板选择</div>',
+      '    <div style="flex:1;overflow-y:auto;padding:0 12px 16px">',
+      '      <div v-if="tplLoading" style="text-align:center;padding:30px 0"><van-loading color="var(--brand)"/></div>',
+      '      <template v-else>',
+      '        <div class="tpl-sec">我的模板（{{ tplList.length }}）</div>',
+      '        <div v-if="!tplList.length" class="muted" style="padding:6px 4px 10px;font-size:12px">还没有模板，保存计划时勾选「同时存为我的模板」即可</div>',
+      '        <div v-for="p in tplList" :key="\'t\'+p.id" class="tpl-item" @click="useTpl(p, true)">',
+      '          <div class="flex1"><div class="n">{{ p.title }}</div><div class="s">{{ p.brief }}</div></div><van-icon name="arrow" color="var(--c-text-4)"/>',
+      '        </div>',
+      '        <template v-if="tplRecent.length">',
+      '          <div class="tpl-sec">{{ bkMeta().realname || \'学员\' }} 之前的计划</div>',
+      '          <div v-for="p in tplRecent" :key="\'r\'+p.id" class="tpl-item" @click="useTpl(p, false)">',
+      '            <div class="flex1"><div class="n">{{ p.date }} {{ p.title }}</div><div class="s">{{ p.brief }}</div></div><van-icon name="arrow" color="var(--c-text-4)"/>',
+      '          </div>',
+      '        </template>',
+      '      </template>',
+      '    </div>',
+      '  </van-popup>',
       '</van-popup>',
     ].join('\n'),
   };
