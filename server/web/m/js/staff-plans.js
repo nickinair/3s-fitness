@@ -3,50 +3,9 @@
   const coachId = () => (Store.user && Store.user.coach_id) || 0;
   const UNITS = ['次', '秒', '分钟'];
 
-  window.Pages.StaffPlans = {
-    data() { return { list: [], loading: true, onlyTpl: false, img: '', imgShow: false, pushing: 0, removing: 0 }; },
-    computed: {
-      shown() { return this.onlyTpl ? this.list.filter(p => p.is_template) : this.list; },
-    },
-    template: [
-      '<div class="page">',
-      '  <m-nav title="训练计划"></m-nav>',
-      '  <div class="flex" style="margin:12px 12px 0;gap:10px">',
-      '    <van-button type="primary" round size="small" icon="plus" style="flex:1" @click="$router.push(\'/staff/plan-edit\')">新建计划</van-button>',
-      '    <van-checkbox v-model="onlyTpl" shape="square" icon-size="16" checked-color="var(--brand)" style="flex-shrink:0">仅看模板</van-checkbox>',
-      '  </div>',
-      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
-      '  <template v-else>',
-      '    <van-empty v-if="!shown.length" description="暂无训练计划，点上方按钮新建"/>',
-      '    <div v-for="p in shown" :key="p.id" class="rec-item">',
-      '      <div class="head" @click="$router.push(\'/staff/plan-edit?id=\'+p.id)">',
-      '        <span class="name">{{ p.title }}</span>',
-      '        <span>',
-      '          <van-tag v-if="p.is_template" type="primary" plain round>模板</van-tag>',
-      '          <van-tag v-if="p.pushed" type="success" round style="margin-left:4px">已推送</van-tag>',
-      '        </span>',
-      '      </div>',
-      '      <div class="muted mt8" @click="$router.push(\'/staff/plan-edit?id=\'+p.id)">',
-      '        {{ p.is_template ? \'通用模板\' : (\'学员 \'+(p.realname||\'-\')) }}',
-      '        <template v-if="p.plan_date"> · {{ H.dateOf(p.plan_date) }}</template>',
-      '        · {{ itemCount(p) }} 个动作',
-      '      </div>',
-      '      <div class="foot">',
-      '        <van-button size="small" round plain icon="delete-o" class="btn-icon-only" :loading="removing===p.id" @click="remove(p)"></van-button>',
-      '        <van-button size="small" round plain @click="$router.push(\'/staff/plan-edit?id=\'+p.id)">编辑</van-button>',
-      '        <van-button size="small" round plain icon="photo-o" @click="genImage(p)">生成图片</van-button>',
-      '        <van-button v-if="p.vip_id" size="small" round type="primary" :loading="pushing===p.id" @click="push(p)">{{ p.pushed ? \'再次推送\' : \'推送给学员\' }}</van-button>',
-      '      </div>',
-      '    </div>',
-      '  </template>',
-      '  <van-popup v-model:show="imgShow" round closeable style="width:86%;max-width:420px;background:transparent">',
-      '    <div style="background:#fff;border-radius:14px;padding:12px 12px 16px">',
-      '      <img :src="img" style="width:100%;display:block;border-radius:10px"/>',
-      '      <div class="muted" style="text-align:center;margin-top:10px">长按图片保存，可直接转发微信给学员</div>',
-      '    </div>',
-      '  </van-popup>',
-      '</div>',
-    ].join('\n'),
+  /* 计划卡片的通用操作(列表页「模板」和学员计划页共用): 编辑 / 生成图片 / 推送 / 删除 */
+  const PlanOps = {
+    data() { return { img: '', imgShow: false, pushing: 0, removing: 0 }; },
     methods: {
       itemCount(p) { return window.parsePlanItems(p.items).length; },
       async genImage(p) {
@@ -62,8 +21,7 @@
         try {
           await vant.showConfirmDialog({
             title: '删除计划', confirmButtonColor: 'var(--danger)', confirmButtonText: '删除',
-            message: '确定删除「' + p.title + '」吗？'
-              + (p.pushed ? '\n该计划已推送，删除后学员也将看不到。' : ''),
+            message: '确定删除「' + p.title + '」吗？' + (p.pushed ? '\n该计划已推送，删除后学员也将看不到。' : ''),
           });
         } catch (e) { return; }
         this.removing = p.id;
@@ -87,11 +45,120 @@
           this.load();
         } finally { this.pushing = 0; }
       },
+    },
+  };
+  const PLAN_CARD = [
+    '    <div v-for="p in plans" :key="p.id" class="rec-item">',
+    '      <div class="head" @click="$router.push(\'/staff/plan-edit?id=\'+p.id)">',
+    '        <span class="name">{{ p.title }}</span>',
+    '        <span>',
+    '          <van-tag v-if="p.is_template" type="primary" plain round>模板</van-tag>',
+    '          <van-tag v-if="p.pushed" type="success" round style="margin-left:4px">已推送</van-tag>',
+    '        </span>',
+    '      </div>',
+    '      <div class="muted mt8" @click="$router.push(\'/staff/plan-edit?id=\'+p.id)">',
+    '        <template v-if="p.plan_date">{{ H.dateOf(p.plan_date) }} · </template>{{ itemCount(p) }} 个动作<template v-if="p.coach_name"> · {{ p.coach_name }}</template>',
+    '      </div>',
+    '      <div class="foot">',
+    '        <van-button size="small" round plain icon="delete-o" class="btn-icon-only" :loading="removing===p.id" @click="remove(p)"></van-button>',
+    '        <van-button size="small" round plain @click="$router.push(\'/staff/plan-edit?id=\'+p.id)">编辑</van-button>',
+    '        <van-button size="small" round plain icon="photo-o" @click="genImage(p)">生成图片</van-button>',
+    '        <van-button v-if="p.vip_id" size="small" round type="primary" :loading="pushing===p.id" @click="push(p)">{{ p.pushed ? \'再次推送\' : \'推送给学员\' }}</van-button>',
+    '      </div>',
+    '    </div>',
+  ];
+  const IMG_POP = [
+    '  <van-popup v-model:show="imgShow" round closeable style="width:86%;max-width:420px;background:transparent">',
+    '    <div style="background:#fff;border-radius:14px;padding:12px 12px 16px">',
+    '      <img :src="img" style="width:100%;display:block;border-radius:10px"/>',
+    '      <div class="muted" style="text-align:center;margin-top:10px">长按图片保存，可直接转发微信给学员</div>',
+    '    </div>',
+    '  </van-popup>',
+  ];
+
+  /* 训练计划(一级目录): 「学员」按学员归档, 点进去看该学员的全部计划; 「模板」是没选学员的通用计划 */
+  window.Pages.StaffPlans = {
+    mixins: [PlanOps],
+    data() {
+      return { tab: (this.$route.query.tab === 'tpl' ? 'tpl' : 'member'), members: [], tpls: [], kw: '', loading: true };
+    },
+    computed: {
+      plans() { return this.tpls; },
+      shownMembers() {
+        const k = this.kw.trim().toLowerCase();
+        return k ? this.members.filter(m => String(m.realname || '').toLowerCase().includes(k) || String(m.phone || '').includes(k)) : this.members;
+      },
+    },
+    template: [
+      '<div class="page">',
+      '  <m-nav title="训练计划"></m-nav>',
+      '  <van-tabs v-model:active="tab" color="var(--brand)" sticky>',
+      '    <van-tab name="member" :title="\'学员（\' + members.length + \'）\'"></van-tab>',
+      '    <van-tab name="tpl" :title="\'模板（\' + tpls.length + \'）\'"></van-tab>',
+      '  </van-tabs>',
+      '  <div class="flex" style="margin:12px 12px 0;gap:10px">',
+      '    <van-button type="primary" round size="small" icon="plus" style="flex:1" @click="$router.push(\'/staff/plan-edit\')">{{ tab===\'tpl\' ? \'新建模板\' : \'新建计划\' }}</van-button>',
+      '  </div>',
+      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
+      '  <template v-else-if="tab===\'member\'">',
+      '    <van-search v-model="kw" placeholder="搜索学员姓名 / 手机号" shape="round" style="margin-top:4px"/>',
+      '    <van-empty v-if="!shownMembers.length" :description="kw ? \'没有匹配的学员\' : \'还没有给学员写过训练计划\'"/>',
+      '    <div v-for="m in shownMembers" :key="m.vip_id" class="rec-item plan-member" @click="openMember(m)">',
+      '      <div class="pm-av">{{ (m.realname || \'学\').slice(-2) }}</div>',
+      '      <div class="flex1" style="min-width:0">',
+      '        <div class="name">{{ m.realname || \'学员\' }} <span class="muted" style="font-weight:400;font-size:12px" v-if="m.phone">尾号{{ String(m.phone).slice(-4) }}</span></div>',
+      '        <div class="muted mt4 pm-last">最近：{{ m.last_title }}<template v-if="m.last_date"> · {{ H.dateOf(m.last_date) }}</template></div>',
+      '      </div>',
+      '      <div class="pm-n"><b>{{ m.plans }}</b><span>份计划</span></div>',
+      '      <van-icon name="arrow" color="var(--c-text-4)"/>',
+      '    </div>',
+      '  </template>',
+      '  <template v-else>',
+      '    <van-empty v-if="!tpls.length" description="还没有模板，新建计划时不选学员就会存为模板"/>',
+    ].concat(PLAN_CARD, [
+      '  </template>',
+    ], IMG_POP, ['</div>']).join('\n'),
+    methods: {
+      openMember(m) { this.$router.push('/staff/plans/member/' + m.vip_id + '?name=' + encodeURIComponent(m.realname || '')); },
       async load() {
         this.loading = true;
         try {
-          const d = await API.get('/training-plans?size=100');
-          this.list = d.list || [];
+          const [ms, t] = await Promise.all([
+            API.get('/training-plans/members'),
+            API.get('/training-plans?is_template=1&size=200'),
+          ]);
+          this.members = ms || [];
+          this.tpls = (t && t.list) || [];
+        } finally { this.loading = false; }
+      },
+    },
+    watch: { tab(v) { this.$router.replace({ query: Object.assign({}, this.$route.query, { tab: v }) }); } },
+    mounted() { this.load(); },
+  };
+
+  /* 训练计划(二级目录): 某个学员的全部训练计划 */
+  window.Pages.StaffMemberPlans = {
+    mixins: [PlanOps],
+    data() { return { vipId: Number(this.$route.params.id), name: this.$route.query.name || '', plans: [], loading: true }; },
+    template: [
+      '<div class="page">',
+      '  <m-nav :title="(name || \'学员\') + \' 的训练计划\'"></m-nav>',
+      '  <div class="flex" style="margin:12px 12px 0;gap:10px">',
+      '    <van-button type="primary" round size="small" icon="plus" style="flex:1" @click="newPlan">为 {{ name || \'TA\' }} 新建计划</van-button>',
+      '  </div>',
+      '  <div v-if="loading" style="text-align:center;padding:50px 0"><van-loading color="var(--brand)">加载中...</van-loading></div>',
+      '  <template v-else>',
+      '    <div class="muted" style="margin:10px 16px 0;font-size:12px" v-if="plans.length">共 {{ plans.length }} 份，按日期从新到旧</div>',
+      '    <van-empty v-if="!plans.length" description="该学员还没有训练计划"/>',
+    ].concat(PLAN_CARD, ['  </template>'], IMG_POP, ['</div>']).join('\n'),
+    methods: {
+      newPlan() { this.$router.push('/staff/plan-edit?vip_id=' + this.vipId + '&name=' + encodeURIComponent(this.name)); },
+      async load() {
+        this.loading = true;
+        try {
+          const d = await API.get('/training-plans?is_template=0&size=200&vip_id=' + this.vipId);
+          this.plans = (d && d.list) || [];
+          if (!this.name && this.plans[0]) this.name = this.plans[0].realname || '';
         } finally { this.loading = false; }
       },
     },
@@ -351,6 +418,11 @@
     async mounted() {
       API.get('/ai/status', { silent: true }).then(s => { this.aiStatus = s || {}; }).catch(() => {});
       try { this.students = await API.get('/coaches/' + coachId() + '/students', { silent: true }); } catch (e) { /* ignore */ }
+      // 从「学员的训练计划」页进来: 自动带上学员
+      if (!this.id && this.$route.query.vip_id) {
+        this.form.vip_id = Number(this.$route.query.vip_id) || 0;
+        this.form.realname = this.$route.query.name || '';
+      }
       if (this.id) {
         this.loading = true;
         try {

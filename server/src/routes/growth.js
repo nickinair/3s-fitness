@@ -305,15 +305,34 @@ r.get('/training-plans', staffAuth(), async (req, res, next) => {
     const { p, size, offset } = page(req);
     const { vip_id, coach_id, is_template, keyword } = req.query;
     const cond = ['merchant_id=?', 'status=1']; const params = [req.user.mid];
-    if (req.user.role === 'coach') { cond.push('coach_id=?'); params.push(req.user.coachId); }
+    // 按学员查看时展示该学员的全部计划(含其他教练写的, 便于接手/约课时沿用); 其余情况教练只看自己的
+    if (req.user.role === 'coach' && !vip_id) { cond.push('coach_id=?'); params.push(req.user.coachId); }
     else if (coach_id) { cond.push('coach_id=?'); params.push(coach_id); }
     if (vip_id) { cond.push('vip_id=?'); params.push(vip_id); }
     if (is_template != null && is_template !== '') { cond.push('is_template=?'); params.push(is_template); }
     if (keyword) { cond.push('(title LIKE ? OR realname LIKE ?)'); params.push(`%${keyword}%`, `%${keyword}%`); }
     const where = cond.join(' AND ');
     const [{ total }] = await db.query(`SELECT COUNT(*) total FROM biz_training_plan WHERE ${where}`, params);
-    const rows = await db.query(`SELECT * FROM biz_training_plan WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`, [...params, size, offset]);
+    const order = vip_id ? 'COALESCE(plan_date, DATE(insert_time)) DESC, id DESC' : 'id DESC';
+    const rows = await db.query(`SELECT * FROM biz_training_plan WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`, [...params, size, offset]);
     res.json(ok({ list: rows, total }));
+  } catch (e) { next(e); }
+});
+
+// 训练计划按学员汇总(一级目录): 每个学员的计划份数、已推送份数、最近一份; 教练只看自己写过计划的学员
+r.get('/training-plans/members', staffAuth(), async (req, res, next) => {
+  try {
+    const cond = ['p.merchant_id=?', 'p.status=1', 'p.is_template=0', 'p.vip_id>0']; const params = [req.user.mid];
+    if (req.user.role === 'coach') { cond.push('p.coach_id=?'); params.push(req.user.coachId); }
+    else if (req.query.coach_id) { cond.push('p.coach_id=?'); params.push(req.query.coach_id); }
+    if (req.query.keyword) { cond.push('(p.realname LIKE ? OR v.phone LIKE ?)'); params.push(`%${req.query.keyword}%`, `%${req.query.keyword}`); }
+    const rows = await db.query(
+      `SELECT p.vip_id, COALESCE(MAX(v.realname), MAX(p.realname)) realname, MAX(v.phone) phone, MAX(v.avatar) avatar,
+              COUNT(*) plans, SUM(p.pushed=1) pushed, MAX(COALESCE(p.plan_date, DATE(p.insert_time))) last_date,
+              SUBSTRING_INDEX(GROUP_CONCAT(p.title ORDER BY COALESCE(p.plan_date, DATE(p.insert_time)) DESC, p.id DESC SEPARATOR '\n'), '\n', 1) last_title
+         FROM biz_training_plan p LEFT JOIN biz_vip_user v ON v.id=p.vip_id
+        WHERE ${cond.join(' AND ')} GROUP BY p.vip_id ORDER BY last_date DESC, p.vip_id DESC LIMIT 300`, params);
+    res.json(ok(rows));
   } catch (e) { next(e); }
 });
 

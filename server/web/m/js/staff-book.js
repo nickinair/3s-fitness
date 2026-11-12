@@ -15,6 +15,8 @@ window.Pages.StaffBook = {
       maxDate: dayjs().add(3, 'month').toDate(),
       // 私教
       loadingPt: false, pt: null, coachId: null, courseId: null, clubId: null, fromTime: null, cardId: null,
+      // 约课时顺手挂训练计划: 从该学员之前的计划或模板里选
+      planPick: null, planShow: false, planLoading: false, planMine: [], planTpl: [], planFor: 0,
       // 团课
       loadingG: false, glist: [], gCur: null, gCards: null, gCardId: null, gShow: false,
       submitting: false,
@@ -143,6 +145,12 @@ window.Pages.StaffBook = {
     '            <van-icon v-if="cardId===c.id" name="checked" color="var(--brand)" size="20"/>',
     '          </div>',
     '        </div>',
+    '        <div class="sec-title">训练计划（可选）</div>',
+    '        <div class="card-box" style="padding:0">',
+    '          <van-cell :title="planPick ? planPick.title : \'不挂，课后再写\'" :label="planPick ? planPick.src : \'可从该学员之前的计划或模板里选\'" is-link @click="openPlan">',
+    '            <template #right-icon><van-icon v-if="planPick" name="clear" color="var(--c-text-4)" size="18" style="margin-left:6px" @click.stop="planPick=null"/><van-icon v-else name="arrow" color="var(--c-text-4)"/></template>',
+    '          </van-cell>',
+    '        </div>',
     '      </template>',
     '    </template>',
     '  </template>',
@@ -196,6 +204,25 @@ window.Pages.StaffBook = {
     '    </div>',
     '    <van-button type="primary" round :loading="submitting" :disabled="!canSubmitPt" @click="doBookPt" style="min-width:120px">确认代约</van-button>',
     '  </div>',
+    /* 选训练计划 */
+    '  <van-popup v-model:show="planShow" position="bottom" round safe-area-inset-bottom style="max-height:75vh;display:flex;flex-direction:column">',
+    '    <div class="pop-head" style="flex-shrink:0;padding:16px 16px 4px;text-align:center">给这节课挂训练计划</div>',
+    '    <div style="flex:1;overflow-y:auto;padding:0 12px 16px">',
+    '      <div v-if="planLoading" style="text-align:center;padding:30px 0"><van-loading color="var(--brand)"/></div>',
+    '      <template v-else>',
+    '        <div class="bk-plan-sec">{{ vip && vip.realname }} 之前的计划（{{ planMine.length }}）</div>',
+    '        <div v-if="!planMine.length" class="muted" style="font-size:12px;padding:0 4px 6px">还没有计划</div>',
+    '        <div v-for="p in planMine" :key="\'m\'+p.id" class="tpl-item" @click="choosePlan(p, \'沿用\' + (p.date ? p.date + \' \' : \'\') + \'的计划\')">',
+    '          <div class="flex1"><div class="n">{{ p.title }}</div><div class="s">{{ p.date }} · {{ p.brief }}</div></div><van-icon name="arrow" color="var(--c-text-4)"/>',
+    '        </div>',
+    '        <div class="bk-plan-sec">我的模板（{{ planTpl.length }}）</div>',
+    '        <div v-if="!planTpl.length" class="muted" style="font-size:12px;padding:0 4px 6px">还没有模板</div>',
+    '        <div v-for="p in planTpl" :key="\'t\'+p.id" class="tpl-item" @click="choosePlan(p, \'模板\')">',
+    '          <div class="flex1"><div class="n">{{ p.title }}</div><div class="s">{{ p.brief }}</div></div><van-icon name="arrow" color="var(--c-text-4)"/>',
+    '        </div>',
+    '      </template>',
+    '    </div>',
+    '  </van-popup>',
     '  <van-calendar v-model:show="calShow" :min-date="minDate" :max-date="maxDate" :default-date="calDefaultDate" color="var(--brand)" @confirm="onDateConfirm"/>',
     '</div>',
   ].join('\n'),
@@ -219,10 +246,11 @@ window.Pages.StaffBook = {
     pickVip(m) {
       if (m.is_black) return vant.showToast('该会员在黑名单中，禁止预约');
       this.vip = m;
+      this.planPick = null; this.planFor = 0;
       this.load();
       this.scrollDay();   // 日期条此时才渲染出来, 需把"今天"滚到可见位置
     },
-    clearVip() { this.vip = null; this.pt = null; this.glist = []; this.resetPt(); this.search(true); },
+    clearVip() { this.vip = null; this.pt = null; this.glist = []; this.resetPt(); this.planPick = null; this.planFor = 0; this.search(true); },
     /* ---- 通用 ---- */
     onTab() { this.load(); },
     goToday() { this.pickDate(H.today()); },
@@ -271,15 +299,50 @@ window.Pages.StaffBook = {
     },
     pickCourse(id) { this.courseId = id; this.fromTime = null; this.syncCard(); },
     syncCard() { if (!this.ptCards.some(c => c.id === this.cardId)) this.cardId = (this.ptCards[0] || {}).id || null; },
+    /* ---- 挂训练计划 ---- */
+    async openPlan() {
+      this.planShow = true;
+      if (this.planFor === this.vip.id) return;
+      this.planLoading = true;
+      const pick = (p) => {
+        const items = window.parsePlanItems(p.items);
+        return { id: p.id, title: p.title, note: p.note || '', items, date: p.plan_date ? H.dateOf(p.plan_date) : '',
+          brief: items.length + '个动作：' + items.slice(0, 3).map(x => x.action_name).join('、') + (items.length > 3 ? '…' : '') };
+      };
+      try {
+        const [m, t] = await Promise.all([
+          API.get('/training-plans?is_template=0&size=30&vip_id=' + this.vip.id, { silent: true }),
+          API.get('/training-plans?is_template=1&size=100', { silent: true }),
+        ]);
+        this.planMine = ((m && m.list) || []).map(pick).filter(p => p.items.length);
+        this.planTpl = ((t && t.list) || []).map(pick).filter(p => p.items.length);
+        this.planFor = this.vip.id;
+      } catch (e) { this.planMine = []; this.planTpl = []; } finally { this.planLoading = false; }
+    },
+    choosePlan(p, src) {
+      this.planPick = { title: p.title, note: p.note, items: p.items, src: src + ' · ' + p.items.length + ' 个动作' };
+      this.planShow = false;
+    },
     async doBookPt() {
       if (!this.canSubmitPt) return;
       this.submitting = true;
       try {
-        await API.post('/ptrain-bookings', {
+        const res = await API.post('/ptrain-bookings', {
           vip_id: this.vip.id, coach_id: this.coachId, course_id: this.courseId, club_id: this.clubId,
           date: this.date, from_time: this.fromTime, card_id: this.cardId,
         });
-        vant.showToast('代约成功，已为会员确认');
+        // 选了训练计划: 挂到刚约好的这节课上(会员可见, 海报在预约卡片里自动生成)
+        let planOk = false;
+        if (this.planPick && res && res.id) {
+          try {
+            await API.put('/ptrain-bookings/' + res.id + '/lesson-plan', {
+              lesson_plan: JSON.stringify({ title: this.planPick.title, items: this.planPick.items, note: this.planPick.note || '' }),
+            }, { silent: true });
+            planOk = true;
+          } catch (e) { vant.showToast('已约好，但训练计划没挂上，可在预约管理里补写'); }
+        }
+        vant.showToast(planOk ? '代约成功，已挂上训练计划' : '代约成功，已为会员确认');
+        this.planPick = null;
         this.fromTime = null;
         await this.loadPt();
       } finally { this.submitting = false; }

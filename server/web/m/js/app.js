@@ -53,6 +53,7 @@
     { path: '/staff/today', component: P.StaffTodayBookings },
     { path: '/staff/plans', component: P.StaffPlans },
     { path: '/staff/plan-edit', component: P.StaffPlanEdit },
+    { path: '/staff/plans/member/:id', component: P.StaffMemberPlans },
     { path: '/staff/milestones', component: P.StaffMilestones },
     { path: '/staff/intents', component: P.StaffIntents },
 
@@ -195,6 +196,7 @@
     if (p.indexOf('/card/') === 0) return '会员卡详情';
     if (p.indexOf('/contract/') === 0) return '合同详情';
     if (p.indexOf('/plan/') === 0) return '计划详情';
+    if (p.indexOf('/staff/plans/member/') === 0) return '学员训练计划';
     if (p.indexOf('/staff/member/') === 0) return '会员详情';
     if (p.indexOf('/staff/segment/') === 0) return '会员名单';
     if (p.indexOf('/staff/group/') === 0) return '预约名单';
