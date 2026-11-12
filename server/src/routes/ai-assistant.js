@@ -226,34 +226,45 @@ async function getUpcoming(ctx, days = 14) {
   return { now: dayjs().format('YYYY-MM-DD HH:mm'), count: list.length, lessons: list };
 }
 
+// 训练统计: 上课节数以「消课记录」为准(与教练业绩/报表同一口径, 含手动补录的消课);
+// 取消/爽约/待上课看预约表; 另附教练给会员的训练计划数量
 async function getStats(ctx, from, to) {
   const f = fmtD(from) || dayjs().startOf('month').format('YYYY-MM-DD');
   const t = fmtD(to) || dayjs().format('YYYY-MM-DD');
-  const pts = await db.query(
-    'SELECT `date`, from_time, to_time, status, coach_name FROM biz_ptrain_bespeak_record WHERE vip_id=? AND `date` BETWEEN ? AND ?',
-    [ctx.vip, f, t]);
-  const groups = await db.query(
-    `SELECT class_start_time, class_end_time, status FROM biz_syllabus_subscribe_record
-      WHERE vip_id=? AND class_start_time BETWEEN ? AND ?`, [ctx.vip, `${f} 00:00:00`, `${t} 23:59:59`]);
-  const [{ n: checkins }] = await db.query(
-    'SELECT COUNT(*) n FROM biz_checkin_record WHERE vip_id=? AND check_in_time BETWEEN ? AND ?', [ctx.vip, `${f} 00:00:00`, `${t} 23:59:59`]);
-  const donePt = pts.filter(p => p.status === 3);
+  const F = `${f} 00:00:00`; const T = `${t} 23:59:59`;
+  const [recs, pts, groups, ckRow, planRow] = await Promise.all([
+    db.query(
+      `SELECT r.costs, r.coach_name, r.insert_time, b.from_time, b.to_time
+         FROM biz_ptrain_record r LEFT JOIN biz_ptrain_bespeak_record b ON b.id=r.bespeak_id AND r.bespeak_id>0
+        WHERE r.vip_id=? AND r.insert_time BETWEEN ? AND ?`, [ctx.vip, F, T]),
+    db.query('SELECT status FROM biz_ptrain_bespeak_record WHERE vip_id=? AND `date` BETWEEN ? AND ?', [ctx.vip, f, t]),
+    db.query(
+      `SELECT class_start_time, class_end_time, status FROM biz_syllabus_subscribe_record
+        WHERE vip_id=? AND class_start_time BETWEEN ? AND ?`, [ctx.vip, F, T]),
+    db.queryOne('SELECT COUNT(*) n FROM biz_checkin_record WHERE vip_id=? AND check_in_time BETWEEN ? AND ?', [ctx.vip, F, T]),
+    db.queryOne(
+      `SELECT COUNT(*) n, SUM(pushed=1) pushed FROM biz_training_plan
+        WHERE vip_id=? AND status=1 AND is_template=0 AND COALESCE(plan_date, DATE(insert_time)) BETWEEN ? AND ?`, [ctx.vip, f, t]),
+  ]);
+  const ptLessons = recs.reduce((n, r) => n + (Number(r.costs) || 0), 0);
+  const ptMin = recs.reduce((n, r) => n + (r.from_time && r.to_time ? Math.max(0, toMin(r.to_time) - toMin(r.from_time)) : 60 * (Number(r.costs) || 0)), 0);
   const doneGroup = groups.filter(g => g.status === 2);
-  const ptMin = donePt.reduce((s, p) => s + Math.max(0, toMin(p.to_time) - toMin(p.from_time)), 0);
-  const gMin = doneGroup.reduce((s, g) => s + Math.max(0, dayjs(g.class_end_time).diff(dayjs(g.class_start_time), 'minute')), 0);
-  const days = new Set([...donePt.map(p => fmtD(p.date)), ...doneGroup.map(g => fmtD(g.class_start_time))]);
+  const gMin = doneGroup.reduce((n, g) => n + Math.max(0, dayjs(g.class_end_time).diff(dayjs(g.class_start_time), 'minute')), 0);
+  const days = new Set([...recs.map(r => fmtD(r.insert_time)), ...doneGroup.map(g => fmtD(g.class_start_time))]);
   const coaches = {};
-  donePt.forEach(p => { coaches[p.coach_name] = (coaches[p.coach_name] || 0) + 1; });
+  recs.forEach((r) => { coaches[r.coach_name] = (coaches[r.coach_name] || 0) + (Number(r.costs) || 0); });
   return {
     from: f, to: t,
-    pt_lessons_done: donePt.length, group_lessons_done: doneGroup.length,
-    total_lessons: donePt.length + doneGroup.length,
+    pt_lessons_done: ptLessons, group_lessons_done: doneGroup.length,
+    total_lessons: ptLessons + doneGroup.length,
     total_minutes: ptMin + gMin, total_hours: +((ptMin + gMin) / 60).toFixed(1),
-    training_days: days.size, checkins,
+    training_days: days.size, checkins: ckRow ? ckRow.n : 0,
     cancelled: pts.filter(p => p.status === 2).length + groups.filter(g => g.status === 3).length,
     no_show: pts.filter(p => p.status === 4).length + groups.filter(g => g.status === 4).length,
     upcoming_in_range: pts.filter(p => [0, 1].includes(p.status)).length + groups.filter(g => [0, 1].includes(g.status)).length,
     pt_by_coach: coaches,
+    training_plans_received: planRow ? Number(planRow.n) || 0 : 0,
+    note: '私教节数以消课记录为准(含补录), 训练计划为教练发给会员的计划份数',
   };
 }
 
@@ -545,7 +556,7 @@ async function weekCompare(ctx, { week_offset = 0 } = {}) {
 const TOOLS = [
   { name: 'get_my_profile', description: '会员基本资料: 姓名、性别、年龄、主教练、初始/目标体重、最近一次体测', parameters: { type: 'object', properties: {} } },
   { name: 'get_upcoming_lessons', description: '会员未来已预约的私教课和团课(含 booking_id, 可用于取消)', parameters: { type: 'object', properties: { days: { type: 'integer', description: '查询未来几天, 默认14' } } } },
-  { name: 'get_training_stats', description: '统计会员某时间段的训练数据: 完成的私教/团课节数、训练时长、训练天数、到店签到次数、取消/爽约次数', parameters: { type: 'object', properties: { from: { type: 'string', description: 'YYYY-MM-DD' }, to: { type: 'string', description: 'YYYY-MM-DD' } }, required: ['from', 'to'] } },
+  { name: 'get_training_stats', description: '统计会员某时间段的训练数据: 完成的私教(以消课记录为准)/团课节数、训练时长、训练天数、到店签到次数、取消/爽约次数、收到的训练计划份数', parameters: { type: 'object', properties: { from: { type: 'string', description: 'YYYY-MM-DD' }, to: { type: 'string', description: 'YYYY-MM-DD' } }, required: ['from', 'to'] } },
   { name: 'get_week_compare', description: '本周(或之前某周)与前一周的训练对比数据, 用于生成每周训练小结', parameters: { type: 'object', properties: { week_offset: { type: 'integer', description: '0=本周, -1=上周' } } } },
   { name: 'get_my_cards', description: '会员的会员卡: 卡名、剩余次数/余额、到期日、状态(含家庭共享卡)', parameters: { type: 'object', properties: {} } },
   { name: 'get_training_plans', description: '今天的课程及教练安排的训练计划内容, 以及最近的训练计划', parameters: { type: 'object', properties: { limit: { type: 'integer' } } } },

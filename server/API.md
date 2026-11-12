@@ -169,6 +169,7 @@ Base URL: `http://localhost:8090/api`
 - POST /staff/ai/chat {message} → {messages:[{id,role,text,cards}]}；每人每天 200 条（secrets.json ai_staff_daily_chats 可调）
 - POST /staff/ai/confirm {msg_id, idx, items?:[id], option?, text?, cancel?} → {card}：执行/放弃某张 action 卡片，执行参数以服务端保存的草稿为准
 - POST /staff/ai/asr {audio_base64, format}；POST /staff/ai/clear
+统计口径：小S里的上课节数一律以消课记录 biz_ptrain_record SUM(costs) 为准（与教练业绩/报表一致，含手动补录），取消/爽约看预约表；get_work_stats 另给出课程计划填写率、新建/推送训练计划份数
 卡片类型：action（act=book/reschedule/cancel/confirm/finish/noshow/checkin/rest/lesson_plan/push_plan/body/maintain/potential/milestone，单次最多 20 项）、pick（同名会员选人，点选项即发送）、copy（话术/祝福等可复制文案）、link（页面入口）
 新表（首次调用自动创建）：biz_ai_staff_message、biz_ai_staff_event（推送去重）、biz_ai_staff_state（已读/用量）
 

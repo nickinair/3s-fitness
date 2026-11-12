@@ -232,16 +232,18 @@ async function memberProfile(ctx, { vip_id }) {
   const v = await getMember(ctx, vip_id);
   const [cards, lessons, upcoming, bodies, plan, maintain, milestones, stat] = await Promise.all([
     memberCards(v.id),
-    db.query(`SELECT id, \`date\`, from_time, coach_name, course_title, lesson_plan FROM biz_ptrain_bespeak_record
-               WHERE vip_id=? AND status=3 ORDER BY \`date\` DESC, from_time DESC LIMIT 5`, [v.id]),
+    // 最近上过的课以消课记录为准(含手动补录), 有对应预约的带出课程名和本节课计划
+    db.query(`SELECT r.insert_time, r.costs, r.coach_name, b.from_time, b.course_title, b.lesson_plan
+                FROM biz_ptrain_record r LEFT JOIN biz_ptrain_bespeak_record b ON b.id=r.bespeak_id AND r.bespeak_id>0
+               WHERE r.vip_id=? ORDER BY r.insert_time DESC, r.id DESC LIMIT 5`, [v.id]),
     db.query(`SELECT id, \`date\`, from_time, to_time, coach_name, course_title, status FROM biz_ptrain_bespeak_record
                WHERE vip_id=? AND status IN (0,1) AND \`date\`>=? ORDER BY \`date\`, from_time LIMIT 5`, [v.id, dayjs().format('YYYY-MM-DD')]),
     db.query('SELECT record_date, weight, body_fat, muscle, waist FROM biz_body_record WHERE vip_id=? ORDER BY record_date DESC, id DESC LIMIT 5', [v.id]),
     db.queryOne('SELECT title, plan_date, items, coach_name FROM biz_training_plan WHERE vip_id=? AND status=1 ORDER BY plan_date DESC, id DESC LIMIT 1', [v.id]),
     db.queryOne('SELECT content, membership_name, insert_time FROM biz_maintain_record WHERE vip_user_id=? AND vip_user_type=1 ORDER BY id DESC LIMIT 1', [v.id]),
     db.query('SELECT id, type, node_value, status FROM biz_milestone WHERE vip_id=? AND status=0 ORDER BY id DESC LIMIT 3', [v.id]).catch(() => []),
-    db.queryOne(`SELECT COUNT(*) n, MAX(\`date\`) last FROM biz_ptrain_bespeak_record WHERE vip_id=? AND status=3 AND \`date\`>=?`,
-      [v.id, dayjs().subtract(30, 'day').format('YYYY-MM-DD')]),
+    db.queryOne('SELECT COALESCE(SUM(costs),0) n FROM biz_ptrain_record WHERE vip_id=? AND insert_time>=?',
+      [v.id, dayjs().subtract(30, 'day').format('YYYY-MM-DD 00:00:00')]),
   ]);
   const lastCheckin = await db.queryOne('SELECT check_in_time FROM biz_checkin_record WHERE vip_id=? ORDER BY id DESC LIMIT 1', [v.id]);
   let planItems = [];
@@ -254,9 +256,9 @@ async function memberProfile(ctx, { vip_id }) {
     main_coach: v.coach_name || '', remark: v.remark || '',
     target_weight_kg: v.target_weight != null ? Number(v.target_weight) || null : null,
     cards: cards.map(cardBrief),
-    lessons_last_30d: stat ? stat.n : 0,
+    lessons_last_30d: stat ? Number(stat.n) || 0 : 0,
     last_visit: lastCheckin ? dayjs(lastCheckin.check_in_time).format('YYYY-MM-DD HH:mm') : '',
-    recent_lessons: lessons.map(l => ({ date: fmtD(l.date), time: l.from_time, coach: l.coach_name, course: l.course_title, plan: parseLessonPlan(l.lesson_plan) })),
+    recent_lessons: lessons.map(l => ({ date: fmtD(l.insert_time), time: l.from_time || '', coach: l.coach_name, course: l.course_title || '补录消课', lessons: Number(l.costs) || 1, plan: parseLessonPlan(l.lesson_plan) })),
     upcoming_bookings: upcoming.map(b => ({ booking_id: b.id, day: dayLabel(b.date), date: fmtD(b.date), time: `${b.from_time}-${b.to_time}`, coach: b.coach_name, course: b.course_title, status: PT_STATUS[b.status] })),
     body_trend: bodies.map(b => ({ date: fmtD(b.record_date), weight: Number(b.weight) || null, body_fat: Number(b.body_fat) || null, muscle: Number(b.muscle) || null, waist: Number(b.waist) || null })),
     last_plan: plan ? { title: plan.title, date: fmtD(plan.plan_date), coach: plan.coach_name, actions: planItems.slice(0, 10).map(x => `${x.action_name} ${x.sets}组x${x.reps}${x.unit || '次'}`) } : null,
@@ -796,6 +798,49 @@ async function proposeMilestoneSummary(ctx, { milestone_id, summary }) {
   });
 }
 
+/* ================= 工作量统计(上课 + 训练计划) ================= */
+// 口径: 上课节数 = 消课记录 SUM(costs)(与教练业绩/报表一致, 含补录); 取消/爽约看预约表;
+// 课程计划填写率 = 时间段内已完成的预约里写了「本节课计划」的节数; 训练计划 = 该教练新建的(非模板)计划份数, 推送=已推送给会员的
+async function workStats(mid, coachId, from, to) {
+  const F = `${from} 00:00:00`; const T = `${to} 23:59:59`;
+  const cw = coachId ? ' AND coach_id=?' : ''; const cp = coachId ? [coachId] : [];
+  const [rec, bk, plan, gc] = await Promise.all([
+    db.queryOne(`SELECT COALESCE(SUM(costs),0) lessons, COUNT(DISTINCT vip_id) students, COUNT(*) records, SUM(bespeak_id=0) manual FROM biz_ptrain_record WHERE merchant_id=?${cw} AND insert_time BETWEEN ? AND ?`, [mid, ...cp, F, T]),
+    db.queryOne(`SELECT SUM(status=3) finished, SUM(status=3 AND lesson_plan IS NOT NULL AND lesson_plan<>'') with_plan, SUM(status=2) cancelled, SUM(status=4) noshow
+                   FROM biz_ptrain_bespeak_record WHERE merchant_id=?${cw} AND \`date\` BETWEEN ? AND ?`, [mid, ...cp, from, to]),
+    db.queryOne(`SELECT SUM(is_template=0) created, SUM(is_template=0 AND pushed=1) pushed, SUM(is_template=1) templates, COUNT(DISTINCT IF(is_template=0, vip_id, NULL)) members
+                   FROM biz_training_plan WHERE merchant_id=?${cw} AND status=1 AND insert_time BETWEEN ? AND ?`, [mid, ...cp, F, T]),
+    db.queryOne(`SELECT COUNT(*) n FROM biz_syllabus_group WHERE merchant_id=?${cw} AND status IN (1,3) AND start_time BETWEEN ? AND ? AND start_time<=NOW()`, [mid, ...cp, F, T]),
+  ]);
+  const N = v => Number(v) || 0;
+  return {
+    from, to,
+    lessons: N(rec.lessons), lesson_records: N(rec.records), manual_records: N(rec.manual), students: N(rec.students),
+    group_classes_taught: N(gc.n),
+    finished_bookings: N(bk.finished), lessons_with_plan: N(bk.with_plan),
+    plan_fill_rate: N(bk.finished) ? `${Math.round(N(bk.with_plan) / N(bk.finished) * 100)}%` : '-',
+    cancelled: N(bk.cancelled), noshow: N(bk.noshow),
+    plans_created: N(plan.created), plans_pushed: N(plan.pushed), plan_members: N(plan.members), templates_created: N(plan.templates),
+  };
+}
+async function getWorkStats(ctx, { date_from, date_to, coach_name }) {
+  const from = fmtD(date_from) || dayjs().startOf('month').format('YYYY-MM-DD');
+  const to = fmtD(date_to) || dayjs().format('YYYY-MM-DD');
+  const note = '上课节数以消课记录为准(与教练业绩一致, 含手动补录); 课程计划=预约上挂的「本节课计划」; 训练计划=新建并发给会员的计划';
+  if (ctx.isCoach || coach_name || (ctx.coachId && !ctx.isMgr)) {
+    const c = await resolveCoach(ctx, coach_name);
+    return { coach: c.realname, ...(await workStats(ctx.mid, c.id, from, to)), note };
+  }
+  // 管理者不指定教练: 全店合计 + 各教练明细
+  const coaches = await listCoaches(ctx);
+  const per = [];
+  for (const c of coaches) {
+    const w = await workStats(ctx.mid, c.id, from, to);
+    if (w.lessons || w.plans_created || w.finished_bookings || w.group_classes_taught) per.push({ coach: c.realname, lessons: w.lessons, students: w.students, plan_fill_rate: w.plan_fill_rate, plans_created: w.plans_created, plans_pushed: w.plans_pushed, group_classes_taught: w.group_classes_taught });
+  }
+  return { scope: '全店', ...(await workStats(ctx.mid, 0, from, to)), by_coach: per, note };
+}
+
 /* ================= 话术库 ================= */
 const { SCENES, sceneOf } = SCRIPT_LIB;
 async function getScripts(ctx, { scene, keyword }) {
@@ -847,7 +892,7 @@ async function listFollowup(ctx, { kind = 'expiring', days }) {
     rows = await db.query(
       `SELECT v.id, v.realname, v.phone,
               GREATEST(COALESCE((SELECT MAX(DATE(ck.check_in_time)) FROM biz_checkin_record ck WHERE ck.vip_id=v.id),'2000-01-01'),
-                       COALESCE((SELECT MAX(pb2.\`date\`) FROM biz_ptrain_bespeak_record pb2 WHERE pb2.vip_id=v.id AND pb2.status=3),'2000-01-01')) last_day
+                       COALESCE((SELECT MAX(DATE(pr.insert_time)) FROM biz_ptrain_record pr WHERE pr.vip_id=v.id),'2000-01-01')) last_day
          FROM biz_vip_user v
         WHERE v.merchant_id=? AND v.status=1${sc}
           AND EXISTS (SELECT 1 FROM biz_member_card lc WHERE lc.vip_id=v.id AND lc.status IN (0,1))
@@ -1019,6 +1064,7 @@ function toolDefs(ctx) {
     { name: 'get_free_slots', description: '查某教练某天可约的开始时间(已排除已约/已完课/团课/请假, 带 vip_id 时同时排除会员自己的课)', parameters: P({ date: str('YYYY-MM-DD'), coach_name: COACH, duration: int('分钟, 默认60'), vip_id: int() }, ['date']) },
     { name: 'find_bookings', description: '查私教预约(拿 booking_id 用于取消/改约/消课/爽约/写计划)。status: pending待确认/confirmed已确认/active未上/done已完成/cancelled/noshow', parameters: P({ vip_id: int(), date_from: str('YYYY-MM-DD'), date_to: str('YYYY-MM-DD'), status: str(), coach_name: COACH }) },
     { name: 'list_pending', description: '待办: kind=confirm 待确认预约 / finish 已上完还没消课 / plan 今明两天没填课程计划', parameters: P({ kind: { type: 'string', enum: ['confirm', 'finish', 'plan'] } }, ['kind']) },
+    { name: 'get_work_stats', description: '工作量统计(某段时间): 上课节数(以消课记录为准, 含补录)、服务学员数、团课节数、取消/爽约、课程计划填写率、新建/推送训练计划份数、新存模板数。问「上了多少课」「写/发了多少训练计划」时用它。管理者不指定教练则返回全店合计和各教练明细', parameters: P({ date_from: str('YYYY-MM-DD, 默认本月1日'), date_to: str('YYYY-MM-DD, 默认今天'), coach_name: COACH }) },
     { name: 'get_performance', description: '业绩: 某月消课课时、耗课金额、销售业绩、课时排名、工资预估。month=YYYY-MM', parameters: P({ month: str(), coach_name: COACH }) },
     { name: 'list_segment', description: '会员名单: low_lesson课时不足 / birthday_week本周生日 / trained_10当月满10次 / trained_50半年满50次 / timecard_active有效期卡 / timecard_expired已过期期卡(教练自动只看自己的学员)', parameters: P({ key: { type: 'string', enum: Object.keys(SEGMENTS) } }, ['key']) },
     { name: 'list_students', description: '教练名下私教学员: 卡余量、到期日、最近上课时间、近30天课时(用于找沉睡学员)', parameters: P({ coach_name: COACH }) },
@@ -1060,6 +1106,7 @@ async function runTool(ctx, name, a) {
     case 'find_bookings': return findBookings(ctx, a);
     case 'list_pending': return listPending(ctx, a);
     case 'get_performance': return getPerformance(ctx, a);
+    case 'get_work_stats': return getWorkStats(ctx, a);
     case 'list_segment': return listSegment(ctx, a);
     case 'list_students': return listStudents(ctx, a);
     case 'get_group_classes': return groupClasses(ctx, a);
@@ -1099,7 +1146,7 @@ async function systemPrompt(ctx) {
 你只做三件事：听懂员工的话 → 调用工具查数据或生成草稿 → 让员工在卡片上点确认。
 
 规则：
-1. 所有数字、名单、时间必须来自工具返回，严禁编造；查不到就如实说。
+1. 所有数字、名单、时间必须来自工具返回，严禁编造；查不到就如实说。上课节数、训练计划份数用 get_work_stats（与业绩报表同一口径），不要自己数预约。
 2. 写操作（代约、取消、改约、确认预约、消课、爽约、团课签到、请假、课程计划、推送训练计划、体测、维护记录、潜客、里程碑总结）只能调用对应的 propose_* 工具生成卡片，之后只说「请在下方卡片确认」，绝不能说已经完成。
 3. 话里提到会员时，先用 search_member 拿 vip_id。匹配到多位时停下来问「你说的是哪位？」（已自动给出选择卡片），不要自己猜；一个都没找到就请对方说手机尾号。
 4. 把「明天下午三点」「周五晚上7点半」换算成具体日期和24小时制，分钟用00/15/30/45；分不清上午下午、或会员/时间不明确时先问清楚再操作。
@@ -1232,18 +1279,17 @@ async function buildWeeklyReport(ctx) {
   const lastFrom = ws.subtract(7, 'day').format('YYYY-MM-DD'); const lastTo = ws.subtract(1, 'day').format('YYYY-MM-DD');
   if (!(await once(ctx, 'weekly', lastFrom))) return;
   const prevFrom = ws.subtract(14, 'day').format('YYYY-MM-DD'); const prevTo = ws.subtract(8, 'day').format('YYYY-MM-DD');
-  const stat = async (f, t) => db.queryOne(`SELECT SUM(status=3) done, SUM(status=4) noshow, SUM(status=2) cancelled, COUNT(DISTINCT IF(status=3, vip_id, NULL)) students
-    FROM biz_ptrain_bespeak_record WHERE coach_id=? AND \`date\` BETWEEN ? AND ?`, [ctx.coachId, f, t]);
-  const [a, b] = await Promise.all([stat(lastFrom, lastTo), stat(prevFrom, prevTo)]);
-  const done = Number(a.done) || 0; const pdone = Number(b.done) || 0;
+  const [a, b] = await Promise.all([workStats(ctx.mid, ctx.coachId, lastFrom, lastTo), workStats(ctx.mid, ctx.coachId, prevFrom, prevTo)]);
+  const done = a.lessons; const pdone = b.lessons;
   if (!done && !pdone) return;
   const diff = done - pdone;
-  const sleep = await db.query(`SELECT v.realname, MAX(p.\`date\`) last FROM biz_ptrain_bespeak_record p JOIN biz_vip_user v ON v.id=p.vip_id
-    WHERE p.coach_id=? AND p.status=3 GROUP BY p.vip_id HAVING last < ? AND last >= ? ORDER BY last DESC LIMIT 5`,
+  const sleep = await db.query(`SELECT v.realname, MAX(DATE(p.insert_time)) last FROM biz_ptrain_record p JOIN biz_vip_user v ON v.id=p.vip_id
+    WHERE p.coach_id=? GROUP BY p.vip_id HAVING last < ? AND last >= ? ORDER BY last DESC LIMIT 5`,
   [ctx.coachId, dayjs().subtract(14, 'day').format('YYYY-MM-DD'), dayjs().subtract(90, 'day').format('YYYY-MM-DD')]);
   const lines = [`📊 上周（${dayjs(lastFrom).format('M.D')}-${dayjs(lastTo).format('M.D')}）教练周报`,
     `・完成私教 ${done} 节，${diff === 0 ? '与前一周持平' : diff > 0 ? `比前一周多 ${diff} 节 👍` : `比前一周少 ${-diff} 节`}`,
-    `・服务学员 ${Number(a.students) || 0} 人，取消 ${Number(a.cancelled) || 0} 节，爽约 ${Number(a.noshow) || 0} 节`];
+    `・服务学员 ${a.students} 人，取消 ${a.cancelled} 节，爽约 ${a.noshow} 节`,
+    `・课程计划：上完的 ${a.finished_bookings} 节课里 ${a.lessons_with_plan} 节写了计划；新发训练计划 ${a.plans_created} 份${a.templates_created ? `，新存模板 ${a.templates_created} 个` : ''}`];
   if (sleep.length) lines.push(`・超过两周没上课：${sleep.map(x => `${x.realname}(${dayjs(x.last).format('M.D')})`).join('、')}，可以让我写召回话术`);
   await saveMsg(ctx, 'assistant', lines.join('\n'));
 }
