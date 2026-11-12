@@ -1460,3 +1460,9 @@ html.is-mp .staff-hero::after { top: 8px; }
 .pm-n span { font-size: 11px; color: var(--c-text-3); }
 /* 代约课: 挂训练计划 */
 .bk-plan-sec { font-size: 12px; color: var(--c-text-3); padding: 12px 4px 6px; }
+/* 训练计划: 底部操作栏(单手可点) */
+.plan-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 480px; box-sizing: border-box; z-index: 110; display: flex; align-items: center; gap: 10px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--c-card); border-top: 1px solid var(--c-line); }
+.plan-seg { display: flex; background: var(--c-bg-2); border-radius: var(--radius-pill); padding: 3px; flex-shrink: 0; }
+.plan-seg span { padding: 8px 14px; font-size: 14px; color: var(--c-text-2); border-radius: var(--radius-pill); cursor: pointer; white-space: nowrap; }
+.plan-seg span.on { background: var(--brand); color: var(--c-card); font-weight: 600; }
+.plan-bar-btn { flex: 1; height: 42px; }
