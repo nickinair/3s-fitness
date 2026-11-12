@@ -780,7 +780,8 @@
           }
 
           t.close();
-          vant.showToast({ message: this.saveTpl ? '计划已保存，并存为模板' : '计划已生成并保存', icon: 'success' });
+          // 保存即推送: 后端同步为学员的训练计划(pushed=1), 学员在小程序「我的训练计划」和预约卡片里都能看到
+          vant.showToast({ message: this.saveTpl ? '已推送给学员，并存为模板' : '已保存并推送给学员', icon: 'success' });
           this.$emit('saved', { booking: bk, plan: planPayload, raw: finalRaw });
           this.close();
         } catch (e) {
@@ -866,7 +867,7 @@
       /* 底部保存按钮 */
       '  <div style="flex-shrink:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#fff;box-shadow:0 -2px 10px rgba(0,0,0,.05);border-top:1px solid var(--c-line)">',
       '    <div class="tpl-save" @click="saveTpl=!saveTpl"><van-checkbox :model-value="saveTpl" icon-size="16px" checked-color="var(--brand)" @click.stop="saveTpl=!saveTpl"/><span>同时存为我的模板，下次直接选</span></div>',
-      '    <van-button type="primary" block round :loading="saving" loading-text="正在生成海报图片..." @click="save">生成计划海报并保存</van-button>',
+      '    <van-button type="primary" block round :loading="saving" loading-text="正在生成海报并推送..." @click="save">生成海报、保存并推送</van-button>',
       '  </div>',
       /* 模板选择弹层 */
       '  <van-popup v-model:show="tplShow" position="bottom" round safe-area-inset-bottom teleport="body" style="max-height:75vh;display:flex;flex-direction:column">',
