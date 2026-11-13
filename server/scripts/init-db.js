@@ -370,7 +370,7 @@ async function main() {
   // ---- 公告 ----
   await conn.query(`INSERT INTO sys_notice (scope,merchant_id,title,content) VALUES
     (1,0,'平台维护通知','系统将于每周三 02:00-04:00 进行例行维护，期间管理后台可能短暂不可用。'),
-    (2,1,'提前祝各位学员中秋节国庆节双节快乐','中秋与国庆将至，3S运动中心全体教练提前祝各位学员双节快乐、阖家团圆！假期期间的营业时间与课程安排请留意门店通知，也欢迎提前在小程序上预约课程。')`);
+    (2,1,'没人疼就去健身！健完全身疼！','没人疼就去健身！健完全身疼！')`);
 
   // ---- 更新会员到期快照 ----
   await conn.query(`UPDATE biz_vip_user v SET
